@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+# Claims a card for the signed-in user: makes it a card member, then moves the
+# card to its board's in-progress list. Safe to re-run.
+#
+#   planka-claim <card>     an id or card URL
+#
+# Runs as the user configured in PLANKA_AGENT_EMAIL.
+require "planka"
+require "planka/client"
+
+abort "usage: planka-claim <card>" unless ARGV.size == 1
+
+begin
+  card_id = Planka.card_id(ARGV.first)
+
+  Planka::Client.session do |client|
+    me = client.me.fetch("id")
+    included = client.board(client.card(card_id).dig("item", "boardId"))
+    in_progress = included.fetch("lists").find { |list| list["name"] == "in-progress" } or raise Planka::Error, "no in-progress list"
+    member = included.fetch("cardMemberships").any? { |m| m["cardId"] == card_id && m["userId"] == me }
+
+    client.add_card_member(card_id, me) unless member
+    client.move_card(card_id, in_progress.fetch("id"))
+    puts "claimed: #{Planka::Board.new(included).card(card_id)}"
+  end
+rescue Planka::Error, KeyError => e
+  abort "planka-claim: #{e.message}"
+end

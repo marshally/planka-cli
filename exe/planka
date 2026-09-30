@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+require "planka-cli"
+
+commands = %w[link next-card branch-name claim comment unticked spec-sweep loop-lock]
+if ARGV == ["--version"]
+  puts Planka::VERSION
+elsif ARGV.empty? || ARGV == ["--help"]
+  puts "usage: planka <command> [arguments]\ncommands: #{commands.join(', ')}"
+else
+  command = ARGV.shift
+  abort "planka: unknown command #{command.inspect}; see planka --help" unless commands.include?(command)
+  load File.expand_path("planka-#{command}", __dir__)
+end

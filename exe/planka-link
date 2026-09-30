@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+# Records blocking edges between Planka cards as linked tasks, which the
+# planka MCP server cannot create.
+#
+#   planka-link <blocked-card> <blocker-card> [<blocker-card>...]
+#
+# Cards are ids or card URLs. Each blocker becomes a task linked to that card
+# in a "Blocked by" task list on the blocked card. Re-running is safe: blockers
+# already linked are skipped. The logic lives in lib/planka/blocking.rb.
+require "planka"
+require "planka/client"
+
+abort "usage: planka-link <blocked-card> <blocker-card> [<blocker-card>...]" if ARGV.size < 2
+
+begin
+  blocked, *blockers = ARGV.map { |arg| Planka.card_id(arg) }
+
+  Planka::Client.session do |client|
+    puts Planka::Blocking.new(client).link(blocked, blockers)
+  end
+rescue Planka::Error, KeyError => e
+  abort "planka-link: #{e.message}"
+end

@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# Prints the branch a card is worked on, e.g.
+# feature/tracer-1.2-an-account-signs-in-the-first-admin. Read-only.
+#
+#   planka-branch-name <card>     an id or card URL
+#
+# The logic lives in lib/planka/branch_name.rb.
+require "planka"
+require "planka/client"
+
+abort "usage: planka-branch-name <card>" unless ARGV.size == 1
+
+begin
+  card_id = Planka.card_id(ARGV.first)
+
+  Planka::Client.session do |client|
+    board = Planka::Board.new(client.board(client.card(card_id).dig("item", "boardId")))
+    puts Planka::BranchName.for(board.card(card_id))
+  end
+rescue Planka::Error, KeyError => e
+  abort "planka-branch-name: #{e.message}"
+end

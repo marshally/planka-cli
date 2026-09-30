@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# Comments on a card as the signed-in user.
+#
+#   planka-comment <card> <text>     the card as an id or card URL
+#
+# Runs as the user configured in PLANKA_AGENT_EMAIL.
+require "planka"
+require "planka/client"
+
+abort "usage: planka-comment <card> <text>" unless ARGV.size == 2
+
+begin
+  card_id = Planka.card_id(ARGV.first)
+
+  Planka::Client.session { |client| client.comment(card_id, ARGV.last) }
+rescue Planka::Error, KeyError => e
+  abort "planka-comment: #{e.message}"
+end

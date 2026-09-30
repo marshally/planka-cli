@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+# Reports whether the signed-in user holds the work-next loop's lock on
+# Planka: a card on any board it can see that it has claimed, that is still
+# open, and that has no PR handed off yet. Read-only.
+#
+#   planka-loop-lock     prints "free", or "held: <card>" and then
+#                            "claimed: <ISO 8601 time>" and "age: <seconds>"
+#
+# Run it with the loop user's resolved credentials.
+# The logic lives in lib/planka/loop_lock.rb.
+require "planka"
+require "planka/client"
+
+
+begin
+  Planka::Client.session do |client|
+    boards = client.board_ids.map { |id| Planka::Board.new(client.board(id)) }
+    me = client.me.fetch("id")
+    card = Planka::LoopLock.held(boards:, user_id: me, comments: client)
+    if card
+      claimed = card.claimed_at(me)
+      puts "held: #{card}", "claimed: #{claimed.iso8601}", "age: #{(Time.now - claimed).to_i}"
+    else
+      puts "free"
+    end
+  end
+rescue Planka::Error, KeyError => e
+  abort "planka-loop-lock: #{e.message}"
+end

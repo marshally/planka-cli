@@ -1,0 +1,693 @@
+{
+  "included": {
+    "lists": [
+      {
+        "id": "1868527336580711446",
+        "name": "needs-triage",
+        "type": "active"
+      },
+      {
+        "id": "1868527359355782167",
+        "name": "needs-info",
+        "type": "active"
+      },
+      {
+        "id": "1868527370286138392",
+        "name": "ready-for-agent",
+        "type": "active"
+      },
+      {
+        "id": "1868527379723322393",
+        "name": "ready-for-human",
+        "type": "active"
+      },
+      {
+        "id": "1868527389563159578",
+        "name": "in-progress",
+        "type": "active"
+      },
+      {
+        "id": "1868527399772095515",
+        "name": "done",
+        "type": "closed"
+      },
+      {
+        "id": "1868527410291409948",
+        "name": "wontfix",
+        "type": "closed"
+      },
+      {
+        "id": "1868429788914385937",
+        "name": null,
+        "type": "archive"
+      },
+      {
+        "id": "1868429788914385938",
+        "name": null,
+        "type": "trash"
+      }
+    ],
+    "labels": [
+      {
+        "id": "1870504876098716772",
+        "name": "enhancement"
+      },
+      {
+        "id": "1870504882851546213",
+        "name": "feature:workspaces"
+      },
+      {
+        "id": "1868527420592620573",
+        "name": "bug"
+      },
+      {
+        "id": "1868527429610374174",
+        "name": "enhancement"
+      }
+    ],
+    "cards": [
+      {
+        "id": "1870505630217798758",
+        "name": "Spec: Workspaces, membership and roles (Plan 3)",
+        "listId": "1868527370286138392",
+        "position": 65535,
+        "createdAt": "2026-09-23T14:20:47.263Z"
+      },
+      {
+        "id": "1870512240004695232",
+        "name": "Deleting, recovering and permanently removing a workspace",
+        "listId": "1868527370286138392",
+        "position": 65599,
+        "createdAt": "2026-09-23T14:33:55.219Z"
+      },
+      {
+        "id": "1870512043065345206",
+        "name": "Transferring ownership",
+        "listId": "1868527370286138392",
+        "position": 65663,
+        "createdAt": "2026-09-23T14:33:31.743Z"
+      },
+      {
+        "id": "1870511914669311148",
+        "name": "Changing roles, removing members, and leaving",
+        "listId": "1868527370286138392",
+        "position": 65791,
+        "createdAt": "2026-09-23T14:33:16.436Z"
+      },
+      {
+        "id": "1870511764043465888",
+        "name": "Adding members and the member list",
+        "listId": "1868527370286138392",
+        "position": 66047,
+        "createdAt": "2026-09-23T14:32:58.478Z"
+      },
+      {
+        "id": "1870511588243408021",
+        "name": "Documents inside a workspace, reached only through it",
+        "listId": "1868527370286138392",
+        "position": 66559,
+        "createdAt": "2026-09-23T14:32:37.521Z"
+      },
+      {
+        "id": "1870511434740270219",
+        "name": "Lookup cop: one way into a workspace, enforced by bin/check",
+        "listId": "1868527370286138392",
+        "position": 67583,
+        "createdAt": "2026-09-23T14:32:19.227Z"
+      },
+      {
+        "id": "1870511301302682753",
+        "name": "Open a workspace; non-members get \"not found\"",
+        "listId": "1868527370286138392",
+        "position": 69631,
+        "createdAt": "2026-09-23T14:32:03.316Z"
+      },
+      {
+        "id": "1870511169920304244",
+        "name": "Create a workspace and see it at /",
+        "listId": "1868527370286138392",
+        "position": 73727,
+        "createdAt": "2026-09-23T14:31:47.653Z"
+      },
+      {
+        "id": "1870510968568546410",
+        "name": "Contract edits: \"by direct request\", user not account, four new membership scenarios",
+        "listId": "1868527370286138392",
+        "position": 81919,
+        "createdAt": "2026-09-23T14:31:23.647Z"
+      }
+    ],
+    "cardLabels": [
+      {
+        "id": "1870505682344608872",
+        "cardId": "1870505630217798758",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870505685104460905",
+        "cardId": "1870505630217798758",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870511021509051506",
+        "cardId": "1870510968568546410",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870511027766953075",
+        "cardId": "1870510968568546410",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870511215671772287",
+        "cardId": "1870511169920304244",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870511224395924608",
+        "cardId": "1870511169920304244",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870511351055516809",
+        "cardId": "1870511301302682753",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870511359989384330",
+        "cardId": "1870511301302682753",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870511480273634451",
+        "cardId": "1870511434740270219",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870511489576600724",
+        "cardId": "1870511434740270219",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870511630865925278",
+        "cardId": "1870511588243408021",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870511639069983903",
+        "cardId": "1870511588243408021",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870511816363213994",
+        "cardId": "1870511764043465888",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870511824466609323",
+        "cardId": "1870511764043465888",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870511959380591796",
+        "cardId": "1870511914669311148",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870511967827920053",
+        "cardId": "1870511914669311148",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870512093799646398",
+        "cardId": "1870512043065345206",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870512102809011391",
+        "cardId": "1870512043065345206",
+        "labelId": "1870504882851546213"
+      },
+      {
+        "id": "1870512289312933065",
+        "cardId": "1870512240004695232",
+        "labelId": "1870504876098716772"
+      },
+      {
+        "id": "1870512296501970122",
+        "cardId": "1870512240004695232",
+        "labelId": "1870504882851546213"
+      }
+    ],
+    "cardMemberships": [],
+    "taskLists": [
+      {
+        "id": "1870510970648921196",
+        "cardId": "1870510968568546410",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870511172613047414",
+        "cardId": "1870511169920304244",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870511303726990467",
+        "cardId": "1870511301302682753",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870511438179599501",
+        "cardId": "1870511434740270219",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870511590449611927",
+        "cardId": "1870511588243408021",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870511766954312866",
+        "cardId": "1870511764043465888",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870511916858737838",
+        "cardId": "1870511914669311148",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870512045070222520",
+        "cardId": "1870512043065345206",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870512242806490306",
+        "cardId": "1870512240004695232",
+        "name": "Acceptance criteria"
+      },
+      {
+        "id": "1870512347890582732",
+        "cardId": "1870511169920304244",
+        "name": "Blocked by"
+      },
+      {
+        "id": "1870512360188282063",
+        "cardId": "1870511301302682753",
+        "name": "Blocked by"
+      },
+      {
+        "id": "1870512372343375058",
+        "cardId": "1870511434740270219",
+        "name": "Blocked by"
+      },
+      {
+        "id": "1870512383919654101",
+        "cardId": "1870511588243408021",
+        "name": "Blocked by"
+      },
+      {
+        "id": "1870512395823088856",
+        "cardId": "1870511764043465888",
+        "name": "Blocked by"
+      },
+      {
+        "id": "1870512406786999515",
+        "cardId": "1870511914669311148",
+        "name": "Blocked by"
+      },
+      {
+        "id": "1870512419042755806",
+        "cardId": "1870512043065345206",
+        "name": "Blocked by"
+      },
+      {
+        "id": "1870512430761641185",
+        "cardId": "1870512240004695232",
+        "name": "Blocked by"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "1870510971252900973",
+        "taskListId": "1870510970648921196",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511173988779127",
+        "taskListId": "1870511172613047414",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511304783955076",
+        "taskListId": "1870511303726990467",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511438766802062",
+        "taskListId": "1870511438179599501",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511591103923352",
+        "taskListId": "1870511590449611927",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511767801562275",
+        "taskListId": "1870511766954312866",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511917756318895",
+        "taskListId": "1870511916858737838",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512046336902329",
+        "taskListId": "1870512045070222520",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512243863454915",
+        "taskListId": "1870512242806490306",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512349476029645",
+        "taskListId": "1870512347890582732",
+        "linkedCardId": "1870510968568546410",
+        "isCompleted": false
+      },
+      {
+        "id": "1870512361966666960",
+        "taskListId": "1870512360188282063",
+        "linkedCardId": "1870511169920304244",
+        "isCompleted": false
+      },
+      {
+        "id": "1870512373752661203",
+        "taskListId": "1870512372343375058",
+        "linkedCardId": "1870511301302682753",
+        "isCompleted": false
+      },
+      {
+        "id": "1870512385001784534",
+        "taskListId": "1870512383919654101",
+        "linkedCardId": "1870511434740270219",
+        "isCompleted": false
+      },
+      {
+        "id": "1870512396913607897",
+        "taskListId": "1870512395823088856",
+        "linkedCardId": "1870511588243408021",
+        "isCompleted": false
+      },
+      {
+        "id": "1870512408154342620",
+        "taskListId": "1870512406786999515",
+        "linkedCardId": "1870511764043465888",
+        "isCompleted": false
+      },
+      {
+        "id": "1870512420443653343",
+        "taskListId": "1870512419042755806",
+        "linkedCardId": "1870511588243408021",
+        "isCompleted": false
+      },
+      {
+        "id": "1870512432179315938",
+        "taskListId": "1870512430761641185",
+        "linkedCardId": "1870511588243408021",
+        "isCompleted": false
+      },
+      {
+        "id": "1870510973182280814",
+        "taskListId": "1870510970648921196",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511176211760248",
+        "taskListId": "1870511172613047414",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511306788832389",
+        "taskListId": "1870511303726990467",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511440402580623",
+        "taskListId": "1870511438179599501",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511593192686745",
+        "taskListId": "1870511590449611927",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511770183926948",
+        "taskListId": "1870511766954312866",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511919551481008",
+        "taskListId": "1870511916858737838",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512048601826490",
+        "taskListId": "1870512045070222520",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512245767668932",
+        "taskListId": "1870512242806490306",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870510975732417647",
+        "taskListId": "1870510970648921196",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511178912892025",
+        "taskListId": "1870511172613047414",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511309271860358",
+        "taskListId": "1870511303726990467",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511441837032592",
+        "taskListId": "1870511438179599501",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511595373724826",
+        "taskListId": "1870511590449611927",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511772499182757",
+        "taskListId": "1870511766954312866",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511921061430449",
+        "taskListId": "1870511916858737838",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512051026134203",
+        "taskListId": "1870512045070222520",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512248074536133",
+        "taskListId": "1870512242806490306",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870510978198668400",
+        "taskListId": "1870510970648921196",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511180909380730",
+        "taskListId": "1870511172613047414",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511310974747783",
+        "taskListId": "1870511303726990467",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511444093568145",
+        "taskListId": "1870511438179599501",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511598041302171",
+        "taskListId": "1870511590449611927",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511774772495526",
+        "taskListId": "1870511766954312866",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511922672043186",
+        "taskListId": "1870511916858737838",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512053425276092",
+        "taskListId": "1870512045070222520",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512250331071686",
+        "taskListId": "1870512242806490306",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870510980446815345",
+        "taskListId": "1870510970648921196",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511182410941563",
+        "taskListId": "1870511172613047414",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511313340335240",
+        "taskListId": "1870511303726990467",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511446400435346",
+        "taskListId": "1870511438179599501",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511600507552924",
+        "taskListId": "1870511590449611927",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511776743818407",
+        "taskListId": "1870511766954312866",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511924291044531",
+        "taskListId": "1870511916858737838",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512055497262269",
+        "taskListId": "1870512045070222520",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512252268840135",
+        "taskListId": "1870512242806490306",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511184734585980",
+        "taskListId": "1870511172613047414",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511603040912541",
+        "taskListId": "1870511590449611927",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511778731918504",
+        "taskListId": "1870511766954312866",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870512254475044040",
+        "taskListId": "1870512242806490306",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511187049841789",
+        "taskListId": "1870511172613047414",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511781173003433",
+        "taskListId": "1870511766954312866",
+        "linkedCardId": null,
+        "isCompleted": false
+      },
+      {
+        "id": "1870511189079884926",
+        "taskListId": "1870511172613047414",
+        "linkedCardId": null,
+        "isCompleted": false
+      }
+    ]
+  }
+}

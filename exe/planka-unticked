@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+# Prints a card's unticked acceptance criteria, one per line. Read-only.
+#
+#   planka-unticked <card>     an id or card URL
+require "planka"
+require "planka/client"
+
+abort "usage: planka-unticked <card>" unless ARGV.size == 1
+
+begin
+  card_id = Planka.card_id(ARGV.first)
+
+  Planka::Client.session do |client|
+    board = Planka::Board.new(client.board(client.card(card_id).dig("item", "boardId")))
+    puts board.card(card_id).unticked_criteria
+  end
+rescue Planka::Error, KeyError => e
+  abort "planka-unticked: #{e.message}"
+end

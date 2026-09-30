@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+# Picks the next card to work on the configured Planka board.
+# Read-only: it never changes the board or git.
+#
+#   planka-next-card                     the top ticket in ready-for-agent
+#   planka-next-card <feature-label>     e.g. feature:workspaces
+#   planka-next-card <effort-label>      e.g. effort:search
+#
+# With no label it prints the highest-positioned unclaimed, unblocked ticket
+# in ready-for-agent (the human orders the list by priority), its spec and
+# the parent branch. A feature label prints the next unclaimed, unblocked ticket in
+# ready-for-agent, its spec, its two-digit place among the feature's tickets
+# (nn) and the parent branch to stack it on, or "none:" and what holds each
+# waiting ticket. Neither ever picks a spec card. An effort label prints the wayfinder frontier and its map.
+#
+# The planka MCP server drops card labels and card memberships, so this reads
+# the board from Planka's API instead. The logic lives in lib/planka.
+require "planka"
+require "planka/client"
+
+abort "usage: planka-next-card [feature-label|effort-label]" if ARGV.size > 1
+
+begin
+  Planka::Client.session do |client|
+    board = Planka::Board.new(client.board(ENV.fetch("PLANKA_BOARD_ID")))
+    puts Planka::NextCard.for(ARGV.first, board:, comments: client, pull_requests: Planka::PullRequest)
+  end
+rescue Planka::Error, KeyError => e
+  abort "planka-next-card: #{e.message}"
+end

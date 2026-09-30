@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+# Moves finished spec cards to done, with a comment: a spec in in-progress
+# whose tickets (the cards sharing its feature label that have acceptance
+# criteria) are all in closed-type lists. Runs on every board the signed-in
+# user can see, and prints each spec it moves.
+#
+#   planka-spec-sweep
+#
+# The logic lives in lib/planka/spec_sweep.rb.
+require "planka"
+require "planka/client"
+
+
+begin
+  Planka::Client.session do |client|
+    client.board_ids.each do |board_id|
+      board = Planka::Board.new(client.board(board_id))
+      Planka::SpecSweep.finished(board).each do |spec|
+        client.comment(spec.id, "Every ticket for this spec is closed, so planka-cli moves it to done.")
+        client.move_card(spec.id, board.list_id("done"))
+        puts "done: #{spec}"
+      end
+    end
+  end
+rescue Planka::Error, KeyError => e
+  abort "planka-spec-sweep: #{e.message}"
+end
