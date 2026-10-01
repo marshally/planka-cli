@@ -47,11 +47,24 @@ module Planka
 
     def list_type(list_id) = @list_types[list_id]
 
-    def list_id(name)
-      @lists.key(name) or raise Error, "no list #{name}"
-    end
+    def label_name(label_id) = @labels[label_id]
+
+    # Resolves a list name to its id, refusing to guess when a board has two
+    # lists with the same name.
+    def list_id(name) = resolve(@lists, name, "list")
+
+    # Resolves a label name to its id, refusing to guess on duplicates.
+    def label_id(name) = resolve(@labels, name, "label")
 
     private
+
+    def resolve(index, name, kind)
+      ids = index.select { |_, value| value == name }.keys
+      raise Error, "no #{kind} #{name}" if ids.empty?
+      raise Error, "ambiguous #{kind} name #{name}: #{ids.join(", ")}" if ids.size > 1
+
+      ids.first
+    end
 
     def task_lists(card_id) = @task_lists.fetch(card_id, [])
   end

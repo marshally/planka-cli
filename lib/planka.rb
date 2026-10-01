@@ -4,6 +4,17 @@ require "time"
 module Planka
   Error = Class.new(StandardError)
 
+  # A multi-step create failed partway through. #state holds the ids created so
+  # far so the caller can report them and resume the rest.
+  class PartialFailure < Error
+    attr_reader :state
+
+    def initialize(message, state)
+      super(message)
+      @state = state
+    end
+  end
+
 
   # A card id, given as an id or a card URL.
   def self.card_id(arg)
