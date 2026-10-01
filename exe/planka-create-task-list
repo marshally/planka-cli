@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# Creates a named task list on a card, appended below its existing task lists.
+#
+#   planka create-task-list <card> --name NAME [--position N]
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka create-task-list <card> --name NAME [--position N]"
+  o.on("--name NAME", "task list name") { |v| options[:name] = v }
+  o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
+end
+Planka::CLI.parse!(parser, "planka-create-task-list")
+
+abort "usage: planka create-task-list <card> --name NAME [--position N]" unless ARGV.size == 1
+
+Planka::CLI.run("planka-create-task-list") do |client|
+  name = options.fetch(:name) { raise Planka::Error, "--name is required" }
+  Planka::CLI.emit(Planka::TaskLists.new(client).create(card_id: Planka.card_id(ARGV.first), name:, position: options[:position]))
+end

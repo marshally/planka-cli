@@ -1,0 +1,32 @@
+#!/usr/bin/env ruby
+# Moves a card to another list on its own board, by list id or exact list name.
+# It changes only the card's list and position; membership is left alone, so
+# moving a spec into in-progress never claims it as a bot's ticket.
+#
+#   planka move-card <card> --list ID|NAME [--position N]
+#
+# Without --position the card is appended below the target list.
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka move-card <card> --list ID|NAME [--position N]"
+  o.on("--list LIST", "target list, by id or name") { |v| options[:list] = v }
+  o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
+end
+Planka::CLI.parse!(parser, "planka-move-card")
+
+abort "usage: planka move-card <card> --list ID|NAME [--position N]" unless ARGV.size == 1
+
+Planka::CLI.run("planka-move-card") do |client|
+  card_id = Planka.card_id(ARGV.first)
+  list = options.fetch(:list) { raise Planka::Error, "--list is required" }
+  board_id = client.card(card_id).dig("item", "boardId")
+  list_id = Planka::CLI.resolve_list(client, list, board_id)
+  position = options[:position] || Planka::CLI.append_position(client, list_id)
+
+  card = client.move_card(card_id, list_id, position:)
+  Planka::CLI.emit("card" => card.slice("id", "name", "listId", "position"))
+end

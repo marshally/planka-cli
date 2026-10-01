@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+# Updates a card's title and/or description, leaving its labels, tasks,
+# comments, members and position untouched. The description comes from a file or
+# stdin so it may be long and multiline.
+#
+#   planka update-card <card> [--title TITLE] [--description-file F|-]
+#
+# At least one of --title or --description-file is required.
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka update-card <card> [--title TITLE] [--description-file F|-]"
+  o.on("--title TITLE", "new title") { |v| options[:title] = v }
+  o.on("--description-file F", "new description from a file, or - for stdin") { |v| options[:description] = v }
+end
+Planka::CLI.parse!(parser, "planka-update-card")
+
+abort "usage: planka update-card <card> [--title TITLE] [--description-file F|-]" unless ARGV.size == 1
+
+Planka::CLI.run("planka-update-card") do |client|
+  attrs = {}
+  attrs[:name] = options[:title] if options[:title]
+  attrs[:description] = Planka::CLI.source(options[:description]) if options[:description]
+  raise Planka::Error, "nothing to update: give --title and/or --description-file" if attrs.empty?
+
+  card = client.update_card(Planka.card_id(ARGV.first), **attrs)
+  Planka::CLI.emit("card" => card.slice("id", "name", "description", "listId", "position"))
+end

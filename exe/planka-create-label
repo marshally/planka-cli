@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# Creates a board label, or reuses the existing one with the same exact name so
+# names are not duplicated. Prints the label and whether it was created.
+#
+#   planka create-label --name NAME [--board ID] [--color COLOR]
+#
+# COLOR is one of Planka's label colors (default berry-red).
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = { color: "berry-red" }
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka create-label --name NAME [--board ID] [--color COLOR]"
+  o.on("--name NAME", "label name") { |v| options[:name] = v }
+  o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
+  o.on("--color COLOR", "label color (default berry-red)") { |v| options[:color] = v }
+end
+Planka::CLI.parse!(parser, "planka-create-label")
+
+Planka::CLI.run("planka-create-label") do |client|
+  name = options.fetch(:name) { raise Planka::Error, "--name is required" }
+  board_id = Planka::CLI.board_id(options[:board])
+  Planka::CLI.emit(Planka::Labels.new(client).find_or_create(board_id:, name:, color: options[:color]))
+end

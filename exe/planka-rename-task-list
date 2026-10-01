@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# Renames a task list by its id, keeping its tasks. Renaming takes an id, never a
+# name, so it can never change the wrong list.
+#
+#   planka rename-task-list --id TASK_LIST_ID --name NAME
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka rename-task-list --id TASK_LIST_ID --name NAME"
+  o.on("--id ID", "task list id") { |v| options[:id] = v }
+  o.on("--name NAME", "new name") { |v| options[:name] = v }
+end
+Planka::CLI.parse!(parser, "planka-rename-task-list")
+
+Planka::CLI.run("planka-rename-task-list") do |client|
+  id = options.fetch(:id) { raise Planka::Error, "--id is required" }
+  name = options.fetch(:name) { raise Planka::Error, "--name is required" }
+  Planka::CLI.emit(Planka::TaskLists.new(client).rename(task_list_id: id, name:))
+end

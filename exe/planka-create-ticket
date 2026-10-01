@@ -1,0 +1,54 @@
+#!/usr/bin/env ruby
+# Creates a ticket card: a project-type card with exactly one "Acceptance
+# criteria" task list holding one incomplete task per criterion, in order.
+# Criteria come from a JSON file (an array of strings), so their text may hold
+# punctuation, quotes, newlines and Unicode without shell interpretation.
+#
+#   planka create-ticket --list ID|NAME --title TITLE --criteria-file F [options]
+#
+#   --list LIST            target list, by id or name (required)
+#   --board ID             board for a list name (default PLANKA_BOARD_ID)
+#   --title TITLE          card title (required)
+#   --description-file F   description from a file, or - for stdin
+#   --criteria-file F      JSON array of criterion strings, or - for stdin (required)
+#   --position N           explicit position; otherwise appended below the list
+#   --card ID              resume: skip creation and fill criteria on this card
+#
+# Card creation cannot be retried safely, so if a later step fails the created
+# card and task-list ids are still printed; resume with --card to finish.
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka create-ticket --list ID|NAME --title TITLE --criteria-file F [--board ID] [--description-file F|-] [--position N] [--card ID]"
+  o.on("--list LIST", "target list, by id or name") { |v| options[:list] = v }
+  o.on("--board ID", "board for a list name (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
+  o.on("--title TITLE", "card title") { |v| options[:title] = v }
+  o.on("--description-file F", "description from a file, or - for stdin") { |v| options[:description] = v }
+  o.on("--criteria-file F", "JSON array of criterion strings, or - for stdin") { |v| options[:criteria] = v }
+  o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
+  o.on("--card ID", "resume: fill criteria on this existing card") { |v| options[:card] = v }
+end
+Planka::CLI.parse!(parser, "planka-create-ticket")
+
+Planka::CLI.run("planka-create-ticket") do |client|
+  raw = Planka::CLI.source(options.fetch(:criteria) { raise Planka::Error, "--criteria-file is required" })
+  criteria = JSON.parse(raw)
+  raise Planka::Error, "criteria must be a JSON array of strings" unless criteria.is_a?(Array) && criteria.all?(String)
+
+  publishing = Planka::Publishing.new(client)
+  result =
+    if options[:card]
+      publishing.resume_ticket(card_id: Planka.card_id(options[:card]), criteria:)
+    else
+      list = options.fetch(:list) { raise Planka::Error, "--list is required" }
+      title = options.fetch(:title) { raise Planka::Error, "--title is required" }
+      list_id = Planka::CLI.resolve_list(client, list, options[:board])
+      position = options[:position] || Planka::CLI.append_position(client, list_id)
+      publishing.create_ticket(list_id:, name: title, description: Planka::CLI.source(options[:description]).to_s, criteria:, position:)
+    end
+
+  Planka::CLI.emit(result)
+end

@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+# Creates a spec card: a project-type card with no acceptance criteria, so the
+# picker never treats it as a ticket. Prints the created card's id and url.
+#
+#   planka create-spec --list ID|NAME --title TITLE [options]
+#
+#   --list LIST            target list, by id or name (required)
+#   --board ID             board for a list name (default PLANKA_BOARD_ID)
+#   --title TITLE          card title (required)
+#   --description-file F   description from a file, or - for stdin
+#   --position N           explicit position; otherwise appended below the list
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka create-spec --list ID|NAME --title TITLE [--board ID] [--description-file F|-] [--position N]"
+  o.on("--list LIST", "target list, by id or name") { |v| options[:list] = v }
+  o.on("--board ID", "board for a list name (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
+  o.on("--title TITLE", "card title") { |v| options[:title] = v }
+  o.on("--description-file F", "description from a file, or - for stdin") { |v| options[:description] = v }
+  o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
+end
+Planka::CLI.parse!(parser, "planka-create-spec")
+
+Planka::CLI.run("planka-create-spec") do |client|
+  list = options.fetch(:list) { raise Planka::Error, "--list is required" }
+  title = options.fetch(:title) { raise Planka::Error, "--title is required" }
+  list_id = Planka::CLI.resolve_list(client, list, options[:board])
+  position = options[:position] || Planka::CLI.append_position(client, list_id)
+  description = Planka::CLI.source(options[:description]).to_s
+
+  Planka::CLI.emit(Planka::Publishing.new(client).create_spec(list_id:, name: title, description:, position:))
+end
