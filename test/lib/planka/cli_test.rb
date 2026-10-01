@@ -20,7 +20,7 @@ class Planka::CLITest < Minitest::Test
   def test_version_and_help_need_no_credentials_or_checkout
     out, err, status = run_cli("--version")
     assert status.success?, err
-    assert_equal "0.1.0\n", out
+    assert_equal "#{Planka::VERSION}\n", out
     out, err, status = run_cli("--help")
     assert status.success?, err
     assert_includes out, "next-card"
