@@ -14,10 +14,9 @@ gem install ./pkg/planka-cli-0.1.0.gem
 planka --help
 ```
 
-The gem has not been published. Its executable names include `planka` and
-all eight existing `planka-*` commands. `bin/planka-op` and the Node MCP
-launcher remain in Lucenta; they are repository integrations rather than Ruby
-gem commands.
+Its executable names include `planka` and every `planka-*` subcommand. The Node
+MCP launcher and any 1Password wrapper remain in Lucenta; they are repository
+integrations rather than Ruby gem commands.
 
 ## Configure
 
@@ -55,6 +54,62 @@ Cards may be numeric ids or card URLs. `claim`, `comment`, `link` and
 `spec-sweep` write to Planka. `claim` and `link` may be safely repeated.
 `next-card` uses the authenticated `gh` CLI when a blocker has a GitHub PR
 handoff. `Branch:` and `PR:` lines in comments determine parent branches.
+
+## Publishing and reading specs and tickets
+
+These commands create, read back and verify specs and tickets. They print JSON
+to stdout, diagnostics to stderr, and exit nonzero on failure. `--help` needs no
+credentials.
+
+```sh
+planka snapshot [--board ID] [--list ID|NAME]   # whole board, or one list's cards
+planka show CARD                                 # one card: description, labels, tasks, blockers, comments
+planka create-spec   --list ID|NAME --title T [--description-file F|-] [--position N]
+planka create-ticket --list ID|NAME --title T --criteria-file F [--description-file F|-] [--position N]
+planka create-ticket --card CARD --criteria-file F        # resume a ticket whose creation failed
+planka update-card   CARD [--title T] [--description-file F|-]
+planka move-card     CARD --list ID|NAME [--position N]
+planka labels        [--board ID]
+planka create-label  --name NAME [--board ID] [--color COLOR]
+planka apply-label   CARD --label ID|NAME
+planka create-task-list CARD --name NAME [--position N]
+planka rename-task-list --id TASK_LIST_ID --name NAME
+```
+
+A spec is a project card with no acceptance criteria; a ticket is a project card
+with one `Acceptance criteria` task list, so the picker keeps them apart. Lists
+and labels may be given by id or exact name; an ambiguous name is rejected rather
+than guessed. A board can carry two labels with the same name (for example two
+`enhancement` labels); apply those by id, since the name is ambiguous. `--description-file` and `--criteria-file` take a path or `-` for
+stdin, so descriptions and criteria keep their newlines, quotes and Unicode
+without shell quoting. `--criteria-file` is a JSON array of strings.
+
+`create-spec`, `create-ticket`, `create-label`, `apply-label` and `move-card`
+write to Planka; `snapshot`, `show` and `labels` are read-only. A create is never
+retried once its outcome is unknown: on a timeout it prints what it created and a
+`reconcile` hint rather than risk a duplicate. `create-label` reuses a label with
+the same name, `apply-label` is safe to repeat, and `create-ticket --card` fills
+only the criteria still missing, so an interrupted ticket is finished, not
+duplicated.
+
+A dependency-ordered batch is a scripted sequence of these primitives: create
+each blocker before the cards it blocks, append new work below the queue
+(`--position` is optional; work lands at the bottom by default), label the cards,
+`link` dependents to their blockers, then `move-card` the spec into `in-progress`.
+For example:
+
+```sh
+feature=$(planka create-label --name feature:work-next | jq -r .label.id)
+spec=$(planka create-spec --list ready-for-agent --title 'Spec: work-next' \
+  --description-file spec.md | jq -r .card.id)
+first=$(planka create-ticket --list ready-for-agent --title 'Ticket 1' \
+  --criteria-file t1.json | jq -r .card.id)
+second=$(planka create-ticket --list ready-for-agent --title 'Ticket 2' \
+  --criteria-file t2.json | jq -r .card.id)
+for c in "$spec" "$first" "$second"; do planka apply-label "$c" --label "$feature"; done
+planka link "$second" "$first"
+planka move-card "$spec" --list in-progress
+```
 
 ## Library
 
