@@ -23,10 +23,12 @@ class Planka::PublishingCLITest < Minitest::Test
     @server.stop
   end
 
-  def planka(*args, env: {})
+  def planka(*args, env: {}, stdin: nil)
     base = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com",
       "PLANKA_AGENT_PASSWORD" => PASSWORD, "PLANKA_BOARD_ID" => @server.board_id }
-    Open3.capture3(base.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
+    opts = { chdir: Dir.tmpdir }
+    opts[:stdin_data] = stdin if stdin
+    Open3.capture3(base.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, **opts)
   end
 
   def ok(*args, **kwargs)
@@ -165,6 +167,35 @@ class Planka::PublishingCLITest < Minitest::Test
 
     by_id = ok_json("apply-label", PARENT, "--label", @server.labels.first["id"])
     assert by_id["created"], "applying a duplicate-named label by id still works"
+  end
+
+  def test_update_card_changes_only_given_fields_and_reads_stdin
+    ok("apply-label", PARENT, "--label", "enhancement")
+    list_id = ok_json("create-task-list", PARENT, "--name", "Notes")["taskList"]["id"]
+
+    ok("update-card", PARENT, "--title", "Renamed spec", "--description-file", "-", stdin: "From stdin\nsecond line")
+
+    detail = ok_json("show", PARENT)
+    assert_equal "Renamed spec", detail["name"]
+    assert_equal "From stdin\nsecond line", detail["description"]
+    assert_equal [ "enhancement" ], detail["labels"].map { |l| l["name"] }, "the label was left in place"
+    assert_includes detail["taskLists"].map { |l| l["id"] }, list_id, "the task list was left in place"
+  end
+
+  def test_update_card_with_nothing_to_change_fails
+    _out, err, status = planka("update-card", PARENT)
+    refute status.success?
+    assert_includes err, "nothing to update"
+  end
+
+  def test_a_missing_required_option_fails_cleanly
+    _out, err, status = planka("create-spec", "--title", "No list")
+    refute status.success?
+    assert_includes err, "--list is required"
+
+    _out, err, status = planka("create-ticket", "--list", "ready-for-agent", "--title", "No criteria")
+    refute status.success?
+    assert_includes err, "--criteria-file is required"
   end
 
   def test_card_url_argument_and_custom_instance_url_are_handled
