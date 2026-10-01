@@ -53,9 +53,6 @@ module Planka
     # lists with the same name.
     def list_id(name) = resolve(@lists, name, "list")
 
-    # Resolves a label name to its id, refusing to guess on duplicates.
-    def label_id(name) = resolve(@labels, name, "label")
-
     private
 
     def resolve(index, name, kind)

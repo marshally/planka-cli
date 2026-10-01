@@ -25,13 +25,26 @@ module Planka
       { "label" => label, "created" => true }
     end
 
+    # Resolves a label given as an id (used as is) or an exact name within the
+    # board, rejecting a name that matches two labels.
+    def resolve(board_id:, label:)
+      labels = list(board_id)
+      return label if labels.any? { |existing| existing["id"] == label }
+
+      matches = labels.select { |existing| existing["name"] == label }
+      raise Error, "no label #{label}" if matches.empty?
+      raise Error, "ambiguous label name #{label}: #{matches.map { |l| l["id"] }.join(", ")}" if matches.size > 1
+
+      matches.first.fetch("id")
+    end
+
     # Applies a label, given its id or exact name, to a card. Safe to repeat: a
     # label already on the card is left as is and existing labels are preserved.
     def apply(card_id:, label:)
       response = @client.card(card_id)
       board_id = response.fetch("item")["boardId"]
       applied = Array(response.fetch("included")["cardLabels"])
-      label_id = resolve(board_id, label)
+      label_id = resolve(board_id:, label:)
 
       return { "cardId" => card_id, "labelId" => label_id, "created" => false } if applied.any? { |cl| cl["labelId"] == label_id }
 
@@ -40,13 +53,6 @@ module Planka
     end
 
     private
-
-    def resolve(board_id, label)
-      board = @client.board(board_id)
-      return label if Array(board["labels"]).any? { |existing| existing["id"] == label }
-
-      Board.new(board).label_id(label)
-    end
 
     def next_position(records) = (records.map { |record| record["position"].to_f }.max || 0) + POSITION_GAP
   end
