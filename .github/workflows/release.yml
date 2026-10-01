@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - run: bundle exec make ci
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # required for trusted publishing
+      contents: write   # required for rake release to push the version tag
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - uses: rubygems/release-gem@v1
