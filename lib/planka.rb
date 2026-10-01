@@ -34,5 +34,8 @@ require_relative "planka/spec_sweep"
 require_relative "planka/blocking"
 require_relative "planka/snapshot"
 require_relative "planka/card_detail"
+require_relative "planka/publishing"
+require_relative "planka/labels"
+require_relative "planka/task_lists"
 
 require_relative "planka/version"
