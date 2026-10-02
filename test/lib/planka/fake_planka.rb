@@ -148,6 +148,7 @@ class FakePlanka
     in [ "GET", [ "api", "cards", id, "comments" ] ] then [ 200, { "items" => comments_for(id) } ]
     in [ "GET", [ "api", "cards", id ] ] then [ 200, card_payload(id) ]
     in [ "GET", [ "api", "lists", id, "cards" ] ] then [ 200, { "items" => @state[:cards].select { |c| c["listId"] == id }, "included" => {} } ]
+    in [ "POST", [ "api", "boards", id, "lists" ] ] then [ 200, { "item" => make_list(id, data) } ]
     in [ "POST", [ "api", "lists", id, "cards" ] ] then [ 200, { "item" => make_card(id, data) } ]
     in [ "PATCH", [ "api", "cards", id ] ] then [ 200, { "item" => patch_card(id, data) } ]
     in [ "POST", [ "api", "boards", id, "labels" ] ] then [ 200, { "item" => make_label(id, data) } ]
@@ -182,6 +183,12 @@ class FakePlanka
   end
 
   def comments_for(id) = @state[:comments].select { |c| c["cardId"] == id }
+
+  def make_list(board_id, data)
+    list = { "id" => next_id, "boardId" => board_id, "name" => data["name"], "type" => data["type"], "position" => data["position"] }
+    @state[:lists] << list
+    list
+  end
 
   def make_card(list_id, data)
     # Planka rejects an empty-string description; the field must be absent or set.

@@ -64,6 +64,7 @@ credentials.
 ```sh
 planka snapshot [--board ID] [--list ID|NAME]   # whole board, or one list's cards
 planka show CARD                                 # one card: description, labels, tasks, blockers, comments
+planka create-list   --name NAME [--board ID] [--type active|closed] [--position N]
 planka create-spec   --list ID|NAME --title T [--description-file F|-] [--position N]
 planka create-ticket --list ID|NAME --title T --criteria-file F [--description-file F|-] [--position N]
 planka create-ticket --card CARD --criteria-file F        # resume a ticket whose creation failed
@@ -76,8 +77,11 @@ planka create-task-list CARD --name NAME [--position N]
 planka rename-task-list --id TASK_LIST_ID --name NAME
 ```
 
-A spec is a project card with no acceptance criteria; a ticket is a project card
-with one `Acceptance criteria` task list, so the picker keeps them apart. Lists
+`create-list` adds a column to a board (a fresh board has none); create the
+conventional `ready-for-agent`, `in-progress` and `done` columns before adding
+cards. A spec is a project card with no acceptance criteria; a ticket is a
+project card with one `Acceptance criteria` task list, so the picker keeps them
+apart. Lists
 and labels may be given by id or exact name; an ambiguous name is rejected rather
 than guessed. A board can carry two labels with the same name (for example two
 `enhancement` labels); apply those by id, since the name is ambiguous. `--description-file` and `--criteria-file` take a path or `-` for

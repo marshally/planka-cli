@@ -44,6 +44,8 @@ module Planka
 
     def update_card(card_id, **attrs) = request(:patch, "/api/cards/#{card_id}", attrs).fetch("item")
 
+    def create_list(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/lists", attrs, idempotent: false).fetch("item")
+
     def create_label(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/labels", attrs, idempotent: false).fetch("item")
 
     def add_card_label(card_id, label_id) = request(:post, "/api/cards/#{card_id}/card-labels", { labelId: label_id }, idempotent: false)

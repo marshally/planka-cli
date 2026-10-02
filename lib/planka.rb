@@ -36,6 +36,7 @@ require_relative "planka/snapshot"
 require_relative "planka/card_detail"
 require_relative "planka/publishing"
 require_relative "planka/labels"
+require_relative "planka/lists"
 require_relative "planka/task_lists"
 require_relative "planka/cli"
 

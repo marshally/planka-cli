@@ -169,6 +169,16 @@ class Planka::PublishingCLITest < Minitest::Test
     assert by_id["created"], "applying a duplicate-named label by id still works"
   end
 
+  def test_create_list_adds_a_column_cards_can_target
+    created = ok_json("create-list", "--name", "triage")
+    assert created["created"]
+    assert_equal "active", created["list"]["type"]
+    assert_includes ok_json("snapshot")["lists"].map { |l| l["name"] }, "triage"
+
+    spec = ok_json("create-spec", "--list", "triage", "--title", "In triage")
+    assert_equal "triage", ok_json("show", spec["card"]["id"])["listName"]
+  end
+
   def test_create_spec_and_ticket_without_a_description
     spec = ok_json("create-spec", "--list", "ready-for-agent", "--title", "No-description spec")
     assert spec["card"]["id"], "a spec needs no description"
