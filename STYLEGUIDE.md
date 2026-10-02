@@ -16,7 +16,6 @@ Use a kubectl-like verb/resource grammar:
 ```text
 planka <verb> <resource> [reference] [flags]
 planka workflow <operation> [arguments] [flags]
-planka auth <operation> [flags]
 ```
 
 Use lowercase names, hyphens for multiword names, and spaces between command
@@ -145,21 +144,20 @@ required only when the operation needs that scope and no explicit parent or
 resource reference supplies it. An optional setting may be absent; do not invent
 a required board for a command that derives it from a card.
 
-Authentication command details remain to be settled independently:
-
-```sh
-planka auth login
-planka auth status
-planka auth logout
-```
+Each API invocation authenticates with `PLANKA_AGENT_EMAIL` and
+`PLANKA_AGENT_PASSWORD`, keeps its session token only in memory, and attempts
+sign-out on completion, including operation failure. Credentials and tokens are
+not persisted. There are no `planka auth` commands, interactive authentication
+prompts, or externally supplied-token mode. Validate credentials before the
+first network request; session cleanup must not mask the primary operation's
+result or error. Document cleanup failures without claiming they undo writes.
 
 Help and version output require no credentials or network. Environment
 diagnostics must not reveal passwords or tokens. Authentication is scoped to the
 selected server; never send credentials to a different server because a resource
 URL was supplied. Do not read credentials from another checkout or invoke a
-credential wrapper implicitly. Login must support unattended callers without
-forcing an interactive prompt; ordinary resource commands must not prompt for
-login.
+credential wrapper implicitly. All authentication is unattended and uses only the caller-supplied
+environment. Ordinary resource commands must not prompt for login.
 
 ## Output and errors
 
@@ -317,7 +315,7 @@ planka create card --help
 planka workflow --help
 ```
 
-Root help groups administration, workflows, and authentication.
+Root help groups administration and workflows.
 Group help lists supported resources or operations with short descriptions.
 Leaf help includes usage, required scope, arguments, defaults, flags, examples,
 output behavior, and mutation/recovery behavior. Render the canonical command

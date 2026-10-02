@@ -32,7 +32,6 @@ The target administration interface uses kubectl-style verb/resource commands:
 ```text
 planka <verb> <resource> [reference] [flags]
 planka workflow <operation> [arguments] [flags]
-planka auth <operation> [flags]
 ```
 
 **The invocations below describe the proposed interface, which is not yet
@@ -135,14 +134,10 @@ built-in guide work without connection settings.
 
 Use the same `PLANKA_*` names with project-specific values, as listed under
 [Current interface](#current-interface). Required scope depends on the command
-and its explicit references. Authentication details remain under discussion:
-
-```sh
-planka auth login
-planka auth status
-planka auth logout
-```
-
+and its explicit references. Each API command signs in using
+`PLANKA_AGENT_EMAIL` and `PLANKA_AGENT_PASSWORD`, holds the token in memory, and
+attempts sign-out when finished. There are no saved credentials, authentication
+prompts, `auth login/logout` commands, or externally supplied-token mode.
 Authentication is scoped to the server selected by the project's environment.
 
 ### Output, help, and version
