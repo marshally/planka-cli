@@ -181,9 +181,13 @@ later release or edition. Record verified versions and verb/resource capabilitie
 as implementation proceeds, and establish reliable version/capability detection
 from API evidence. Future major releases require verification.
 
+Deletion confirmation is settled: an explicit `delete RESOURCE REF` executes
+without prompts or `--yes`, identically in terminals and scripts. Missing targets
+are invalid invocation. Cascade behavior remains a separate open decision.
+
 | Decision | Required outcome |
 | --- | --- |
-| Deletion | Establish cascades and whether each destructive operation needs confirmation; define noninteractive behavior and `--yes` if required. |
+| Deletion cascades | Establish cascading effects and whether dependent-resource deletion needs an explicit opt-in. Confirmation is settled: no prompts or `--yes`. |
 | Legacy deprecation | Choose release timing, notice policy, and removal conditions for flat/direct executables and their schemas. |
 
 Do not choose a generic resource model or credential persistence scheme simply

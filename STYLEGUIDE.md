@@ -337,10 +337,11 @@ reconcile. For multi-step workflows, preserve completed steps and created IDs in
 JSON recovery output. Do not claim atomicity when the API uses multiple writes.
 Provide an explicit resume operation instead of requiring a duplicate create.
 
-Delete requires an explicit resource reference. Document cascading effects in
-command help and errors. If confirmation is required for a particular destructive
-operation, provide `--yes` for automation and fail clearly in noninteractive mode
-without it; never block a script on an unexpected prompt.
+Delete requires an explicit resource reference and executes without confirmation
+prompts. The same invocation behaves identically in terminals and scripts; do
+not require `--yes` or an interactive session. An omitted target is an input error,
+not a request to delete a collection. Document cascading effects in command help
+and errors; the cascade opt-in policy remains to be settled separately.
 
 ## Workflow commands
 
