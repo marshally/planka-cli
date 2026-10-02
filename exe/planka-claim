@@ -2,7 +2,7 @@
 # Claims a card for the signed-in user: makes it a card member, then moves the
 # card to its board's in-progress list. Safe to re-run.
 #
-#   planka-claim <card>     an id or card URL
+#   planka claim <card>     an id or card URL
 #
 # Runs as the user configured in PLANKA_AGENT_EMAIL.
 require "planka"
@@ -10,7 +10,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka claim <card> [--output human|json]")
-Planka::CLI.parse!(parser, "planka-claim")
+Planka::CLI.parse!(parser, "planka claim")
 abort parser.banner unless ARGV.size == 1
 
 begin
@@ -33,5 +33,5 @@ begin
     Planka::CLI.emit(result, output: options[:output], human: "claimed: #{card}")
   end
 rescue Planka::Error, KeyError => e
-  abort "planka-claim: #{e.message}"
+  abort "planka claim: #{e.message}"
 end

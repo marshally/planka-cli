@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Standardized help and diagnostic names on `planka <command>` while preserving
+the direct `planka-*` executables. All commands list and support `-h`/`--help`
+without credentials; top-level help points to command-specific help.
+
 Added publishing and reading commands so an agent can create and verify specs
 and tickets without the MCP server or ad hoc REST: `snapshot`, `show`,
 `create-list`, `create-spec`, `create-ticket`, `update-card`, `move-card`,

@@ -6,8 +6,9 @@ commands = %w[link next-card branch-name claim comment unticked spec-sweep loop-
   create-label apply-label create-task-list rename-task-list]
 if ARGV == ["--version"]
   puts Planka::VERSION
-elsif ARGV.empty? || ARGV == ["--help"]
+elsif ARGV.empty? || ARGV == ["--help"] || ARGV == ["-h"]
   puts "usage: planka <command> [arguments]\ncommands: #{commands.join(', ')}"
+  puts "\nRun planka <command> --help for command usage and options."
 else
   command = ARGV.shift
   abort "planka: unknown command #{command.inspect}; see planka --help" unless commands.include?(command)

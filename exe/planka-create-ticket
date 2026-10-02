@@ -32,9 +32,9 @@ parser = OptionParser.new do |o|
   o.on("--card ID", "resume: fill criteria on this existing card") { |v| options[:card] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-create-ticket")
+Planka::CLI.parse!(parser, "planka create-ticket")
 
-Planka::CLI.run("planka-create-ticket", output: options[:output]) do |client|
+Planka::CLI.run("planka create-ticket", output: options[:output]) do |client|
   raw = Planka::CLI.source(options.fetch(:criteria) { raise Planka::Error, "--criteria-file is required" })
   criteria = JSON.parse(raw)
   raise Planka::Error, "criteria must be a JSON array of strings" unless criteria.is_a?(Array) && criteria.all?(String)

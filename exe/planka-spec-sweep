@@ -4,7 +4,7 @@
 # criteria) are all in closed-type lists. Runs on every board the signed-in
 # user can see, and prints each spec it moves.
 #
-#   planka-spec-sweep
+#   planka spec-sweep
 #
 # The logic lives in lib/planka/spec_sweep.rb.
 require "planka"
@@ -12,7 +12,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka spec-sweep [--output human|json]")
-Planka::CLI.parse!(parser, "planka-spec-sweep")
+Planka::CLI.parse!(parser, "planka spec-sweep")
 abort parser.banner unless ARGV.empty?
 
 begin
@@ -31,5 +31,5 @@ begin
     Planka::CLI.emit(result, output: options[:output], human:)
   end
 rescue Planka::Error, KeyError => e
-  abort "planka-spec-sweep: #{e.message}"
+  abort "planka spec-sweep: #{e.message}"
 end

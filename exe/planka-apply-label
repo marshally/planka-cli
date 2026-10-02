@@ -13,11 +13,11 @@ parser = OptionParser.new do |o|
   o.on("--label LABEL", "label id or exact name") { |v| options[:label] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-apply-label")
+Planka::CLI.parse!(parser, "planka apply-label")
 
 abort parser.banner unless ARGV.size == 1
 
-Planka::CLI.run("planka-apply-label", output: options[:output]) do |client|
+Planka::CLI.run("planka apply-label", output: options[:output]) do |client|
   label = options.fetch(:label) { raise Planka::Error, "--label is required" }
   result = Planka::Labels.new(client).apply(card_id: Planka.card_id(ARGV.first), label:)
   Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.label_application(result))

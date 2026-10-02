@@ -14,9 +14,16 @@ gem install ./pkg/planka-cli-0.1.0.gem
 planka --help
 ```
 
-Its executable names include `planka` and every `planka-*` subcommand. The Node
-MCP launcher and any 1Password wrapper remain in Lucenta; they are repository
-integrations rather than Ruby gem commands.
+Use `planka <command>` as the primary interface. The gem also installs a
+`planka-<command>` executable for each operation so existing scripts can call
+commands directly. Both forms accept the same arguments and flags; their help
+and diagnostics use the primary command name. The Node MCP launcher and any
+1Password wrapper remain in Lucenta; they are repository integrations rather
+than Ruby gem commands.
+
+Run `planka --help` (or `planka -h`) to list commands, and
+`planka <command> --help` (or `-h`) for that command's usage and options.
+Help works without credentials. Use `planka --version` for the gem version.
 
 ## Configure
 

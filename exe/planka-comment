@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # Comments on a card as the signed-in user.
 #
-#   planka-comment <card> <text>     the card as an id or card URL
+#   planka comment <card> <text>     the card as an id or card URL
 #
 # Runs as the user configured in PLANKA_AGENT_EMAIL.
 require "planka"
@@ -9,7 +9,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka comment <card> <text> [--output human|json]")
-Planka::CLI.parse!(parser, "planka-comment")
+Planka::CLI.parse!(parser, "planka comment")
 abort parser.banner unless ARGV.size == 2
 
 begin
@@ -21,5 +21,5 @@ begin
     Planka::CLI.emit(result, output: options[:output], human: "Commented on card #{card_id}")
   end
 rescue Planka::Error, KeyError => e
-  abort "planka-comment: #{e.message}"
+  abort "planka comment: #{e.message}"
 end

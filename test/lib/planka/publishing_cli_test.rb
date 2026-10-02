@@ -393,7 +393,7 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_includes out, "Outcome unknown"
     assert_includes out, "read the board back before retrying"
     refute out.start_with?("{")
-    assert_includes err, "planka-create-spec"
+    assert_includes err, "planka create-spec:"
   end
 
   def test_an_ambiguous_label_name_is_rejected_but_an_id_still_works

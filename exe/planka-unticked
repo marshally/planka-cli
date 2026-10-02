@@ -1,13 +1,13 @@
 #!/usr/bin/env ruby
 # Prints a card's unticked acceptance criteria, one per line. Read-only.
 #
-#   planka-unticked <card>     an id or card URL
+#   planka unticked <card>     an id or card URL
 require "planka"
 require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka unticked <card> [--output human|json]")
-Planka::CLI.parse!(parser, "planka-unticked")
+Planka::CLI.parse!(parser, "planka unticked")
 abort parser.banner unless ARGV.size == 1
 
 begin
@@ -19,5 +19,5 @@ begin
     Planka::CLI.emit({ "cardId" => card_id, "criteria" => criteria }, output: options[:output], human: criteria.join("\n"))
   end
 rescue Planka::Error, KeyError => e
-  abort "planka-unticked: #{e.message}"
+  abort "planka unticked: #{e.message}"
 end

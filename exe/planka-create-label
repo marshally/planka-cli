@@ -17,9 +17,9 @@ parser = OptionParser.new do |o|
   o.on("--color COLOR", "label color (default berry-red)") { |v| options[:color] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-create-label")
+Planka::CLI.parse!(parser, "planka create-label")
 
-Planka::CLI.run("planka-create-label", output: options[:output]) do |client|
+Planka::CLI.run("planka create-label", output: options[:output]) do |client|
   name = options.fetch(:name) { raise Planka::Error, "--name is required" }
   board_id = Planka::CLI.board_id(options[:board])
   result = Planka::Labels.new(client).find_or_create(board_id:, name:, color: options[:color])

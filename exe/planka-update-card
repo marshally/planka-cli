@@ -17,11 +17,11 @@ parser = OptionParser.new do |o|
   o.on("--description-file F", "new description from a file, or - for stdin") { |v| options[:description] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-update-card")
+Planka::CLI.parse!(parser, "planka update-card")
 
 abort parser.banner unless ARGV.size == 1
 
-Planka::CLI.run("planka-update-card", output: options[:output]) do |client|
+Planka::CLI.run("planka update-card", output: options[:output]) do |client|
   attrs = {}
   attrs[:name] = options[:title] if options[:title]
   attrs[:description] = Planka::CLI.source(options[:description]) if options[:description]

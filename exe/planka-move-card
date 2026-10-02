@@ -17,11 +17,11 @@ parser = OptionParser.new do |o|
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-move-card")
+Planka::CLI.parse!(parser, "planka move-card")
 
 abort parser.banner unless ARGV.size == 1
 
-Planka::CLI.run("planka-move-card", output: options[:output]) do |client|
+Planka::CLI.run("planka move-card", output: options[:output]) do |client|
   card_id = Planka.card_id(ARGV.first)
   list = options.fetch(:list) { raise Planka::Error, "--list is required" }
   board_id = client.card(card_id).dig("item", "boardId")
