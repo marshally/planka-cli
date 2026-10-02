@@ -40,6 +40,8 @@ planka auth <operation> [flags]
 implemented.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
 [Workflow examples](#workflow-examples) for an end-to-end publishing sequence.
+See the [implementation handoff](docs/CLI_REDESIGN_IMPLEMENTATION.md) for the
+first implementation task, acceptance criteria, and open decisions.
 
 Uppercase references such as `BOARD`, `LIST`, and `CARD` are placeholders for
 IDs, supported resource URLs, or exact names within a known parent scope.

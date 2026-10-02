@@ -6,6 +6,9 @@ uses the flat commands documented in README.md. Examples below are target
 syntax, not a claim that every command is implemented or supported by every
 Planka release.
 
+The [implementation handoff](docs/CLI_REDESIGN_IMPLEMENTATION.md) records code
+entry points, staged implementation, acceptance criteria, and open decisions.
+
 ## Command grammar
 
 Use a kubectl-like verb/resource grammar:
