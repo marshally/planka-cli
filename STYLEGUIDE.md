@@ -170,6 +170,29 @@ login.
 An empty queue is a successful workflow result, not an API failure. JSON output
 must distinguish an empty result from a failed operation.
 
+### Canonical JSON envelope
+
+Canonical commands use a shared envelope with `data`, `meta`, and `error`:
+
+```json
+{
+  "data": {"id": "123", "name": "Fix login"},
+  "meta": {},
+  "error": null
+}
+```
+
+Resource reads put the resource object in `data`. Collection reads put an array
+in `data`, including `[]` for an empty collection. `meta` is an object for command
+metadata; successful mutations include `meta.changed` to distinguish a change
+from an already-satisfied operation. Successful commands set `error` to null.
+Failures use a structured `error`, including recovery information for incomplete
+writes. Exact error/recovery fields remain to be settled before implementation.
+
+Workflow result schemas must fit this envelope and be documented individually.
+Legacy commands retain their existing JSON shapes; this envelope applies to the
+new canonical commands rather than retroactively wrapping legacy output.
+
 ## Mutation and recovery behavior
 
 Make reads strictly read-only. `get`, `describe`, help, and workflow inspection
