@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# Applies a label to a card, by label id or exact label name resolved within the
+# card's board. Existing labels are preserved and re-applying is safe.
+#
+#   planka apply-label <card> --label ID|NAME
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka apply-label <card> --label ID|NAME"
+  o.on("--label LABEL", "label id or exact name") { |v| options[:label] = v }
+end
+Planka::CLI.parse!(parser, "planka-apply-label")
+
+abort "usage: planka apply-label <card> --label ID|NAME" unless ARGV.size == 1
+
+Planka::CLI.run("planka-apply-label") do |client|
+  label = options.fetch(:label) { raise Planka::Error, "--label is required" }
+  Planka::CLI.emit(Planka::Labels.new(client).apply(card_id: Planka.card_id(ARGV.first), label:))
+end

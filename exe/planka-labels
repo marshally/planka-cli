@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+# Lists a board's labels with their ids, names, colors and positions, read from
+# the board snapshot (the authoritative source for labels). Read-only.
+#
+#   planka labels [--board ID]     board defaults to PLANKA_BOARD_ID
+require "planka"
+require "planka/client"
+require "optparse"
+
+options = {}
+parser = OptionParser.new do |o|
+  o.banner = "usage: planka labels [--board ID]"
+  o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
+end
+Planka::CLI.parse!(parser, "planka-labels")
+
+Planka::CLI.run("planka-labels") do |client|
+  board_id = Planka::CLI.board_id(options[:board])
+  Planka::CLI.emit("boardId" => board_id, "labels" => Planka::Labels.new(client).list(board_id))
+end

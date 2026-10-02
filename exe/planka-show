@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+# Reads one card as a single JSON document: description, board and list
+# identity, labels, members, named task lists with their tasks, linked blockers
+# and comments. Read-only.
+#
+#   planka show <card>     an id or card URL
+require "planka"
+require "planka/client"
+
+abort "usage: planka show <card>" unless ARGV.size == 1
+
+Planka::CLI.run("planka-show") do |client|
+  Planka::CLI.emit(Planka::CardDetail.new(client).for(Planka.card_id(ARGV.first)))
+end
