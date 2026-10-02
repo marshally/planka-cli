@@ -170,6 +170,23 @@ login.
 An empty queue is a successful workflow result, not an API failure. JSON output
 must distinguish an empty result from a failed operation.
 
+### Exit codes
+
+Canonical commands use these exit codes:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success, including empty collections/queues and already-satisfied relationships. |
+| `2` | Invalid invocation or local input: unknown commands/flags, incorrect arguments, invalid values, unreadable input files, or malformed input documents. |
+| `1` | Other failures, including configuration, authentication, authorization, missing individual resources, API/network failures, incomplete writes, and unknown write outcomes. |
+
+Use JSON `error.code` for finer failure distinctions rather than assigning a
+separate process exit code to every error category. Missing required command
+arguments are invalid invocation; missing credentials or unresolved required
+configuration are operational failures. Ambiguous or absent names discovered
+through API lookup are operational failures, rather than local syntax errors.
+Legacy commands and direct executables retain their existing exit behavior.
+
 ### Canonical JSON envelope
 
 Canonical commands use a shared envelope with `data`, `meta`, and `error`:
