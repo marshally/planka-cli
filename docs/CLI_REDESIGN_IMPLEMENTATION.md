@@ -139,9 +139,14 @@ remains unchanged. See the style guide's Canonical JSON envelope section.
 Per-command schemas, error codes, and recovery actions are implementation
 deliverables governed by these rules, rather than an open envelope decision.
 
+Exit codes are also settled: canonical commands return 0 for success, 2 for
+invalid invocation/local input, and 1 for other failures, including incomplete
+and unknown write outcomes. Detailed failure categories use JSON `error.code`.
+Legacy exit behavior remains unchanged. See the style guide's Exit codes section
+for category boundaries.
+
 | Decision | Required outcome |
 | --- | --- |
-| Exit codes | Specify whether failures share a generic nonzero code or have stable categories; preserve existing zero/nonzero behavior for legacy callers. |
 | Context storage | Choose location, format/version, permissions, precedence details, and handling of stale parent defaults. |
 | Authentication | Choose credential/token storage, unattended login inputs, server binding, expiration, logout, and redaction behavior. |
 | Pagination/filtering | Establish actual API pagination and supported filters; define completeness, ordering, and user-facing flags. |
