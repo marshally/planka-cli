@@ -113,6 +113,10 @@ their destination unless `--position` is supplied. `--description-file -` reads
 stdin. Deletes require an explicit target; supported combinations of verbs and
 resources depend on the Planka API.
 
+An explicit `delete RESOURCE REF` executes without prompts or a `--yes` flag,
+with identical behavior in terminals and scripts. Cascade policy is still under
+discussion.
+
 ### Attach and detach relationships
 
 ```sh
