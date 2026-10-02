@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+Added `planka prime` (also `planka-prime`) to print a concise, built-in agent
+workflow guide without credentials or API access. Supports `--output json`.
+
 Standardized help and diagnostic names on `planka <command>` while preserving
 the direct `planka-*` executables. All commands list and support `-h`/`--help`
 without credentials; top-level help points to command-specific help.

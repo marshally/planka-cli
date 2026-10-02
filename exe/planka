@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require "planka-cli"
 
-commands = %w[link next-card branch-name claim comment unticked spec-sweep loop-lock
+commands = %w[prime link next-card branch-name claim comment unticked spec-sweep loop-lock
   snapshot show create-list create-spec create-ticket update-card move-card labels
   create-label apply-label create-task-list rename-task-list]
 if ARGV == ["--version"]

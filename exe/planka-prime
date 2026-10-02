@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+# Prints built-in agent instructions without connecting to Planka.
+require "planka"
+require "planka/prime"
+
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka prime [--output human|json]")
+Planka::CLI.parse!(parser, "planka prime")
+abort parser.banner unless ARGV.empty?
+
+Planka::CLI.emit({ "instructions" => Planka::Prime::INSTRUCTIONS },
+  output: options[:output], human: Planka::Prime::INSTRUCTIONS)

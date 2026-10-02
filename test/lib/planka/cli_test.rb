@@ -9,7 +9,7 @@ class Planka::CLITest < Minitest::Test
   include PlankaTestHelper
 
   ROOT = File.expand_path("../../..", __dir__)
-  COMMANDS = %w[link next-card branch-name claim comment unticked spec-sweep loop-lock
+  COMMANDS = %w[prime link next-card branch-name claim comment unticked spec-sweep loop-lock
     snapshot show create-list create-spec create-ticket update-card move-card labels
     create-label apply-label create-task-list rename-task-list].freeze
 
@@ -63,6 +63,60 @@ class Planka::CLITest < Minitest::Test
     short_out, short_err, short_status = run_cli("-h")
     assert short_status.success?, short_err
     assert_equal out, short_out
+  end
+
+  def test_prime_teaches_the_agent_workflow_without_credentials_or_checkout
+    out, err, status = run_cli("prime")
+    assert status.success?, err
+    assert_empty err
+    assert_match(/\A# planka-cli agent guide\n/, out)
+    assert_includes out, "--output json"
+    assert_includes out, "PLANKA_BASE_URL"
+    assert_includes out, "PLANKA_AGENT_EMAIL"
+    assert_includes out, "PLANKA_AGENT_PASSWORD"
+    assert_includes out, "PLANKA_BOARD_ID"
+    assert_includes out, "planka next-card"
+    assert_includes out, "planka show CARD"
+    assert_includes out, "planka claim CARD"
+    assert_includes out, "planka link BLOCKED BLOCKER"
+    assert_includes out, "planka create-ticket --card CARD"
+    assert_includes out, "read the board back before retrying"
+    assert_includes out, "planka <command> --help"
+    assert_operator out.split.size, :<=, 500, "primer should fit a small agent context budget"
+  end
+
+  def test_prime_json_contains_the_same_instructions
+    human, err, status = run_cli("prime")
+    assert status.success?, err
+
+    out, err, status = run_cli("prime", "--output", "json")
+    assert status.success?, err
+    assert_empty err
+    assert_equal({ "instructions" => human }, JSON.parse(out))
+  end
+
+  def test_prime_rejects_unexpected_positional_arguments
+    out, err, status = run_cli("prime", "extra")
+    refute status.success?
+    assert_empty out
+    assert_includes err, "usage: planka prime [--output human|json]"
+  end
+
+  def test_direct_prime_is_independent_of_connection_settings_and_keeps_credentials_private
+    expected, err, status = run_cli("prime", "--output", "json")
+    assert status.success?, err
+    out, err, status = run_cli("--output", "json", executable: "planka-prime", env: {
+      "PLANKA_BASE_URL" => "http://127.0.0.1:1",
+      "PLANKA_AGENT_EMAIL" => "private-agent@example.invalid",
+      "PLANKA_AGENT_PASSWORD" => "private-prime-test-password",
+      "PLANKA_BOARD_ID" => "private-board-id",
+    })
+    assert status.success?, err
+    assert_empty err
+    assert_equal expected, out
+    refute_includes out, "private-prime-test-password"
+    refute_includes out, "private-agent@example.invalid"
+    refute_includes out, "private-board-id"
   end
 
   def test_unknown_command_and_missing_credentials_fail_clearly
