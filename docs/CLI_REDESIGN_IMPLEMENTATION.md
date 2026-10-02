@@ -56,8 +56,8 @@ Before changing implementation, record the first leaf's JSON schema and successf
 human output contract. Canonical output uses the approved `data`/`meta`/`error`
 envelope: put the existing card-detail object in `data`, with `meta: {}` and
 `error: null` on success. Preserve the unwrapped legacy `show` JSON shape and test
-the two contracts independently. Settle the error/recovery fields below before
-implementing failure output.
+the two contracts independently. Use the approved error/recovery rules in the
+style guide and document the leaf's applicable error codes.
 
 ### Acceptance criteria
 
@@ -130,14 +130,17 @@ Do not rewrite retry behavior merely as a side effect of reorganizing commands.
 These choices are not settled by the example invocations. Resolve the relevant
 ones in the implementation slice before claiming its contract is complete.
 
-JSON envelope direction is settled: canonical commands use `data`, `meta`, and
-`error`; resource collections use arrays, successful mutations report
-`meta.changed`, and legacy JSON remains unchanged. See the style guide's
-Canonical JSON envelope section. Error/recovery field details remain open.
+JSON envelope and error/recovery rules are settled. Canonical commands always
+include `data`, `meta`, and `error`; resource collections use arrays. Errors have
+stable codes and readable messages, with recovery actions and known resource
+references when applicable. Failures preserve known partial data or null;
+mutation `meta.changed` is true, false, or null for an unknown effect. Legacy JSON
+remains unchanged. See the style guide's Canonical JSON envelope section.
+Per-command schemas, error codes, and recovery actions are implementation
+deliverables governed by these rules, rather than an open envelope decision.
 
 | Decision | Required outcome |
 | --- | --- |
-| JSON schema details | Shared envelope approved; finish error/recovery fields, relation results, and per-command schemas. |
 | Exit codes | Specify whether failures share a generic nonzero code or have stable categories; preserve existing zero/nonzero behavior for legacy callers. |
 | Context storage | Choose location, format/version, permissions, precedence details, and handling of stale parent defaults. |
 | Authentication | Choose credential/token storage, unattended login inputs, server binding, expiration, logout, and redaction behavior. |
