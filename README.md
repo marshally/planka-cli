@@ -32,7 +32,6 @@ The target administration interface uses kubectl-style verb/resource commands:
 ```text
 planka <verb> <resource> [reference] [flags]
 planka workflow <operation> [arguments] [flags]
-planka config <operation> [flags]
 planka auth <operation> [flags]
 ```
 
@@ -45,8 +44,9 @@ first implementation task, acceptance criteria, and open decisions.
 
 Uppercase references such as `BOARD`, `LIST`, and `CARD` are placeholders for
 IDs, supported resource URLs, or exact names within a known parent scope.
-Singular and plural resource spellings are aliases. Explicit flags override
-environment settings and saved context defaults; ambiguous names are rejected.
+Singular and plural resource spellings are aliases. Each project supplies its
+own environment settings; missing required variables fail before network access.
+Explicit parent flags select scope; ambiguous names are rejected.
 
 ### Read resources
 
@@ -126,22 +126,24 @@ duplicate. `claim` adds membership and moves a card into progress;
 `claim-status` only reports existing claims. `complete-specs` comments and moves
 eligible specs to done.
 
-### Contexts and authentication
+### Environment and authentication
+
+Each project supplies its own connection, credential, and scope environment.
+There are no saved contexts or configuration files. Missing or empty required
+variables cause an immediate error before network access. Help, version, and the
+built-in guide work without connection settings.
+
+Use the same `PLANKA_*` names with project-specific values, as listed under
+[Current interface](#current-interface). Required scope depends on the command
+and its explicit references. Authentication details remain under discussion:
 
 ```sh
-planka config set-context home --server https://planka.example.com \
-  --project PROJECT --board BOARD
-planka config get-contexts
-planka config use-context home
-planka get cards --context home
-planka --context home get cards
 planka auth login
 planka auth status
 planka auth logout
 ```
 
-Contexts select a server and default scope. `--context` overrides the selected
-context for one invocation. Authentication is scoped to the selected server.
+Authentication is scoped to the server selected by the project's environment.
 
 ### Output, help, and version
 

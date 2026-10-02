@@ -6,7 +6,7 @@ The goal is a general Planka administration CLI with a kubectl-like
 `planka <verb> <resource> [reference] [flags]` interface. Convention-based agent
 operations live under `planka workflow`.
 
-This PR changes documentation only. No nested command dispatcher, saved contexts,
+This PR changes documentation only. No nested command dispatcher,
 new authentication interface, or additional administration operations have been
 implemented. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the target.
@@ -64,8 +64,8 @@ style guide and document the leaf's applicable error codes.
 - `planka describe card CARD` accepts current card IDs and supported card URLs,
   uses the existing environment/session mechanism, and reads the correct instance.
 - It supports `--output human|json`, `-o json`, and `-h`/`--help`. Common output
-  flags work before or after the command path. Do not advertise `--context` until
-  contexts exist.
+  flags work before or after the command path. Do not add context/config flags.
+  Missing or empty required environment variables fail before network access.
 - Human output includes the current useful card details. JSON mode emits one
   documented document on stdout, with diagnostics only on stderr.
 - Root and group help list implemented canonical commands with descriptions.
@@ -100,7 +100,7 @@ leave them out of the package. Report local versus CI verification separately.
 ### Boundary
 
 The first task adds no new deletion, relationship removal, user administration,
-saved credentials, contexts, pagination, declarative apply, or API-version support.
+saved credentials, pagination, declarative apply, or API-version support.
 Those are separate capabilities with their own API contracts and acceptance
 criteria. Do not add command placeholders that claim these features work.
 
@@ -115,8 +115,9 @@ criteria. Do not add command placeholders that claim these features work.
 3. Add new administration capabilities in independently reviewable slices:
    collection reads, deletion, relationship removal, and project/board/user
    management only where the supported API contract is established.
-4. Add contexts and authentication after their storage and lifecycle decisions
-   are recorded. Preserve environment-based unattended use.
+4. Implement authentication after its lifecycle decisions are recorded. Use the
+   project-supplied environment and fail fast on missing required variables; do
+   not introduce persisted contexts or configuration fallback.
 5. Reconcile README, built-in workflow guidance, executable packaging, and
    release notes with implemented behavior. Deprecate legacy entry points only
    under a separately documented compatibility policy.
@@ -145,9 +146,17 @@ and unknown write outcomes. Detailed failure categories use JSON `error.code`.
 Legacy exit behavior remains unchanged. See the style guide's Exit codes section
 for category boundaries.
 
+Configuration source is settled: each project supplies its own process
+environment. Missing or empty required variables fail before network access.
+Saved contexts, user-level config files, and fallback to another project are
+excluded. Projects use the same `PLANKA_*` names with their own values; there are
+no variable-name mappings or project-specific prefixes. Scope defaults are needed
+only when the requested operation requires them and explicit references/parent
+flags do not supply scope. Help, version, and the built-in guide remain
+credential-free.
+
 | Decision | Required outcome |
 | --- | --- |
-| Context storage | Choose location, format/version, permissions, precedence details, and handling of stale parent defaults. |
 | Authentication | Choose credential/token storage, unattended login inputs, server binding, expiration, logout, and redaction behavior. |
 | Pagination/filtering | Establish actual API pagination and supported filters; define completeness, ordering, and user-facing flags. |
 | Supported versions | State tested Planka editions/versions and the supported verb/resource matrix. |

@@ -16,7 +16,6 @@ Use a kubectl-like verb/resource grammar:
 ```text
 planka <verb> <resource> [reference] [flags]
 planka workflow <operation> [arguments] [flags]
-planka config <operation> [flags]
 planka auth <operation> [flags]
 ```
 
@@ -90,8 +89,8 @@ planka delete comment COMMENT
   matches and report candidate IDs. Never select the first match arbitrarily.
 - Validate that explicit parents agree with each other and with a referenced
   resource. Explicit scope mismatches are errors.
-- An ID or URL identifying a resource determines its actual parent. A default
-  context board must not redirect an explicit card reference to another board.
+- An ID or URL identifying a resource determines its actual parent. An environment-default
+  board must not redirect an explicit card reference to another board.
 - Require sufficient scope for collection reads and creates; do not silently
   aggregate all projects or boards. Operations intentionally spanning boards,
   such as workflow claim status, must document that scope.
@@ -104,7 +103,8 @@ Retain API-specific terms only when they help users understand the operation.
 
 Use consistent long flags across resources. Reserve `-h` for `--help` and `-o`
 for `--output`. Accept common flags after the executable or command path, so
-`planka --context home get cards` and `planka get cards --context home` agree.
+`planka -o json get cards --board BOARD` and
+`planka get cards --board BOARD -o json` agree.
 
 Descriptions accept `--description-file PATH`; criteria accept
 `--criteria-file PATH` as a JSON array of strings. Both accept `-` for stdin.
@@ -121,26 +121,40 @@ overrides that behavior where the API supports positioning.
 
 ## Configuration and authentication
 
-Provide named contexts for the server and default project/board scope:
+Each project supplies connection settings, credentials, and its own scope
+defaults through the process environment. There is no saved context, current
+context, user-level config file, `--context`, `--config`, or `planka config`
+command. Do not reuse configuration from another project or silently fall back
+to a different server or board.
+
+Fail fast when required environment variables are missing or empty, before any
+network request. Identify missing variable names without printing secret values.
+Validate the complete required environment for the requested operation before
+opening a session. Help, version, and the built-in workflow guide remain exempt.
+Scope requirements depend on the operation: an explicit card reference determines
+its parent; collection reads and creates need their documented parent scope.
+Explicit parent flags may select scope but must not bypass required connection
+and credential environment checks.
+
+Use the same `PLANKA_*` variable names across projects, with project-specific
+values supplied by the caller. Preserve `PLANKA_BASE_URL`, `PLANKA_AGENT_EMAIL`,
+`PLANKA_AGENT_PASSWORD`, `PLANKA_BOARD_ID`, and `PLANKA_BRANCH_PREFIX`. Do not
+introduce variable-name mappings or per-project prefixes. Connection and
+authentication settings are required for API operations; scope defaults are
+required only when the operation needs that scope and no explicit parent or
+resource reference supplies it. An optional setting may be absent; do not invent
+a required board for a command that derives it from a card.
+
+Authentication command details remain to be settled independently:
 
 ```sh
-planka config set-context home --server https://planka.example.com --project PROJECT --board BOARD
-planka config get-contexts
-planka config use-context home
-planka get cards --context home
 planka auth login
 planka auth status
 planka auth logout
 ```
 
-Resolve settings in this order: explicit flags, process environment, selected
-context, documented built-in defaults. `--context` selects a context without
-changing the saved current context. Preserve the existing `PLANKA_*` environment
-interface during migration. Workflow-specific defaults, such as a branch prefix,
-must not affect ordinary administration commands.
-
-Help and version output require no credentials or network. Configuration
-inspection must not reveal passwords or tokens. Authentication is scoped to the
+Help and version output require no credentials or network. Environment
+diagnostics must not reveal passwords or tokens. Authentication is scoped to the
 selected server; never send credentials to a different server because a resource
 URL was supplied. Do not read credentials from another checkout or invoke a
 credential wrapper implicitly. Login must support unattended callers without
@@ -303,7 +317,7 @@ planka create card --help
 planka workflow --help
 ```
 
-Root help groups administration, workflows, configuration, and authentication.
+Root help groups administration, workflows, and authentication.
 Group help lists supported resources or operations with short descriptions.
 Leaf help includes usage, required scope, arguments, defaults, flags, examples,
 output behavior, and mutation/recovery behavior. Render the canonical command
