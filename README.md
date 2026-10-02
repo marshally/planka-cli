@@ -25,7 +25,7 @@ Run `planka --help` (or `planka -h`) to list commands, and
 `planka <command> --help` (or `-h`) for that command's usage and options.
 Help works without credentials. Use `planka --version` for the gem version.
 
-## Usage
+## Usage — planned interface
 
 The target administration interface uses kubectl-style verb/resource commands:
 
@@ -38,9 +38,8 @@ planka auth <operation> [flags]
 
 **The invocations below describe the proposed interface, which is not yet
 implemented.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
-mapping. The [Commands](#commands) and
-[Publishing and reading specs and tickets](#publishing-and-reading-specs-and-tickets)
-sections document the currently available commands.
+mapping. See [Current interface](#current-interface) for working commands and
+[Workflow examples](#workflow-examples) for an end-to-end publishing sequence.
 
 Uppercase references such as `BOARD`, `LIST`, and `CARD` are placeholders for
 IDs, supported resource URLs, or exact names within a known parent scope.
@@ -160,7 +159,13 @@ on stdout; diagnostics go to stderr and failures exit nonzero. Help and version
 require no credentials or network. Unknown write outcomes must be reconciled
 before retrying; incomplete workflows retain recovery state in JSON output.
 
-## Configure
+## Current interface
+
+The installed CLI currently uses the flat commands below. Run
+`planka <command> --help` for full arguments and options. Each operation also
+has a direct `planka-<command>` executable.
+
+### Configuration
 
 Supply resolved credentials in the process environment:
 
@@ -177,88 +182,52 @@ inspect all boards visible to the signed-in user. No command reads `.mcp.json`,
 looks in another checkout for secrets, or invokes 1Password automatically.
 For `op://` references, launch the command through your own `op run` setup.
 
-## Commands
+### Working commands
 
-Run `planka prime` at the start of an agent session or after context compaction
-to print a succinct guide to connection settings, JSON output, ticket workflows,
-publishing, and failed-write recovery. It uses built-in instructions and works
-without credentials, a checkout, or a live Planka instance. `planka-prime` is the
-equivalent direct executable. `planka prime --output json` returns the guide as
-`{"instructions":"..."}`.
+All commands support `--output json`; the default is human-readable output.
+Diagnostics go to stderr and failures exit nonzero. Cards accept numeric IDs or
+card URLs. List and label names must match exactly within their board; ambiguous
+names require IDs.
 
-```sh
-planka prime                      # concise agent workflow instructions
-planka next-card                  # top unclaimed, unblocked ticket by position
-planka next-card feature:search   # earliest takeable ticket for a feature
-planka next-card effort:search    # wayfinder map and frontier
-planka branch-name CARD           # branch slug; fits 63 chars including prefix
-planka unticked CARD              # incomplete acceptance criteria
-planka loop-lock                  # signed-in user's open claim without PR handoff
-planka claim CARD                 # add membership and move to in-progress
-planka comment CARD 'Branch: card/example'
-planka link BLOCKED BLOCKER [BLOCKER...]
-planka spec-sweep                 # comment and move finished specs to done
-```
+| Invocation | Purpose |
+| --- | --- |
+| `planka prime` | Print built-in agent guidance without credentials or network. |
+| `planka snapshot [--board ID] [--list ID_OR_NAME]` | Read a board or one list's cards. |
+| `planka show CARD` | Read a card's description, labels, tasks, blockers, and comments. |
+| `planka labels [--board ID]` | Read board labels. |
+| `planka create-list --name NAME [--board ID]` | Create a board column. |
+| `planka create-spec --list ID_OR_NAME --title TITLE` | Create a spec; optionally supply `--description-file`. |
+| `planka create-ticket --list ID_OR_NAME --title TITLE --criteria-file FILE` | Create a ticket with acceptance criteria. |
+| `planka update-card CARD [--title TITLE] [--description-file FILE]` | Update a card. |
+| `planka move-card CARD --list ID_OR_NAME` | Move a card. |
+| `planka create-label --name NAME [--board ID] [--color COLOR]` | Create or reuse a label. |
+| `planka apply-label CARD --label ID_OR_NAME` | Attach a label. |
+| `planka create-task-list CARD --name NAME` | Create a task list. |
+| `planka rename-task-list --id TASK_LIST_ID --name NAME` | Rename a task list. |
+| `planka next-card [FEATURE_OR_EFFORT_LABEL]` | Select takeable work or report an effort frontier. |
+| `planka branch-name CARD` | Generate a branch slug. |
+| `planka unticked CARD` | Read incomplete acceptance criteria. |
+| `planka loop-lock` | Report the signed-in user's open claim without a PR handoff. |
+| `planka claim CARD` | Add membership and move a card into progress. |
+| `planka comment CARD TEXT` | Post a comment. |
+| `planka link BLOCKED BLOCKER [BLOCKER...]` | Record blockers. |
+| `planka spec-sweep` | Comment and move finished specs to done. |
 
-Cards may be numeric ids or card URLs. `claim`, `comment`, `link` and
-`spec-sweep` write to Planka. `claim` and `link` may be safely repeated.
 `next-card` uses the authenticated `gh` CLI when a blocker has a GitHub PR
 handoff. `Branch:` and `PR:` lines in comments determine parent branches.
+`prime --output json` returns the guide as `{"instructions":"..."}`.
 
-Every command prints a concise human-readable result by default. Add
-`--output json` for a single structured JSON document intended for agents and
-scripts. The flag works with both command styles:
+## Workflow examples
 
-```sh
-planka show CARD --output json
-planka-show CARD --output json
-```
+These examples use the current interface. Before publishing work, create the
+conventional `ready-for-agent`, `in-progress`, and `done` columns. A spec is a
+project card without acceptance criteria; a ticket has one `Acceptance criteria`
+task list, which lets the picker distinguish them.
 
-Diagnostics go to stderr and failures exit nonzero. Partial creates and writes
-whose outcome is unknown retain recovery state and reconciliation instructions
-in JSON mode.
+Descriptions and criteria accept file paths or `-` for stdin, preserving
+newlines, quotes, and Unicode. Criteria files contain a JSON array of strings.
 
-## Publishing and reading specs and tickets
-
-These commands create, read back and verify specs and tickets. Their default
-output is formatted for a person; use `--output json` for automation. `--help`
-needs no credentials.
-
-```sh
-planka snapshot [--board ID] [--list ID|NAME]   # whole board, or one list's cards
-planka show CARD                                 # one card: description, labels, tasks, blockers, comments
-planka create-list   --name NAME [--board ID] [--type active|closed] [--position N]
-planka create-spec   --list ID|NAME --title T [--description-file F|-] [--position N]
-planka create-ticket --list ID|NAME --title T --criteria-file F [--description-file F|-] [--position N]
-planka create-ticket --card CARD --criteria-file F        # resume a ticket whose creation failed
-planka update-card   CARD [--title T] [--description-file F|-]
-planka move-card     CARD --list ID|NAME [--position N]
-planka labels        [--board ID]
-planka create-label  --name NAME [--board ID] [--color COLOR]
-planka apply-label   CARD --label ID|NAME
-planka create-task-list CARD --name NAME [--position N]
-planka rename-task-list --id TASK_LIST_ID --name NAME
-```
-
-`create-list` adds a column to a board (a fresh board has none); create the
-conventional `ready-for-agent`, `in-progress` and `done` columns before adding
-cards. A spec is a project card with no acceptance criteria; a ticket is a
-project card with one `Acceptance criteria` task list, so the picker keeps them
-apart. Lists
-and labels may be given by id or exact name; an ambiguous name is rejected rather
-than guessed. A board can carry two labels with the same name (for example two
-`enhancement` labels); apply those by id, since the name is ambiguous. `--description-file` and `--criteria-file` take a path or `-` for
-stdin, so descriptions and criteria keep their newlines, quotes and Unicode
-without shell quoting. `--criteria-file` is a JSON array of strings.
-
-`create-spec`, `create-ticket`, `create-label`, `apply-label` and `move-card`
-write to Planka; `snapshot`, `show` and `labels` are read-only. A create is never
-retried once its outcome is unknown: in JSON mode, a timeout returns what it
-created and a `reconcile` hint rather than risking a duplicate. `create-label`
-reuses a label with
-the same name, `apply-label` is safe to repeat, and `create-ticket --card` fills
-only the criteria still missing, so an interrupted ticket is finished, not
-duplicated.
+### Publish a dependency-ordered batch
 
 A dependency-ordered batch is a scripted sequence of these primitives: create
 each blocker before the cards it blocks, append new work below the queue
@@ -278,6 +247,19 @@ for c in "$spec" "$first" "$second"; do planka apply-label "$c" --label "$featur
 planka link "$second" "$first"
 planka move-card "$spec" --list in-progress
 ```
+
+### Recover an interrupted write
+
+Do not retry a create when its outcome is unknown. Read the board back first;
+JSON failure output retains created resources and reconciliation instructions.
+If a ticket was created but some criteria are missing, resume it with:
+
+```sh
+planka create-ticket --card CARD --criteria-file criteria.json --output json
+```
+
+This adds only missing criteria. `claim`, `link`, and `apply-label` may be safely
+repeated, and `create-label` reuses an existing label with the same name.
 
 ## Library
 
