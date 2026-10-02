@@ -51,6 +51,29 @@ Reserve `apply -f FILE` for a future declarative interface with documented
 identity, reconciliation, and deletion semantics. Attaching labels uses `add`,
 not `apply`.
 
+### Collection completeness and pagination
+
+Collection reads return the complete scoped collection by default. Follow API
+pages internally where paging is supported; verify actual endpoint behavior
+before claiming completeness. Do not expose page/cursor controls as the primary
+CLI contract or require `--all` to fetch the complete result.
+
+Offer `--limit N` as an optional positive-integer result cap. Invalid limits are
+local input errors. Successful limited reads may return fewer than N items.
+Collection JSON includes `meta.complete`: true when the entire matching
+collection was returned, false when results are truncated or retrieval fails.
+Reaching the limit does not itself prove truncation; establish whether more
+matching results exist before reporting completeness. When `--limit` truncates
+human output, include a readable truncation notice. Explicitly limited results
+are successful; a page-fetch failure is not.
+
+On page-fetch failure, exit 1, retain collected results in `data`, set
+`meta.complete` to false, and emit a structured error. Never silently return a
+successful partial collection. Pagination does not promise a consistent snapshot
+if resources change while pages are fetched; document endpoint-specific ordering
+and consistency limits. Filtering and limit application order remain to be
+settled with the filtering contract.
+
 ```sh
 planka get projects
 planka get boards --project PROJECT

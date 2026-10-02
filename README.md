@@ -65,6 +65,15 @@ planka describe card CARD
 `get` lists a collection or reads one resource concisely. `describe` includes
 related information. Both are read-only.
 
+Collection reads return all scoped results by default, following supported API
+pages internally. Use `--limit N` to cap results; JSON `meta.complete` identifies
+complete versus truncated results. A page-fetch failure exits nonzero and retains
+collected results with an error rather than reporting successful completion.
+
+```sh
+planka get cards --board BOARD --limit 20 -o json
+```
+
 ### Create, update, move, and delete resources
 
 ```sh
