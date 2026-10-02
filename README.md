@@ -1,7 +1,10 @@
 # planka-cli
 
 Ruby CLI and library for Planka board workflows, extracted from Lucenta.
-Requires Ruby 3.2 or newer. Board workflows use the conventions
+Requires Ruby 3.2 or newer. The redesigned administration interface targets
+Planka 2.0.0 and higher; Planka 1.x is outside its scope. Version-specific
+capabilities require API verification as implementation proceeds.
+Board workflows use the conventions
 `ready-for-agent`, `in-progress`, `done`, `Acceptance criteria`, `Blocked by`,
 `feature:<slug>` and `effort:<slug>`. Linked tasks represent blocking edges.
 

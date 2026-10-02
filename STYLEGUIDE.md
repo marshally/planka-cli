@@ -152,6 +152,20 @@ Use `--name` for the displayed name of a resource, including cards, specs, and
 tickets. Use `--text` for comments and `--description-file` for descriptions.
 Retain API-specific terms only when they help users understand the operation.
 
+## Supported Planka versions
+
+The administration CLI targets Planka 2.0.0 and higher. Planka 1.x is outside
+scope because the redesign targets the version-2 API contract; do not add legacy
+API adapters or silently fall back to version-1 behavior.
+
+The minimum version is a support boundary, not proof that all commands work on
+every later release or edition. Record verified edition/version and supported
+verb/resource combinations as capabilities are implemented. Future major
+versions require API verification rather than an automatic compatibility claim.
+Known unsupported versions or capabilities must fail clearly. Establish a
+reliable version/capability check from the actual API contract; do not invent a
+version endpoint or treat every API failure as proof of an old server.
+
 ## Flags and input
 
 Use consistent long flags across resources. Reserve `-h` for `--help` and `-o`
