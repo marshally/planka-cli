@@ -44,7 +44,15 @@ For `op://` references, launch the command through your own `op run` setup.
 
 ## Commands
 
+Run `planka prime` at the start of an agent session or after context compaction
+to print a succinct guide to connection settings, JSON output, ticket workflows,
+publishing, and failed-write recovery. It uses built-in instructions and works
+without credentials, a checkout, or a live Planka instance. `planka-prime` is the
+equivalent direct executable. `planka prime --output json` returns the guide as
+`{"instructions":"..."}`.
+
 ```sh
+planka prime                      # concise agent workflow instructions
 planka next-card                  # top unclaimed, unblocked ticket by position
 planka next-card feature:search   # earliest takeable ticket for a feature
 planka next-card effort:search    # wayfinder map and frontier
