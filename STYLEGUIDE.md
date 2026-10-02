@@ -186,8 +186,39 @@ Resource reads put the resource object in `data`. Collection reads put an array
 in `data`, including `[]` for an empty collection. `meta` is an object for command
 metadata; successful mutations include `meta.changed` to distinguish a change
 from an already-satisfied operation. Successful commands set `error` to null.
-Failures use a structured `error`, including recovery information for incomplete
-writes. Exact error/recovery fields remain to be settled before implementation.
+Always include all three top-level fields, on success and failure. Failures retain
+known partial results in `data`; use null when there are no known results.
+`meta.changed` is true when an effect is known to have occurred, false when the
+operation is known to have made no change, and null when the effect is unknown.
+Do not infer false from a failed request. The overall outcome of a multi-step
+workflow is distinct from whether any step changed data.
+
+On failure, `error` is an object containing a stable machine-readable `code` and
+a human-readable `message`. When recovery applies, it also contains `recovery`,
+an object with an `action` and a `resources` array of known resource references.
+Each reference identifies its resource `type` and `id`; never invent an ID after
+an uncertain create. The array may be empty when the affected resource is unknown.
+Recovery actions and per-command partial-result shapes must be documented.
+
+```json
+{
+  "data": {"card": {"id": "123", "name": "Fix login"}},
+  "meta": {"changed": true},
+  "error": {
+    "code": "partial_failure",
+    "message": "Ticket created, but acceptance criteria are incomplete",
+    "recovery": {
+      "action": "resume-ticket",
+      "resources": [{"type": "card", "id": "123"}]
+    }
+  }
+}
+```
+
+Error codes are stable identifiers, not text to parse from `message`. An unknown
+write outcome must expose that uncertainty and readback recovery rather than
+suggesting an unconditional retry. Required per-command schemas and recovery
+actions are specified as each capability is implemented under this envelope.
 
 Workflow result schemas must fit this envelope and be documented individually.
 Legacy commands retain their existing JSON shapes; this envelope applies to the
