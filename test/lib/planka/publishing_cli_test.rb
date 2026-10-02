@@ -169,6 +169,15 @@ class Planka::PublishingCLITest < Minitest::Test
     assert by_id["created"], "applying a duplicate-named label by id still works"
   end
 
+  def test_create_spec_and_ticket_without_a_description
+    spec = ok_json("create-spec", "--list", "ready-for-agent", "--title", "No-description spec")
+    assert spec["card"]["id"], "a spec needs no description"
+
+    ticket = ok_json("create-ticket", "--list", "ready-for-agent", "--title", "No-description ticket",
+      "--criteria-file", file("c.json", JSON.generate([ "only criterion" ])))
+    assert ticket["completed"], "a ticket needs no description"
+  end
+
   def test_update_card_changes_only_given_fields_and_reads_stdin
     ok("apply-label", PARENT, "--label", "enhancement")
     list_id = ok_json("create-task-list", PARENT, "--name", "Notes")["taskList"]["id"]

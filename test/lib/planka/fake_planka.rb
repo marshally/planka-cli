@@ -184,6 +184,9 @@ class FakePlanka
   def comments_for(id) = @state[:comments].select { |c| c["cardId"] == id }
 
   def make_card(list_id, data)
+    # Planka rejects an empty-string description; the field must be absent or set.
+    raise "empty description" if data["description"] == ""
+
     card = { "id" => next_id, "name" => data["name"], "description" => data["description"], "type" => data["type"], "listId" => list_id, "boardId" => BOARD_ID, "position" => data["position"], "createdAt" => "2026-10-01T00:00:00.000Z" }
     @state[:cards] << card
     card

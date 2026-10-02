@@ -16,15 +16,15 @@ module Planka
     end
 
     # A spec: a project card with no acceptance criteria.
-    def create_spec(list_id:, name:, description:, position: POSITION_GAP)
-      card = @client.create_card(list_id, name:, description:, type: "project", position:)
+    def create_spec(list_id:, name:, description: nil, position: POSITION_GAP)
+      card = @client.create_card(list_id, **card_attrs(name, description, position))
       { "card" => card_ref(card) }
     end
 
     # A ticket: a project card plus one "Acceptance criteria" task list with one
     # incomplete task per criterion, in order.
-    def create_ticket(list_id:, name:, description:, criteria:, position: POSITION_GAP)
-      card = @client.create_card(list_id, name:, description:, type: "project", position:)
+    def create_ticket(list_id:, name:, criteria:, description: nil, position: POSITION_GAP)
+      card = @client.create_card(list_id, **card_attrs(name, description, position))
       fill(card.fetch("id"), criteria, card: card_ref(card))
     end
 
@@ -36,6 +36,14 @@ module Planka
     end
 
     private
+
+    # Planka rejects an empty-string description, so a card with no description
+    # omits the field entirely rather than sending "".
+    def card_attrs(name, description, position)
+      attrs = { name:, type: "project", position: }
+      attrs[:description] = description unless description.nil? || description.empty?
+      attrs
+    end
 
     # Reconciles the card's criteria list against the wanted criteria. Safe to
     # repeat: an existing list is reused and criteria already present are kept.

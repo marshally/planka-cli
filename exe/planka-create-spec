@@ -29,7 +29,7 @@ Planka::CLI.run("planka-create-spec") do |client|
   title = options.fetch(:title) { raise Planka::Error, "--title is required" }
   list_id = Planka::CLI.resolve_list(client, list, options[:board])
   position = options[:position] || Planka::CLI.append_position(client, list_id)
-  description = Planka::CLI.source(options[:description]).to_s
+  description = Planka::CLI.source(options[:description])
 
   Planka::CLI.emit(Planka::Publishing.new(client).create_spec(list_id:, name: title, description:, position:))
 end

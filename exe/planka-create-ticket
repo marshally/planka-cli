@@ -47,7 +47,7 @@ Planka::CLI.run("planka-create-ticket") do |client|
       title = options.fetch(:title) { raise Planka::Error, "--title is required" }
       list_id = Planka::CLI.resolve_list(client, list, options[:board])
       position = options[:position] || Planka::CLI.append_position(client, list_id)
-      publishing.create_ticket(list_id:, name: title, description: Planka::CLI.source(options[:description]).to_s, criteria:, position:)
+      publishing.create_ticket(list_id:, name: title, description: Planka::CLI.source(options[:description]), criteria:, position:)
     end
 
   Planka::CLI.emit(result)

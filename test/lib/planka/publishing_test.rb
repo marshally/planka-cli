@@ -90,6 +90,15 @@ class Planka::PublishingTest < Minitest::Test
     assert_includes error.message, "Acceptance criteria lists"
   end
 
+  def test_a_blank_description_is_omitted_not_sent_as_empty_string
+    [ nil, "" ].each do |blank|
+      client = FakeClient.new
+      publishing(client).create_spec(list_id: "L", name: "S", description: blank)
+
+      refute client.writes.first[2].key?(:description), "description #{blank.inspect} should be omitted"
+    end
+  end
+
   def test_a_failed_task_create_raises_partial_failure_carrying_the_ids_so_far
     client = FakeClient.new(fail_task_on: 2)
 
