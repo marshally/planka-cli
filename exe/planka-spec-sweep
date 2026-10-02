@@ -10,17 +10,25 @@
 require "planka"
 require "planka/client"
 
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka spec-sweep [--output human|json]")
+Planka::CLI.parse!(parser, "planka-spec-sweep")
+abort parser.banner unless ARGV.empty?
 
 begin
   Planka::Client.session do |client|
+    moved = []
     client.board_ids.each do |board_id|
       board = Planka::Board.new(client.board(board_id))
       Planka::SpecSweep.finished(board).each do |spec|
         client.comment(spec.id, "Every ticket for this spec is closed, so planka-cli moves it to done.")
         client.move_card(spec.id, board.list_id("done"))
-        puts "done: #{spec}"
+        moved << spec
       end
     end
+    human = moved.empty? ? "No finished specs" : moved.map { |spec| "done: #{spec}" }.join("\n")
+    result = { "count" => moved.size, "moved" => moved.map { |spec| Planka::CLI.card_ref(spec) } }
+    Planka::CLI.emit(result, output: options[:output], human:)
   end
 rescue Planka::Error, KeyError => e
   abort "planka-spec-sweep: #{e.message}"

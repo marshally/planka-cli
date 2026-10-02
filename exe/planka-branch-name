@@ -8,14 +8,18 @@
 require "planka"
 require "planka/client"
 
-abort "usage: planka-branch-name <card>" unless ARGV.size == 1
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka branch-name <card> [--output human|json]")
+Planka::CLI.parse!(parser, "planka-branch-name")
+abort parser.banner unless ARGV.size == 1
 
 begin
   card_id = Planka.card_id(ARGV.first)
 
   Planka::Client.session do |client|
     board = Planka::Board.new(client.board(client.card(card_id).dig("item", "boardId")))
-    puts Planka::BranchName.for(board.card(card_id))
+    branch = Planka::BranchName.for(board.card(card_id))
+    Planka::CLI.emit({ "cardId" => card_id, "branch" => branch }, output: options[:output], human: branch)
   end
 rescue Planka::Error, KeyError => e
   abort "planka-branch-name: #{e.message}"

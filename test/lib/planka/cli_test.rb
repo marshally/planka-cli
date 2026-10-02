@@ -36,6 +36,18 @@ class Planka::CLITest < Minitest::Test
     refute_includes err, ".mcp.json"
   end
 
+  def test_commands_document_and_validate_output_formats_without_credentials
+    out, err, status = run_cli("show", "--help")
+    assert status.success?, err
+    assert_includes out, "--output FORMAT"
+    assert_includes out, "human or json"
+
+    _out, err, status = run_cli("show", "123", "--output", "yaml")
+    refute status.success?
+    assert_includes err, "invalid argument"
+    assert_includes err, "--output"
+  end
+
   def test_card_urls_use_the_board_instance_and_strip_trailing_slashes
     custom = Planka::Board.new(payload, base_url: "https://other.example/planka///")
     assert_equal "https://other.example/planka/cards/#{card_id('Contract edits')}",

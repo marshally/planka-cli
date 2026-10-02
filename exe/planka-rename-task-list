@@ -9,14 +9,16 @@ require "optparse"
 
 options = {}
 parser = OptionParser.new do |o|
-  o.banner = "usage: planka rename-task-list --id TASK_LIST_ID --name NAME"
+  o.banner = "usage: planka rename-task-list --id TASK_LIST_ID --name NAME [--output human|json]"
   o.on("--id ID", "task list id") { |v| options[:id] = v }
   o.on("--name NAME", "new name") { |v| options[:name] = v }
+  Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka-rename-task-list")
 
-Planka::CLI.run("planka-rename-task-list") do |client|
+Planka::CLI.run("planka-rename-task-list", output: options[:output]) do |client|
   id = options.fetch(:id) { raise Planka::Error, "--id is required" }
   name = options.fetch(:name) { raise Planka::Error, "--name is required" }
-  Planka::CLI.emit(Planka::TaskLists.new(client).rename(task_list_id: id, name:))
+  result = Planka::TaskLists.new(client).rename(task_list_id: id, name:)
+  Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.resource_result("Renamed", "task list", result["taskList"]))
 end

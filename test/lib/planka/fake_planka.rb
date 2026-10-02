@@ -145,6 +145,8 @@ class FakePlanka
     in [ "POST", [ "api", "access-tokens" ] ] then [ 200, { "item" => "fake-token" } ]
     in [ "DELETE", [ "api", "access-tokens", "me" ] ] then [ 200, {} ]
     in [ "GET", [ "api", "boards", id ] ] then [ 200, board_payload(id) ]
+    in [ "GET", [ "api", "users", "me" ] ] then [ 200, { "item" => { "id" => "user-bot" } } ]
+    in [ "GET", [ "api", "projects" ] ] then [ 200, { "included" => { "boards" => [ { "id" => BOARD_ID } ] } } ]
     in [ "GET", [ "api", "cards", id, "comments" ] ] then [ 200, { "items" => comments_for(id) } ]
     in [ "GET", [ "api", "cards", id ] ] then [ 200, card_payload(id) ]
     in [ "GET", [ "api", "lists", id, "cards" ] ] then [ 200, { "items" => @state[:cards].select { |c| c["listId"] == id }, "included" => {} } ]
@@ -218,7 +220,7 @@ class FakePlanka
   end
 
   def make_membership(card_id, data)
-    record = { "id" => next_id, "cardId" => card_id, "userId" => data["userId"] }
+    record = { "id" => next_id, "cardId" => card_id, "userId" => data["userId"], "createdAt" => Time.now.utc.iso8601 }
     @state[:cardMemberships] << record
     record
   end

@@ -10,13 +10,24 @@
 require "planka"
 require "planka/client"
 
-abort "usage: planka-link <blocked-card> <blocker-card> [<blocker-card>...]" if ARGV.size < 2
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka link <blocked-card> <blocker-card> [<blocker-card>...] [--output human|json]")
+Planka::CLI.parse!(parser, "planka-link")
+abort parser.banner if ARGV.size < 2
 
 begin
   blocked, *blockers = ARGV.map { |arg| Planka.card_id(arg) }
 
   Planka::Client.session do |client|
-    puts Planka::Blocking.new(client).link(blocked, blockers)
+    lines = Planka::Blocking.new(client).link(blocked, blockers)
+    links = blockers.uniq.zip(lines).map do |blocker, line|
+      {
+        "blockerCardId" => blocker,
+        "status" => line.start_with?("already linked:") ? "already-linked" : "linked",
+        "closed" => line.end_with?("(closed)"),
+      }
+    end
+    Planka::CLI.emit({ "blockedCardId" => blocked, "links" => links }, output: options[:output], human: lines.join("\n"))
   end
 rescue Planka::Error, KeyError => e
   abort "planka-link: #{e.message}"

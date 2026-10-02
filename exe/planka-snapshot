@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
-# Reads a board as machine-readable JSON: lists, cards, labels, card-label
-# associations, task lists, tasks and card memberships, with identifiers,
-# positions, list types and descriptions retained. Cards gain a url and are
-# ordered by position. Read-only.
+# Reads a board: lists, cards, labels, card-label associations, task lists,
+# tasks and card memberships. JSON output retains identifiers, positions, list
+# types and descriptions. Cards gain a url and are ordered by position.
 #
 #   planka snapshot [--board ID] [--list ID|NAME]
 #
@@ -14,13 +13,14 @@ require "optparse"
 
 options = {}
 parser = OptionParser.new do |o|
-  o.banner = "usage: planka snapshot [--board ID] [--list ID|NAME]"
+  o.banner = "usage: planka snapshot [--board ID] [--list ID|NAME] [--output human|json]"
   o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
   o.on("--list LIST", "only this list's cards, by id or name") { |v| options[:list] = v }
+  Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka-snapshot")
 
-Planka::CLI.run("planka-snapshot") do |client|
+Planka::CLI.run("planka-snapshot", output: options[:output]) do |client|
   board_id = Planka::CLI.board_id(options[:board])
   included = client.board(board_id)
   snapshot = Planka::Snapshot.new(included)
@@ -28,8 +28,9 @@ Planka::CLI.run("planka-snapshot") do |client|
   if options[:list]
     list = options[:list]
     list_id = list.match?(/\A\d+\z/) ? list : Planka::Board.new(included).list_id(list)
-    Planka::CLI.emit("boardId" => board_id, "listId" => list_id, "cards" => snapshot.cards_in(list_id))
+    result = { "boardId" => board_id, "listId" => list_id, "cards" => snapshot.cards_in(list_id) }
   else
-    Planka::CLI.emit({ "boardId" => board_id }.merge(snapshot.to_h))
+    result = { "boardId" => board_id }.merge(snapshot.to_h)
   end
+  Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.board_snapshot(result))
 end

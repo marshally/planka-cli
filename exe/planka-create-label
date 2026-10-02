@@ -11,15 +11,18 @@ require "optparse"
 
 options = { color: "berry-red" }
 parser = OptionParser.new do |o|
-  o.banner = "usage: planka create-label --name NAME [--board ID] [--color COLOR]"
+  o.banner = "usage: planka create-label --name NAME [--board ID] [--color COLOR] [--output human|json]"
   o.on("--name NAME", "label name") { |v| options[:name] = v }
   o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
   o.on("--color COLOR", "label color (default berry-red)") { |v| options[:color] = v }
+  Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka-create-label")
 
-Planka::CLI.run("planka-create-label") do |client|
+Planka::CLI.run("planka-create-label", output: options[:output]) do |client|
   name = options.fetch(:name) { raise Planka::Error, "--name is required" }
   board_id = Planka::CLI.board_id(options[:board])
-  Planka::CLI.emit(Planka::Labels.new(client).find_or_create(board_id:, name:, color: options[:color]))
+  result = Planka::Labels.new(client).find_or_create(board_id:, name:, color: options[:color])
+  action = result["created"] ? "Created" : "Reused"
+  Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.resource_result(action, "label", result["label"]))
 end

@@ -11,6 +11,10 @@
 require "planka"
 require "planka/client"
 
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka loop-lock [--output human|json]")
+Planka::CLI.parse!(parser, "planka-loop-lock")
+abort parser.banner unless ARGV.empty?
 
 begin
   Planka::Client.session do |client|
@@ -19,10 +23,14 @@ begin
     card = Planka::LoopLock.held(boards:, user_id: me, comments: client)
     if card
       claimed = card.claimed_at(me)
-      puts "held: #{card}", "claimed: #{claimed.iso8601}", "age: #{(Time.now - claimed).to_i}"
+      age = (Time.now - claimed).to_i
+      result = { "held" => true, "card" => Planka::CLI.card_ref(card), "claimedAt" => claimed.iso8601, "ageSeconds" => age }
+      human = [ "held: #{card}", "claimed: #{claimed.iso8601}", "age: #{age}" ].join("\n")
     else
-      puts "free"
+      result = { "held" => false, "card" => nil }
+      human = "free"
     end
+    Planka::CLI.emit(result, output: options[:output], human:)
   end
 rescue Planka::Error, KeyError => e
   abort "planka-loop-lock: #{e.message}"

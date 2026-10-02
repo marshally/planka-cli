@@ -11,16 +11,18 @@ require "optparse"
 
 options = { type: "active" }
 parser = OptionParser.new do |o|
-  o.banner = "usage: planka create-list --name NAME [--board ID] [--type active|closed] [--position N]"
+  o.banner = "usage: planka create-list --name NAME [--board ID] [--type active|closed] [--position N] [--output human|json]"
   o.on("--name NAME", "list name") { |v| options[:name] = v }
   o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
   o.on("--type TYPE", "active or closed (default active)") { |v| options[:type] = v }
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
+  Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka-create-list")
 
-Planka::CLI.run("planka-create-list") do |client|
+Planka::CLI.run("planka-create-list", output: options[:output]) do |client|
   name = options.fetch(:name) { raise Planka::Error, "--name is required" }
   board_id = Planka::CLI.board_id(options[:board])
-  Planka::CLI.emit(Planka::Lists.new(client).create(board_id:, name:, type: options[:type], position: options[:position]))
+  result = Planka::Lists.new(client).create(board_id:, name:, type: options[:type], position: options[:position])
+  Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.resource_result("Created", "list", result["list"]))
 end
