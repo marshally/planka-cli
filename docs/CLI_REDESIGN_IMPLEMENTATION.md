@@ -7,7 +7,7 @@ The goal is a general Planka administration CLI with a kubectl-like
 operations live under `planka workflow`.
 
 This PR changes documentation only. No nested command dispatcher,
-new authentication interface, or additional administration operations have been
+additional administration operations have been
 implemented. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the target.
 
@@ -115,9 +115,9 @@ criteria. Do not add command placeholders that claim these features work.
 3. Add new administration capabilities in independently reviewable slices:
    collection reads, deletion, relationship removal, and project/board/user
    management only where the supported API contract is established.
-4. Implement authentication after its lifecycle decisions are recorded. Use the
-   project-supplied environment and fail fast on missing required variables; do
-   not introduce persisted contexts or configuration fallback.
+4. Verify environment validation and per-command session lifecycle across all
+   canonical operations. Use project-supplied email/password, in-memory tokens,
+   and sign-out cleanup; do not introduce persisted configuration or auth commands.
 5. Reconcile README, built-in workflow guidance, executable packaging, and
    release notes with implemented behavior. Deprecate legacy entry points only
    under a separately documented compatibility policy.
@@ -155,9 +155,14 @@ only when the requested operation requires them and explicit references/parent
 flags do not supply scope. Help, version, and the built-in guide remain
 credential-free.
 
+Authentication is settled: each API invocation signs in with
+`PLANKA_AGENT_EMAIL` and `PLANKA_AGENT_PASSWORD`, holds the token in memory, and
+attempts sign-out on completion. No persisted credentials, interactive prompts,
+auth commands, or environment-token mode. Cleanup must not mask the operation
+result/error; keep credentials bound to `PLANKA_BASE_URL`.
+
 | Decision | Required outcome |
 | --- | --- |
-| Authentication | Choose credential/token storage, unattended login inputs, server binding, expiration, logout, and redaction behavior. |
 | Pagination/filtering | Establish actual API pagination and supported filters; define completeness, ordering, and user-facing flags. |
 | Supported versions | State tested Planka editions/versions and the supported verb/resource matrix. |
 | Deletion | Establish cascades and whether each destructive operation needs confirmation; define noninteractive behavior and `--yes` if required. |
