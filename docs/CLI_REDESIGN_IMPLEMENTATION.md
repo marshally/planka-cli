@@ -161,9 +161,16 @@ attempts sign-out on completion. No persisted credentials, interactive prompts,
 auth commands, or environment-token mode. Cleanup must not mask the operation
 result/error; keep credentials bound to `PLANKA_BASE_URL`.
 
+Pagination behavior is settled: collection reads fetch the complete scoped
+collection by default, following supported API pages internally. `--limit N`
+provides an explicit result cap. Collection JSON reports `meta.complete`; page
+failures return nonzero and preserve collected data without claiming success.
+Verify endpoint paging, ordering, and completeness during implementation; do
+not infer support from this behavioral contract.
+
 | Decision | Required outcome |
 | --- | --- |
-| Pagination/filtering | Establish actual API pagination and supported filters; define completeness, ordering, and user-facing flags. |
+| Filtering | Choose filter flags and matching/combination semantics, and define when limits apply. Verify actual API filtering support, paging, and ordering during implementation. |
 | Supported versions | State tested Planka editions/versions and the supported verb/resource matrix. |
 | Deletion | Establish cascades and whether each destructive operation needs confirmation; define noninteractive behavior and `--yes` if required. |
 | Legacy deprecation | Choose release timing, notice policy, and removal conditions for flat/direct executables and their schemas. |
