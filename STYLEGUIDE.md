@@ -71,8 +71,39 @@ On page-fetch failure, exit 1, retain collected results in `data`, set
 `meta.complete` to false, and emit a structured error. Never silently return a
 successful partial collection. Pagination does not promise a consistent snapshot
 if resources change while pages are fetched; document endpoint-specific ordering
-and consistency limits. Filtering and limit application order remain to be
-settled with the filtering contract.
+and consistency limits. Apply filters before the result limit.
+
+### Collection filtering
+
+Use explicit flags such as `--name`, `--label`, and `--member` on collection
+commands where those fields or relationships are meaningful. `--name` is an
+exact match, not substring search or a regular expression. Labels and members
+use the documented reference-resolution rules; ambiguous names are errors.
+
+All filters combine with AND, including repeated `--label` and `--member`
+values. A repeated label means the card must have every specified label; a
+repeated member means it must include every specified member. Reject conflicting
+duplicate scalar filters instead of silently selecting the last value.
+
+```sh
+planka get cards --board BOARD \
+  --label enhancement \
+  --label feature:search \
+  --member USER \
+  --name "Fix login" \
+  --limit 20
+```
+
+This returns at most 20 cards with the exact name `Fix login`, both labels,
+and the specified member. Filtering precedes `--limit`, and `meta.complete`
+describes completeness of the matching collection, not the unfiltered scope.
+Fetching an unfiltered page of 20 items and then filtering it is not equivalent.
+
+Use verified server-side filters or client-side filtering with the same matching
+behavior. Client-side filtering must inspect enough pages to fulfill the filtered
+limit and establish completeness. Unsupported filters fail clearly rather than
+being ignored. The initial contract has no general selector expression language,
+OR syntax, or filter-based bulk mutations.
 
 ```sh
 planka get projects

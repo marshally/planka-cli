@@ -74,6 +74,22 @@ collected results with an error rather than reporting successful completion.
 planka get cards --board BOARD --limit 20 -o json
 ```
 
+Combine collection filters with AND; repeated labels or members must all match.
+`--name` matches exactly, and the limit applies after filtering:
+
+```sh
+planka get cards --board BOARD \
+  --label enhancement \
+  --label feature:search \
+  --member USER \
+  --name "Fix login" \
+  --limit 20
+```
+
+This selects up to 20 cards named `Fix login` with both labels and the specified
+member. Filters are available only on commands where they are meaningful; there
+is no general selector language or filter-based bulk mutation interface.
+
 ### Create, update, move, and delete resources
 
 ```sh
