@@ -175,9 +175,14 @@ produce equivalent results; `meta.complete` refers to matching results. No gener
 selector language or filter-based bulk mutations. Each capability must verify
 endpoint paging, ordering, and filtering support during implementation.
 
+The supported-version floor is settled: target Planka 2.0.0 and higher, with no
+Planka 1.x API adapters. This minimum does not establish compatibility with every
+later release or edition. Record verified versions and verb/resource capabilities
+as implementation proceeds, and establish reliable version/capability detection
+from API evidence. Future major releases require verification.
+
 | Decision | Required outcome |
 | --- | --- |
-| Supported versions | State tested Planka editions/versions and the supported verb/resource matrix. |
 | Deletion | Establish cascades and whether each destructive operation needs confirmation; define noninteractive behavior and `--yes` if required. |
 | Legacy deprecation | Choose release timing, notice policy, and removal conditions for flat/direct executables and their schemas. |
 
