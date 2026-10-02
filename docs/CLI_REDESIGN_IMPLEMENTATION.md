@@ -168,9 +168,15 @@ failures return nonzero and preserve collected data without claiming success.
 Verify endpoint paging, ordering, and completeness during implementation; do
 not infer support from this behavioral contract.
 
+Filtering is settled: explicit applicable flags (`--name`, `--label`, `--member`)
+combine with AND, including repeated labels/members. Names match exactly and
+filters precede `--limit`. Verified server filters and client-side filtering must
+produce equivalent results; `meta.complete` refers to matching results. No general
+selector language or filter-based bulk mutations. Each capability must verify
+endpoint paging, ordering, and filtering support during implementation.
+
 | Decision | Required outcome |
 | --- | --- |
-| Filtering | Choose filter flags and matching/combination semantics, and define when limits apply. Verify actual API filtering support, paging, and ordering during implementation. |
 | Supported versions | State tested Planka editions/versions and the supported verb/resource matrix. |
 | Deletion | Establish cascades and whether each destructive operation needs confirmation; define noninteractive behavior and `--yes` if required. |
 | Legacy deprecation | Choose release timing, notice policy, and removal conditions for flat/direct executables and their schemas. |
