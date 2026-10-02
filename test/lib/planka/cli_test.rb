@@ -9,12 +9,47 @@ class Planka::CLITest < Minitest::Test
   include PlankaTestHelper
 
   ROOT = File.expand_path("../../..", __dir__)
+  COMMANDS = %w[link next-card branch-name claim comment unticked spec-sweep loop-lock
+    snapshot show create-list create-spec create-ticket update-card move-card labels
+    create-label apply-label create-task-list rename-task-list].freeze
 
-  def run_cli(*args, env: {})
+  def run_cli(*args, env: {}, executable: "planka")
     Open3.capture3({ "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil,
       "PLANKA_AGENT_PASSWORD" => nil, "PLANKA_BOARD_ID" => nil,
       "PLANKA_BRANCH_PREFIX" => nil }.merge(env),
-      RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
+      RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args, chdir: Dir.tmpdir)
+  end
+
+  def test_option_errors_use_the_documented_command_name_for_both_entry_points
+    COMMANDS.each do |command|
+      _out, err, status = run_cli(command, "--unknown")
+      refute status.success?
+      assert_match(/\Aplanka #{command}: invalid option: --unknown\n/, err)
+
+      _out, direct_err, direct_status = run_cli("--unknown", executable: "planka-#{command}")
+      refute direct_status.success?
+      assert_equal err, direct_err
+    end
+  end
+
+  def test_every_command_has_matching_help_through_both_entry_points
+    COMMANDS.each do |command|
+      out, err, status = run_cli(command, "--help")
+      assert status.success?, "#{command}: #{err}"
+      assert_empty err
+      assert_match(/\Ausage: planka #{command}(?: |\n)/, out)
+      assert_includes out, "--output FORMAT"
+      assert_includes out, "-h, --help"
+
+      direct_out, direct_err, direct_status = run_cli("--help", executable: "planka-#{command}")
+      assert direct_status.success?, direct_err
+      assert_empty direct_err
+      assert_equal out, direct_out
+
+      short_out, short_err, short_status = run_cli(command, "-h")
+      assert short_status.success?, short_err
+      assert_equal out, short_out
+    end
   end
 
   def test_version_and_help_need_no_credentials_or_checkout
@@ -24,6 +59,10 @@ class Planka::CLITest < Minitest::Test
     out, err, status = run_cli("--help")
     assert status.success?, err
     assert_includes out, "next-card"
+    assert_includes out, "planka <command> --help"
+    short_out, short_err, short_status = run_cli("-h")
+    assert short_status.success?, short_err
+    assert_equal out, short_out
   end
 
   def test_unknown_command_and_missing_credentials_fail_clearly
@@ -32,8 +71,13 @@ class Planka::CLITest < Minitest::Test
     assert_includes err, "unknown command"
     _out, err, status = run_cli("branch-name", "123")
     refute status.success?
+    assert_match(/\Aplanka branch-name: /, err)
     assert_includes err, "PLANKA_BASE_URL"
     refute_includes err, ".mcp.json"
+    _out, err, status = run_cli("show", "123")
+    refute status.success?
+    assert_match(/\Aplanka show: /, err)
+    assert_includes err, "PLANKA_BASE_URL"
   end
 
   def test_commands_document_and_validate_output_formats_without_credentials

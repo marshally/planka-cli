@@ -18,9 +18,9 @@ parser = OptionParser.new do |o|
   o.on("--list LIST", "only this list's cards, by id or name") { |v| options[:list] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-snapshot")
+Planka::CLI.parse!(parser, "planka snapshot")
 
-Planka::CLI.run("planka-snapshot", output: options[:output]) do |client|
+Planka::CLI.run("planka snapshot", output: options[:output]) do |client|
   board_id = Planka::CLI.board_id(options[:board])
   included = client.board(board_id)
   snapshot = Planka::Snapshot.new(included)

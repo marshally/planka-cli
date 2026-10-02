@@ -2,7 +2,7 @@
 # Prints the branch a card is worked on, e.g.
 # feature/tracer-1.2-an-account-signs-in-the-first-admin. Read-only.
 #
-#   planka-branch-name <card>     an id or card URL
+#   planka branch-name <card>     an id or card URL
 #
 # The logic lives in lib/planka/branch_name.rb.
 require "planka"
@@ -10,7 +10,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka branch-name <card> [--output human|json]")
-Planka::CLI.parse!(parser, "planka-branch-name")
+Planka::CLI.parse!(parser, "planka branch-name")
 abort parser.banner unless ARGV.size == 1
 
 begin
@@ -22,5 +22,5 @@ begin
     Planka::CLI.emit({ "cardId" => card_id, "branch" => branch }, output: options[:output], human: branch)
   end
 rescue Planka::Error, KeyError => e
-  abort "planka-branch-name: #{e.message}"
+  abort "planka branch-name: #{e.message}"
 end

@@ -12,11 +12,11 @@ parser = OptionParser.new do |o|
   o.banner = "usage: planka show <card> [--output human|json]"
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-show")
+Planka::CLI.parse!(parser, "planka show")
 
 abort parser.banner unless ARGV.size == 1
 
-Planka::CLI.run("planka-show", output: options[:output]) do |client|
+Planka::CLI.run("planka show", output: options[:output]) do |client|
   detail = Planka::CardDetail.new(client).for(Planka.card_id(ARGV.first))
   Planka::CLI.emit(detail, output: options[:output], human: Planka::CLI.card_detail(detail))
 end

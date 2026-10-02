@@ -79,6 +79,10 @@ module Planka
       parser.on("--output FORMAT", %w[human json], "output format: human or json (default human)") do |format|
         options[:output] = format
       end
+      parser.on("-h", "--help", "show command usage and options") do
+        puts parser.help
+        exit 0
+      end
     end
 
     def output_parser(options, banner)
@@ -162,7 +166,7 @@ module Planka
     end
 
     # Parses options, reporting a bad flag on stderr with the command's help
-    # rather than a backtrace. --help is handled by OptionParser itself.
+    # rather than a backtrace. Help exits before a client session is opened.
     def parse!(parser, program)
       parser.parse!
     rescue OptionParser::ParseError => e

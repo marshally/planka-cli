@@ -2,9 +2,9 @@
 # Picks the next card to work on the configured Planka board.
 # Read-only: it never changes the board or git.
 #
-#   planka-next-card                     the top ticket in ready-for-agent
-#   planka-next-card <feature-label>     e.g. feature:workspaces
-#   planka-next-card <effort-label>      e.g. effort:search
+#   planka next-card                     the top ticket in ready-for-agent
+#   planka next-card <feature-label>     e.g. feature:workspaces
+#   planka next-card <effort-label>      e.g. effort:search
 #
 # With no label it prints the highest-positioned unclaimed, unblocked ticket
 # in ready-for-agent (the human orders the list by priority), its spec and
@@ -20,7 +20,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka next-card [feature-label|effort-label] [--output human|json]")
-Planka::CLI.parse!(parser, "planka-next-card")
+Planka::CLI.parse!(parser, "planka next-card")
 abort parser.banner if ARGV.size > 1
 
 begin
@@ -30,5 +30,5 @@ begin
     Planka::CLI.emit(Planka::CLI.next_card(report), output: options[:output], human: report.to_s)
   end
 rescue Planka::Error, KeyError => e
-  abort "planka-next-card: #{e.message}"
+  abort "planka next-card: #{e.message}"
 end

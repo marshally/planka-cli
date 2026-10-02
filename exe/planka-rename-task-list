@@ -14,9 +14,9 @@ parser = OptionParser.new do |o|
   o.on("--name NAME", "new name") { |v| options[:name] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-rename-task-list")
+Planka::CLI.parse!(parser, "planka rename-task-list")
 
-Planka::CLI.run("planka-rename-task-list", output: options[:output]) do |client|
+Planka::CLI.run("planka rename-task-list", output: options[:output]) do |client|
   id = options.fetch(:id) { raise Planka::Error, "--id is required" }
   name = options.fetch(:name) { raise Planka::Error, "--name is required" }
   result = Planka::TaskLists.new(client).rename(task_list_id: id, name:)

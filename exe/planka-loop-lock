@@ -3,7 +3,7 @@
 # Planka: a card on any board it can see that it has claimed, that is still
 # open, and that has no PR handed off yet. Read-only.
 #
-#   planka-loop-lock     prints "free", or "held: <card>" and then
+#   planka loop-lock     prints "free", or "held: <card>" and then
 #                            "claimed: <ISO 8601 time>" and "age: <seconds>"
 #
 # Run it with the loop user's resolved credentials.
@@ -13,7 +13,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka loop-lock [--output human|json]")
-Planka::CLI.parse!(parser, "planka-loop-lock")
+Planka::CLI.parse!(parser, "planka loop-lock")
 abort parser.banner unless ARGV.empty?
 
 begin
@@ -33,5 +33,5 @@ begin
     Planka::CLI.emit(result, output: options[:output], human:)
   end
 rescue Planka::Error, KeyError => e
-  abort "planka-loop-lock: #{e.message}"
+  abort "planka loop-lock: #{e.message}"
 end

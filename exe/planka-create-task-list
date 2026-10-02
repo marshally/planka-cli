@@ -13,11 +13,11 @@ parser = OptionParser.new do |o|
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-create-task-list")
+Planka::CLI.parse!(parser, "planka create-task-list")
 
 abort parser.banner unless ARGV.size == 1
 
-Planka::CLI.run("planka-create-task-list", output: options[:output]) do |client|
+Planka::CLI.run("planka create-task-list", output: options[:output]) do |client|
   name = options.fetch(:name) { raise Planka::Error, "--name is required" }
   result = Planka::TaskLists.new(client).create(card_id: Planka.card_id(ARGV.first), name:, position: options[:position])
   Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.resource_result("Created", "task list", result["taskList"]))

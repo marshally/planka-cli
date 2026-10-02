@@ -18,9 +18,9 @@ parser = OptionParser.new do |o|
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
   Planka::CLI.output_option(o, options)
 end
-Planka::CLI.parse!(parser, "planka-create-list")
+Planka::CLI.parse!(parser, "planka create-list")
 
-Planka::CLI.run("planka-create-list", output: options[:output]) do |client|
+Planka::CLI.run("planka create-list", output: options[:output]) do |client|
   name = options.fetch(:name) { raise Planka::Error, "--name is required" }
   board_id = Planka::CLI.board_id(options[:board])
   result = Planka::Lists.new(client).create(board_id:, name:, type: options[:type], position: options[:position])
