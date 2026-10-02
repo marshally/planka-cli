@@ -55,11 +55,24 @@ Cards may be numeric ids or card URLs. `claim`, `comment`, `link` and
 `next-card` uses the authenticated `gh` CLI when a blocker has a GitHub PR
 handoff. `Branch:` and `PR:` lines in comments determine parent branches.
 
+Every command prints a concise human-readable result by default. Add
+`--output json` for a single structured JSON document intended for agents and
+scripts. The flag works with both command styles:
+
+```sh
+planka show CARD --output json
+planka-show CARD --output json
+```
+
+Diagnostics go to stderr and failures exit nonzero. Partial creates and writes
+whose outcome is unknown retain recovery state and reconciliation instructions
+in JSON mode.
+
 ## Publishing and reading specs and tickets
 
-These commands create, read back and verify specs and tickets. They print JSON
-to stdout, diagnostics to stderr, and exit nonzero on failure. `--help` needs no
-credentials.
+These commands create, read back and verify specs and tickets. Their default
+output is formatted for a person; use `--output json` for automation. `--help`
+needs no credentials.
 
 ```sh
 planka snapshot [--board ID] [--list ID|NAME]   # whole board, or one list's cards
@@ -90,8 +103,9 @@ without shell quoting. `--criteria-file` is a JSON array of strings.
 
 `create-spec`, `create-ticket`, `create-label`, `apply-label` and `move-card`
 write to Planka; `snapshot`, `show` and `labels` are read-only. A create is never
-retried once its outcome is unknown: on a timeout it prints what it created and a
-`reconcile` hint rather than risk a duplicate. `create-label` reuses a label with
+retried once its outcome is unknown: in JSON mode, a timeout returns what it
+created and a `reconcile` hint rather than risking a duplicate. `create-label`
+reuses a label with
 the same name, `apply-label` is safe to repeat, and `create-ticket --card` fills
 only the criteria still missing, so an interrupted ticket is finished, not
 duplicated.
@@ -103,13 +117,13 @@ each blocker before the cards it blocks, append new work below the queue
 For example:
 
 ```sh
-feature=$(planka create-label --name feature:work-next | jq -r .label.id)
+feature=$(planka create-label --name feature:work-next --output json | jq -r .label.id)
 spec=$(planka create-spec --list ready-for-agent --title 'Spec: work-next' \
-  --description-file spec.md | jq -r .card.id)
+  --description-file spec.md --output json | jq -r .card.id)
 first=$(planka create-ticket --list ready-for-agent --title 'Ticket 1' \
-  --criteria-file t1.json | jq -r .card.id)
+  --criteria-file t1.json --output json | jq -r .card.id)
 second=$(planka create-ticket --list ready-for-agent --title 'Ticket 2' \
-  --criteria-file t2.json | jq -r .card.id)
+  --criteria-file t2.json --output json | jq -r .card.id)
 for c in "$spec" "$first" "$second"; do planka apply-label "$c" --label "$feature"; done
 planka link "$second" "$first"
 planka move-card "$spec" --list in-progress

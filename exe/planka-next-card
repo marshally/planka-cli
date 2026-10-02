@@ -18,12 +18,16 @@
 require "planka"
 require "planka/client"
 
-abort "usage: planka-next-card [feature-label|effort-label]" if ARGV.size > 1
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka next-card [feature-label|effort-label] [--output human|json]")
+Planka::CLI.parse!(parser, "planka-next-card")
+abort parser.banner if ARGV.size > 1
 
 begin
   Planka::Client.session do |client|
     board = Planka::Board.new(client.board(ENV.fetch("PLANKA_BOARD_ID")))
-    puts Planka::NextCard.for(ARGV.first, board:, comments: client, pull_requests: Planka::PullRequest)
+    report = Planka::NextCard.for(ARGV.first, board:, comments: client, pull_requests: Planka::PullRequest)
+    Planka::CLI.emit(Planka::CLI.next_card(report), output: options[:output], human: report.to_s)
   end
 rescue Planka::Error, KeyError => e
   abort "planka-next-card: #{e.message}"

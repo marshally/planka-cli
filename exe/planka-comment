@@ -7,12 +7,19 @@
 require "planka"
 require "planka/client"
 
-abort "usage: planka-comment <card> <text>" unless ARGV.size == 2
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka comment <card> <text> [--output human|json]")
+Planka::CLI.parse!(parser, "planka-comment")
+abort parser.banner unless ARGV.size == 2
 
 begin
   card_id = Planka.card_id(ARGV.first)
 
-  Planka::Client.session { |client| client.comment(card_id, ARGV.last) }
+  Planka::Client.session do |client|
+    comment = client.comment(card_id, ARGV.last).fetch("item")
+    result = { "cardId" => card_id, "comment" => comment.slice("id", "text", "userId", "createdAt") }
+    Planka::CLI.emit(result, output: options[:output], human: "Commented on card #{card_id}")
+  end
 rescue Planka::Error, KeyError => e
   abort "planka-comment: #{e.message}"
 end

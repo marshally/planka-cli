@@ -8,7 +8,10 @@
 require "planka"
 require "planka/client"
 
-abort "usage: planka-claim <card>" unless ARGV.size == 1
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka claim <card> [--output human|json]")
+Planka::CLI.parse!(parser, "planka-claim")
+abort parser.banner unless ARGV.size == 1
 
 begin
   card_id = Planka.card_id(ARGV.first)
@@ -20,8 +23,14 @@ begin
     member = included.fetch("cardMemberships").any? { |m| m["cardId"] == card_id && m["userId"] == me }
 
     client.add_card_member(card_id, me) unless member
-    client.move_card(card_id, in_progress.fetch("id"))
-    puts "claimed: #{Planka::Board.new(included).card(card_id)}"
+    moved = client.move_card(card_id, in_progress.fetch("id"))
+    card = Planka::Board.new(included).card(card_id)
+    result = {
+      "card" => moved.slice("id", "name", "listId", "position").merge("url" => card.url),
+      "claimed" => true,
+      "memberAdded" => !member,
+    }
+    Planka::CLI.emit(result, output: options[:output], human: "claimed: #{card}")
   end
 rescue Planka::Error, KeyError => e
   abort "planka-claim: #{e.message}"

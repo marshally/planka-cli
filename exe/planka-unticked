@@ -5,14 +5,18 @@
 require "planka"
 require "planka/client"
 
-abort "usage: planka-unticked <card>" unless ARGV.size == 1
+options = {}
+parser = Planka::CLI.output_parser(options, "usage: planka unticked <card> [--output human|json]")
+Planka::CLI.parse!(parser, "planka-unticked")
+abort parser.banner unless ARGV.size == 1
 
 begin
   card_id = Planka.card_id(ARGV.first)
 
   Planka::Client.session do |client|
     board = Planka::Board.new(client.board(client.card(card_id).dig("item", "boardId")))
-    puts board.card(card_id).unticked_criteria
+    criteria = board.card(card_id).unticked_criteria
+    Planka::CLI.emit({ "cardId" => card_id, "criteria" => criteria }, output: options[:output], human: criteria.join("\n"))
   end
 rescue Planka::Error, KeyError => e
   abort "planka-unticked: #{e.message}"

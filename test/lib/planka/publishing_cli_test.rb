@@ -31,13 +31,19 @@ class Planka::PublishingCLITest < Minitest::Test
     Open3.capture3(base.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, **opts)
   end
 
+  def planka_executable(command, *args)
+    base = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com",
+      "PLANKA_AGENT_PASSWORD" => PASSWORD, "PLANKA_BOARD_ID" => @server.board_id }
+    Open3.capture3(base, RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka-#{command}", *args, chdir: Dir.tmpdir)
+  end
+
   def ok(*args, **kwargs)
     out, err, status = planka(*args, **kwargs)
     assert status.success?, "#{args.inspect} failed (#{err})"
     out
   end
 
-  def ok_json(*args, **kwargs) = JSON.parse(ok(*args, **kwargs))
+  def ok_json(*args, **kwargs) = JSON.parse(ok(*args, "--output", "json", **kwargs))
 
   def file(name, content)
     path = File.join(Dir.mktmpdir, name)
@@ -159,6 +165,237 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_equal [ PARENT ], listing["cards"].map { |c| c["id"] }
   end
 
+  def test_show_is_human_readable_by_default_and_json_when_requested
+    out = ok("show", PARENT)
+    assert_includes out, "Spec: Work-next refinement"
+    assert_includes out, "List: ready-for-agent"
+    assert_includes out, "Original description."
+    assert_includes out, "Comments:"
+    assert_includes out, "Parent context note."
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("show", PARENT, "--output", "json"))
+    assert_equal PARENT, doc["id"]
+    assert_equal "Spec: Work-next refinement", doc["name"]
+  end
+
+  def test_snapshot_is_human_readable_by_default_and_json_when_requested
+    out = ok("snapshot")
+    assert_includes out, "Board #{FakePlanka::BOARD_ID}"
+    assert_includes out, "ready-for-agent"
+    assert_includes out, "Spec: Work-next refinement"
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("snapshot", "--output", "json"))
+    assert_equal FakePlanka::BOARD_ID, doc["boardId"]
+    assert_equal [ PARENT ], doc["cards"].map { |card| card["id"] }
+  end
+
+  def test_labels_are_human_readable_by_default_and_json_when_requested
+    out = ok("labels")
+    assert_includes out, "enhancement"
+    assert_includes out, "berry-red"
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("labels", "--output", "json"))
+    assert_equal [ "enhancement" ], doc["labels"].map { |label| label["name"] }
+  end
+
+  def test_create_list_reports_human_success_and_json_when_requested
+    out = ok("create-list", "--name", "triage")
+    assert_includes out, "Created list: triage"
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("create-list", "--name", "backlog", "--output", "json"))
+    assert_equal "backlog", doc.dig("list", "name")
+    assert doc["created"]
+  end
+
+  def test_create_spec_reports_human_success_and_json_when_requested
+    out = ok("create-spec", "--list", "ready-for-agent", "--title", "Human spec")
+    assert_includes out, "Created card: Human spec"
+    assert_includes out, @server.base_url
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("create-spec", "--list", "ready-for-agent", "--title", "Agent spec", "--output", "json"))
+    assert_equal "Agent spec", doc.dig("card", "name")
+  end
+
+  def test_create_ticket_reports_human_success_and_json_when_requested
+    criteria = file("human-ticket.json", JSON.generate([ "Works" ]))
+    out = ok("create-ticket", "--list", "ready-for-agent", "--title", "Human ticket", "--criteria-file", criteria)
+    assert_includes out, "Created ticket: Human ticket"
+    assert_includes out, "Acceptance criteria: 1"
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("create-ticket", "--list", "ready-for-agent", "--title", "Agent ticket",
+      "--criteria-file", criteria, "--output", "json"))
+    assert doc["completed"]
+    assert_equal "Agent ticket", doc.dig("card", "name")
+  end
+
+  def test_update_card_reports_human_success_and_json_when_requested
+    out = ok("update-card", PARENT, "--title", "Human title")
+    assert_includes out, "Updated card: Human title"
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("update-card", PARENT, "--title", "Agent title", "--output", "json"))
+    assert_equal "Agent title", doc.dig("card", "name")
+  end
+
+  def test_move_card_reports_human_success_and_json_when_requested
+    out = ok("move-card", PARENT, "--list", "in-progress")
+    assert_includes out, "Moved card: Spec: Work-next refinement"
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("move-card", PARENT, "--list", "done", "--output", "json"))
+    assert_equal FakePlanka::LIST_DONE, doc.dig("card", "listId")
+  end
+
+  def test_create_label_reports_created_or_reused_for_humans_and_json_when_requested
+    out = ok("create-label", "--name", "feature:human")
+    assert_includes out, "Created label: feature:human"
+    reused = ok("create-label", "--name", "enhancement")
+    assert_includes reused, "Reused label: enhancement"
+
+    doc = JSON.parse(ok("create-label", "--name", "feature:agent", "--output", "json"))
+    assert doc["created"]
+    assert_equal "feature:agent", doc.dig("label", "name")
+  end
+
+  def test_apply_label_reports_applied_or_present_for_humans_and_json_when_requested
+    out = ok("apply-label", PARENT, "--label", "enhancement")
+    assert_includes out, "Applied label #{FakePlanka::LABEL_ENHANCEMENT} to card #{PARENT}"
+    present = ok("apply-label", PARENT, "--label", "enhancement")
+    assert_includes present, "already has label"
+
+    doc = JSON.parse(ok("apply-label", PARENT, "--label", "enhancement", "--output", "json"))
+    refute doc["created"]
+    assert_equal PARENT, doc["cardId"]
+  end
+
+  def test_create_task_list_reports_human_success_and_json_when_requested
+    out = ok("create-task-list", PARENT, "--name", "Human tasks")
+    assert_includes out, "Created task list: Human tasks"
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("create-task-list", PARENT, "--name", "Agent tasks", "--output", "json"))
+    assert_equal "Agent tasks", doc.dig("taskList", "name")
+  end
+
+  def test_rename_task_list_reports_human_success_and_json_when_requested
+    created = JSON.parse(ok("create-task-list", PARENT, "--name", "Before", "--output", "json"))
+    id = created.dig("taskList", "id")
+
+    out = ok("rename-task-list", "--id", id, "--name", "Human name")
+    assert_includes out, "Renamed task list: Human name"
+    refute out.start_with?("{")
+
+    doc = JSON.parse(ok("rename-task-list", "--id", id, "--name", "Agent name", "--output", "json"))
+    assert_equal "Agent name", doc.dig("taskList", "name")
+  end
+
+  def test_branch_name_keeps_human_text_and_offers_json
+    assert_equal "card/spec-work-next-refinement\n", ok("branch-name", PARENT)
+
+    doc = JSON.parse(ok("branch-name", PARENT, "--output", "json"))
+    assert_equal "card/spec-work-next-refinement", doc["branch"]
+    assert_equal PARENT, doc["cardId"]
+  end
+
+  def test_unticked_keeps_one_criterion_per_line_and_offers_json
+    criteria = [ "First criterion", "Second criterion" ]
+    ticket = ok_json("create-ticket", "--list", "ready-for-agent", "--title", "Criteria ticket",
+      "--criteria-file", file("unticked.json", JSON.generate(criteria)))
+    id = ticket.dig("card", "id")
+
+    assert_equal "First criterion\nSecond criterion\n", ok("unticked", id)
+    doc = JSON.parse(ok("unticked", id, "--output", "json"))
+    assert_equal id, doc["cardId"]
+    assert_equal criteria, doc["criteria"]
+  end
+
+  def test_comment_confirms_human_success_and_returns_created_comment_as_json
+    out = ok("comment", PARENT, "Human note")
+    assert_includes out, "Commented on card #{PARENT}"
+
+    doc = JSON.parse(ok("comment", PARENT, "Agent note", "--output", "json"))
+    assert_equal PARENT, doc["cardId"]
+    assert_equal "Agent note", doc.dig("comment", "text")
+    assert doc.dig("comment", "id")
+  end
+
+  def test_claim_keeps_human_confirmation_and_offers_json
+    out = ok("claim", PARENT)
+    assert_includes out, "claimed: Spec: Work-next refinement"
+
+    doc = JSON.parse(ok("claim", PARENT, "--output", "json"))
+    assert_equal PARENT, doc.dig("card", "id")
+    assert_equal FakePlanka::LIST_PROGRESS, doc.dig("card", "listId")
+    assert doc["claimed"]
+    refute doc["memberAdded"], "re-claim reports that membership already existed"
+  end
+
+  def test_link_keeps_human_lines_and_offers_structured_json
+    blocker = ok_json("create-spec", "--list", "ready-for-agent", "--title", "Blocker").dig("card", "id")
+    assert_includes ok("link", PARENT, blocker), "linked: #{blocker} (open)"
+
+    doc = JSON.parse(ok("link", PARENT, blocker, "--output", "json"))
+    assert_equal PARENT, doc["blockedCardId"]
+    assert_equal blocker, doc.dig("links", 0, "blockerCardId")
+    assert_equal "already-linked", doc.dig("links", 0, "status")
+  end
+
+  def test_next_card_keeps_human_report_and_offers_structured_json
+    ticket = ok_json("create-ticket", "--list", "ready-for-agent", "--title", "Next ticket",
+      "--criteria-file", file("next.json", JSON.generate([ "Works" ])))
+    id = ticket.dig("card", "id")
+
+    assert_includes ok("next-card"), "card: Next ticket"
+    doc = JSON.parse(ok("next-card", "--output", "json"))
+    assert_equal id, doc.dig("card", "id")
+    assert_equal "main", doc["parent"]
+    assert_empty doc["blockers"]
+  end
+
+  def test_loop_lock_keeps_human_status_and_offers_structured_json
+    assert_equal "free\n", ok("loop-lock")
+    ok("claim", PARENT)
+
+    assert_includes ok("loop-lock"), "held: Spec: Work-next refinement"
+    doc = JSON.parse(ok("loop-lock", "--output", "json"))
+    assert doc["held"]
+    assert_equal PARENT, doc.dig("card", "id")
+    assert_kind_of Integer, doc["ageSeconds"]
+  end
+
+  def test_spec_sweep_reports_no_work_for_humans_and_json
+    assert_equal "No finished specs\n", ok("spec-sweep")
+
+    doc = JSON.parse(ok("spec-sweep", "--output", "json"))
+    assert_equal 0, doc["count"]
+    assert_empty doc["moved"]
+  end
+
+  def test_direct_command_executable_has_the_same_json_contract
+    dispatched = JSON.parse(ok("show", PARENT, "--output", "json"))
+    out, err, status = planka_executable("show", PARENT, "--output", "json")
+
+    assert status.success?, err
+    assert_equal dispatched, JSON.parse(out)
+  end
+
+  def test_unknown_write_outcome_is_human_readable_without_json_output
+    @server.inject("POST", %r{/api/lists/.+/cards\z}, :apply_then_drop)
+    out, err, status = planka("create-spec", "--list", "ready-for-agent", "--title", "Risky human spec")
+
+    refute status.success?
+    assert_includes out, "Outcome unknown"
+    assert_includes out, "read the board back before retrying"
+    refute out.start_with?("{")
+    assert_includes err, "planka-create-spec"
+  end
+
   def test_an_ambiguous_label_name_is_rejected_but_an_id_still_works
     @server.add_label("enhancement")
     _out, err, status = planka("apply-label", PARENT, "--label", "enhancement")
@@ -248,7 +485,7 @@ class Planka::PublishingCLITest < Minitest::Test
 
   def test_card_create_with_unknown_outcome_is_not_retried
     @server.inject("POST", %r{/api/lists/.+/cards\z}, :apply_then_drop)
-    out, _err, status = planka("create-spec", "--list", "ready-for-agent", "--title", "Risky spec")
+    out, _err, status = planka("create-spec", "--list", "ready-for-agent", "--title", "Risky spec", "--output", "json")
 
     refute status.success?
     assert_equal 1, @server.cards.size - 1, "exactly one card was created"
@@ -263,7 +500,7 @@ class Planka::PublishingCLITest < Minitest::Test
     @server.inject("POST", %r{/api/task-lists/.+/tasks\z}, :server_error, skip: 1)
 
     out, _err, status = planka("create-ticket", "--list", "ready-for-agent", "--title", "Half ticket",
-      "--criteria-file", file("c.json", JSON.generate(criteria)))
+      "--criteria-file", file("c.json", JSON.generate(criteria)), "--output", "json")
     refute status.success?
     doc = JSON.parse(out)
     card_id = doc.fetch("card").fetch("id")

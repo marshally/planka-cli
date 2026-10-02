@@ -12,20 +12,22 @@ require "optparse"
 
 options = {}
 parser = OptionParser.new do |o|
-  o.banner = "usage: planka update-card <card> [--title TITLE] [--description-file F|-]"
+  o.banner = "usage: planka update-card <card> [--title TITLE] [--description-file F|-] [--output human|json]"
   o.on("--title TITLE", "new title") { |v| options[:title] = v }
   o.on("--description-file F", "new description from a file, or - for stdin") { |v| options[:description] = v }
+  Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka-update-card")
 
-abort "usage: planka update-card <card> [--title TITLE] [--description-file F|-]" unless ARGV.size == 1
+abort parser.banner unless ARGV.size == 1
 
-Planka::CLI.run("planka-update-card") do |client|
+Planka::CLI.run("planka-update-card", output: options[:output]) do |client|
   attrs = {}
   attrs[:name] = options[:title] if options[:title]
   attrs[:description] = Planka::CLI.source(options[:description]) if options[:description]
   raise Planka::Error, "nothing to update: give --title and/or --description-file" if attrs.empty?
 
   card = client.update_card(Planka.card_id(ARGV.first), **attrs)
-  Planka::CLI.emit("card" => card.slice("id", "name", "description", "listId", "position"))
+  result = { "card" => card.slice("id", "name", "description", "listId", "position") }
+  Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.resource_result("Updated", "card", result["card"]))
 end
