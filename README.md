@@ -25,6 +25,141 @@ Run `planka --help` (or `planka -h`) to list commands, and
 `planka <command> --help` (or `-h`) for that command's usage and options.
 Help works without credentials. Use `planka --version` for the gem version.
 
+## Usage
+
+The target administration interface uses kubectl-style verb/resource commands:
+
+```text
+planka <verb> <resource> [reference] [flags]
+planka workflow <operation> [arguments] [flags]
+planka config <operation> [flags]
+planka auth <operation> [flags]
+```
+
+**The invocations below describe the proposed interface, which is not yet
+implemented.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
+mapping. The [Commands](#commands) and
+[Publishing and reading specs and tickets](#publishing-and-reading-specs-and-tickets)
+sections document the currently available commands.
+
+Uppercase references such as `BOARD`, `LIST`, and `CARD` are placeholders for
+IDs, supported resource URLs, or exact names within a known parent scope.
+Singular and plural resource spellings are aliases. Explicit flags override
+environment settings and saved context defaults; ambiguous names are rejected.
+
+### Read resources
+
+```sh
+planka get projects
+planka get boards --project PROJECT
+planka get lists --board BOARD
+planka get cards --board BOARD
+planka get cards --list LIST
+planka get card CARD
+planka get labels --board BOARD
+planka get comments --card CARD
+planka describe board BOARD
+planka describe card CARD
+```
+
+`get` lists a collection or reads one resource concisely. `describe` includes
+related information. Both are read-only.
+
+### Create, update, move, and delete resources
+
+```sh
+planka create list --board BOARD --name "Ready" --type active --position 65536
+planka create card --list LIST --name "Fix login" --description-file description.md
+planka update card CARD --name "Fix session expiry" --description-file revised.md
+planka move card CARD --list LIST --position 65536
+planka delete card CARD
+planka create label --board BOARD --name enhancement --color berry-red
+planka create task-list --card CARD --name "Acceptance criteria" --position 65536
+planka update task-list TASK_LIST --name "Verification"
+planka create comment --card CARD --text "Ready for review"
+planka delete comment COMMENT
+```
+
+Updates change only supplied fields. New resources and moved cards append to
+their destination unless `--position` is supplied. `--description-file -` reads
+stdin. Deletes require an explicit target; supported combinations of verbs and
+resources depend on the Planka API.
+
+### Attach and detach relationships
+
+```sh
+planka add label LABEL --card CARD
+planka remove label LABEL --card CARD
+planka add member USER --card CARD
+planka remove member USER --card CARD
+```
+
+`add` and `remove` change relationships without creating or deleting the label
+or user. An already-satisfied relationship succeeds without another change.
+
+### Specs, tickets, and agent workflows
+
+```sh
+planka workflow guide
+planka workflow create spec --list LIST --name "Search" --description-file spec.md
+planka workflow create ticket --list LIST --name "Index documents" \
+  --criteria-file criteria.json --description-file ticket.md
+planka workflow resume ticket CARD --criteria-file criteria.json
+planka workflow next --board BOARD
+planka workflow next --board BOARD --label feature:search
+planka workflow next --board BOARD --label effort:search
+planka workflow claim CARD
+planka workflow claim-status
+planka workflow branch-name CARD
+planka workflow pending-criteria CARD
+planka workflow add blocker BLOCKER --card BLOCKED
+planka workflow add blocker BLOCKER_ONE BLOCKER_TWO --card BLOCKED
+planka workflow remove blocker BLOCKER --card BLOCKED
+planka workflow complete-specs
+```
+
+These operations use the list, label, acceptance-criteria, and blocker
+conventions described in the style guide. `--criteria-file` accepts a JSON array
+of strings or `-` for stdin. Resume an interrupted ticket instead of creating a
+duplicate. `claim` adds membership and moves a card into progress;
+`claim-status` only reports existing claims. `complete-specs` comments and moves
+eligible specs to done.
+
+### Contexts and authentication
+
+```sh
+planka config set-context home --server https://planka.example.com \
+  --project PROJECT --board BOARD
+planka config get-contexts
+planka config use-context home
+planka get cards --context home
+planka --context home get cards
+planka auth login
+planka auth status
+planka auth logout
+```
+
+Contexts select a server and default scope. `--context` overrides the selected
+context for one invocation. Authentication is scoped to the selected server.
+
+### Output, help, and version
+
+```sh
+planka get card CARD -o json
+planka get cards --board BOARD --output json
+planka workflow next --board BOARD -o json
+planka --help
+planka create --help
+planka create card --help
+planka workflow --help
+planka --version
+```
+
+Human-readable output is the default. JSON mode emits one structured document
+on stdout; diagnostics go to stderr and failures exit nonzero. Help and version
+require no credentials or network. Unknown write outcomes must be reconciled
+before retrying; incomplete workflows retain recovery state in JSON output.
+
 ## Configure
 
 Supply resolved credentials in the process environment:
