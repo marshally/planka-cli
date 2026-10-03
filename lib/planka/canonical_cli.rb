@@ -33,6 +33,11 @@ module Planka
       Example: planka describe board 123 -o json
     HELP
 
+    RESOURCES = {
+      "card" => { collection: "cards", help: LEAF_HELP, read: :card_description }.freeze,
+      "board" => { collection: "boards", help: BOARD_HELP, read: :board_description }.freeze,
+    }.freeze
+
     def root_help(commands)
       [ROOT_HELP, "commands: #{commands.join(', ')}", "\nRun planka <command> --help for command usage and options."].join("\n")
     end
@@ -51,26 +56,33 @@ module Planka
         o.on("-h", "--help") { options[:help] = true }
       end
       parser.parse!(args)
-      unless [[], ["describe"], ["describe", "card"], ["describe", "cards"], ["describe", "board"], ["describe", "boards"]].include?(args.first(2))
+      resource_name = args[1].to_s.delete_suffix("s")
+      resource = RESOURCES[resource_name]
+      unless args.empty? || (args.first == "describe" && (args.size == 1 || resource))
         fail_command(options, "invalid_input", "unknown command; see planka --help", 2)
       end
-      resource = %w[board boards].include?(args[1]) ? "board" : "card"
-      collection = resource == "board" ? "boards" : "cards"
-      options[:program] = "planka describe #{resource}" if args.first == "describe"
+      options[:program] = "planka describe #{resource_name}" if resource
       if args.size > 3
         fail_command(options, "invalid_input", "Unexpected arguments; see planka describe --help", 2)
       end
       if options[:help]
-        leaf_help = %w[board boards].include?(args[1]) ? BOARD_HELP : LEAF_HELP
-        puts [root_help(legacy_commands), GROUP_HELP, leaf_help][[args.length, 2].min]
+        help = if args.empty?
+          root_help(legacy_commands)
+        elsif args.size == 1
+          GROUP_HELP
+        else
+          resource.fetch(:help)
+        end
+        puts help
         puts parser.help
         return
       end
-      unless args.first == "describe" && %w[card cards board boards].include?(args[1]) && args.size == 3
-        fail_command(options, "invalid_input", "Expected planka describe #{resource} #{resource.upcase}; see planka describe --help", 2)
+      unless resource && args.size == 3
+        fail_command(options, "invalid_input", "Expected planka describe RESOURCE REF; see planka describe --help", 2)
       end
+      collection = resource.fetch(:collection)
       unless args.last.match?(/\A\d+\z/) || args.last.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{collection}/\d+/?\z})
-        fail_command(options, "invalid_input", "Expected a numeric #{resource} ID or supported #{resource} URL", 2)
+        fail_command(options, "invalid_input", "Expected a numeric #{resource_name} ID or supported #{resource_name} URL", 2)
       end
       missing = %w[PLANKA_BASE_URL PLANKA_AGENT_EMAIL PLANKA_AGENT_PASSWORD].select { |key| ENV[key].to_s.strip.empty? }
       fail_command(options, "configuration_error", "Missing required environment: #{missing.join(', ')}", 1) unless missing.empty?
@@ -82,30 +94,17 @@ module Planka
         begin
           reference = URI(args.last)
         rescue URI::InvalidURIError
-          fail_command(options, "invalid_input", "Invalid #{resource} URL; use a numeric #{resource} ID or same-instance #{resource} URL", 2)
+          fail_command(options, "invalid_input", "Invalid #{resource_name} URL; use a numeric #{resource_name} ID or same-instance #{resource_name} URL", 2)
         end
         unless [reference.scheme, reference.host, reference.port] == [base.scheme, base.host, base.port] &&
             reference.path.match?(%r{\A#{Regexp.escape(base.path.sub(%r{/+\z}, ''))}/#{collection}/\d+/?\z}) && !reference.userinfo && !reference.query && !reference.fragment
-          fail_command(options, "invalid_input", "#{resource.capitalize} URL must belong to PLANKA_BASE_URL", 2)
+          fail_command(options, "invalid_input", "#{resource_name.capitalize} URL must belong to PLANKA_BASE_URL", 2)
         end
       end
       cleanup_notice = ->(_error) { warn "#{options[:program]}: session cleanup failed; the read result is unchanged" }
       Planka::Client.session(on_cleanup_error: cleanup_notice) do |client|
-        id = Planka.card_id(args.last)
-        if resource == "board"
-          included = client.board(id)
-          unless included.is_a?(Hash) && Planka::Snapshot::RECORD_TYPES.all? { |key|
-            records = included.fetch(key, [])
-            records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) }
-          }
-            raise Planka::Error, "Invalid board snapshot payload"
-          end
-          detail = { "boardId" => id }.merge(Planka::Snapshot.new(included).to_h)
-          human = Planka::CLI.board_snapshot(detail)
-        else
-          detail = Planka::CardDetail.new(client).for(id)
-          human = Planka::CLI.card_detail(detail)
-        end
+        id = args.last[/(\d+)\/?\z/, 1]
+        detail, human = public_send(resource.fetch(:read), client, id)
         Planka::CLI.emit({ "data" => detail, "meta" => {}, "error" => nil },
           output: options[:output], human: human)
       end
@@ -120,6 +119,23 @@ module Planka
       fail_command(options, "configuration_error", "Invalid PLANKA_BASE_URL", 1)
     rescue OptionParser::ParseError
       fail_command(options, "invalid_input", "Invalid option or output format; see planka describe --help", 2)
+    end
+
+    def card_description(client, id)
+      detail = Planka::CardDetail.new(client).for(id)
+      [detail, Planka::CLI.card_detail(detail)]
+    end
+
+    def board_description(client, id)
+      included = client.board(id)
+      unless included.is_a?(Hash) && Planka::Snapshot::RECORD_TYPES.all? { |key|
+        records = included.fetch(key, [])
+        records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) }
+      }
+        raise Planka::Error, "Invalid board snapshot payload"
+      end
+      detail = { "boardId" => id }.merge(Planka::Snapshot.new(included).to_h)
+      [detail, Planka::CLI.board_snapshot(detail)]
     end
 
     def fail_command(options, code, message, status)
