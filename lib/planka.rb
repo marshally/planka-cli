@@ -3,6 +3,7 @@ require "time"
 # Planka board workflows, shared by the library and CLI.
 module Planka
   Error = Class.new(StandardError)
+  InvalidResponse = Class.new(Error)
 
   # A multi-step create failed partway through. #state holds the ids created so
   # far so the caller can report them and resume the rest.

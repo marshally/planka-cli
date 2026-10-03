@@ -6,7 +6,27 @@ module Planka
   class Snapshot
     RECORD_TYPES = %w[lists cards labels cardLabels taskLists tasks cardMemberships].freeze
 
-    def initialize(included, base_url: ENV.fetch("PLANKA_BASE_URL"))
+    def self.read(client, id, base_url:)
+      { "boardId" => id }.merge(new(client.board(id), base_url: base_url, validate: true).to_h)
+    end
+
+    def self.validate!(included)
+      unless included.is_a?(Hash) && RECORD_TYPES.all? { |key|
+        records = included.fetch(key, [])
+        records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) }
+      }
+        raise InvalidResponse, "Invalid board snapshot collections"
+      end
+      Array(included["cards"]).each do |card|
+        position = card["position"]
+        unless position.nil? || position.is_a?(Numeric) || position.is_a?(String)
+          raise InvalidResponse, "Invalid card position"
+        end
+      end
+    end
+
+    def initialize(included, base_url: ENV.fetch("PLANKA_BASE_URL"), validate: false)
+      self.class.validate!(included) if validate
       @included = included
       @base_url = base_url.sub(%r{/+\z}, "")
     end

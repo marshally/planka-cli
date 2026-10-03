@@ -5,9 +5,9 @@ require "uri"
 module Planka
   # A signed-in session against Planka's REST API as the board's bot user.
   class Client
-    def self.session(on_cleanup_error: nil)
-      client = new(ENV.fetch("PLANKA_BASE_URL"))
-      client.sign_in(ENV.fetch("PLANKA_AGENT_EMAIL"), ENV.fetch("PLANKA_AGENT_PASSWORD"))
+    def self.session(base_url: nil, email: nil, password: nil, validate_responses: false, on_cleanup_error: nil)
+      client = new(base_url || ENV.fetch("PLANKA_BASE_URL"), validate_responses: validate_responses)
+      client.sign_in(email || ENV.fetch("PLANKA_AGENT_EMAIL"), password || ENV.fetch("PLANKA_AGENT_PASSWORD"))
       yield client
     ensure
       begin
@@ -19,13 +19,18 @@ module Planka
       end
     end
 
-    def initialize(base_url)
+    def initialize(base_url, validate_responses: false)
+      @validate_responses = validate_responses
       @base = URI(base_url)
       @token = nil
     end
 
     def sign_in(email, password)
-      @token = request(:post, "/api/access-tokens", { emailOrUsername: email, password: password }).fetch("item")
+      response = request(:post, "/api/access-tokens", { emailOrUsername: email, password: password })
+      if @validate_responses && (!response.is_a?(Hash) || !response["item"].is_a?(String) || response["item"].empty?)
+        raise InvalidResponse, "Invalid authentication response"
+      end
+      @token = response.fetch("item")
     end
 
     def sign_out(suppress_errors: true)
@@ -36,9 +41,21 @@ module Planka
       nil
     end
 
-    def board(id) = request(:get, "/api/boards/#{id}").fetch("included")
+    def board(id)
+      response = request(:get, "/api/boards/#{id}")
+      if @validate_responses && !response["included"].is_a?(Hash)
+        raise InvalidResponse, "Invalid board response"
+      end
+      response.fetch("included")
+    end
 
-    def comments(card_id) = request(:get, "/api/cards/#{card_id}/comments").fetch("items")
+    def comments(card_id)
+      response = request(:get, "/api/cards/#{card_id}/comments")
+      if @validate_responses && !response["items"].is_a?(Array)
+        raise InvalidResponse, "Invalid comments response"
+      end
+      response.fetch("items")
+    end
 
     def card(id) = request(:get, "/api/cards/#{id}")
 
@@ -129,7 +146,14 @@ module Planka
       raise ServerError, "#{method.upcase} #{path}: #{res.code} #{res.body}" if res.is_a?(Net::HTTPServerError)
       raise HTTPError.new("#{method.upcase} #{path}: #{res.code} #{res.body}", res.code.to_i) unless res.is_a?(Net::HTTPSuccess)
 
-      JSON.parse(res.body)
+      document = JSON.parse(res.body)
+      raise InvalidResponse, "Invalid response document" if @validate_responses && !document.is_a?(Hash)
+
+      document
+    rescue JSON::ParserError
+      raise InvalidResponse, "Invalid response JSON" if @validate_responses
+
+      raise
     end
   end
 end

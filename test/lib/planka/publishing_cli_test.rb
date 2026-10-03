@@ -345,6 +345,39 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_equal [["POST", "/api/access-tokens"]], @server.requests.map { |m, p, _| [m, p] }
   end
 
+  def test_canonical_commands_reject_invalid_session_tokens_before_resource_reads
+    @server.inject("POST", %r{access-tokens$}, :invalid_token)
+    out, err, status = planka("describe", "card", PARENT, "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    refute_includes out + err, "private upstream body"
+    assert_equal [["POST", "/api/access-tokens"]], @server.requests.map { |m, p, _| [m, p] }
+  end
+
+  def test_card_related_board_payload_failures_are_reported_as_invalid_responses
+    @server.inject("GET", %r{boards/#{FakePlanka::BOARD_ID}$}, :missing_board_records)
+    out, err, status = planka("describe", "card", PARENT, "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    refute_includes err, "KeyError"
+    refute_includes err, "card_detail.rb"
+    assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+  end
+
+  def test_snapshot_optional_collections_keep_their_legacy_and_canonical_shapes
+    expected = { "boardId" => FakePlanka::BOARD_ID, "lists" => [], "cards" => [], "labels" => [],
+      "cardLabels" => [], "taskLists" => [], "tasks" => [], "cardMemberships" => [] }
+    @server.inject("GET", %r{boards/#{FakePlanka::BOARD_ID}$}, :missing_board_records)
+    assert_equal expected, ok_json("snapshot", "--board", FakePlanka::BOARD_ID)
+    @server.inject("GET", %r{boards/#{FakePlanka::BOARD_ID}$}, :missing_board_records)
+    out, err, status = planka("describe", "board", FakePlanka::BOARD_ID, "-o", "json")
+    assert status.success?, err
+    assert_empty err
+    assert_equal({ "data" => expected, "meta" => {}, "error" => nil }, JSON.parse(out))
+  end
+
   def test_publishes_reads_back_and_preserves_the_whole_workflow
     criteria = [ %(Handles "quoted" punctuation, commas.), "Supports\nmultiline and ünïcode 多行" ]
 

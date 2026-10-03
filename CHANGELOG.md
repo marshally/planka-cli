@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+Separated canonical invocation parsing, configuration/reference validation, and
+output/status handling from the command coordinator. Canonical sessions use
+explicit validated settings, and readers report malformed response shapes as
+`InvalidResponse`. Invalid authentication tokens fail before resource reads.
+Legacy session/reader defaults and command contracts remain unchanged.
+
+
 Added `planka describe board BOARD` (also `describe boards`) to read the existing
 board snapshot through the canonical JSON/error and session contract. Explicit
 board IDs or same-instance URLs are required; environment defaults do not replace

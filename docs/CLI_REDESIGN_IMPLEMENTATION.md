@@ -28,7 +28,8 @@ record. Use an isolated implementation branch and preserve unrelated work.
 | --- | --- |
 | [exe/planka](../exe/planka) | Flat command whitelist and executable dispatcher. |
 | [exe/](../exe/) | Existing leaf parsers and direct `planka-<command>` entry points. |
-| [lib/planka/cli.rb](../lib/planka/cli.rb) | Option parsing, output formatting, scope helpers, and recovery/error plumbing. |
+| [lib/planka/cli.rb](../lib/planka/cli.rb) | Legacy option parsing, human formatters, scope helpers, and recovery/error plumbing. |
+| [lib/planka/canonical_cli.rb](../lib/planka/canonical_cli.rb), [lib/planka/cli/](../lib/planka/cli/) | Canonical coordinator, parsed invocations, validated configuration, output/status handling, and expected failures. |
 | [lib/planka/client.rb](../lib/planka/client.rb) | HTTP endpoints, session lifecycle, retries, and unknown-write-outcome detection. |
 | [lib/planka/card_detail.rb](../lib/planka/card_detail.rb), [lib/planka/snapshot.rb](../lib/planka/snapshot.rb) | Existing detailed card and board/list read models. |
 | [lib/planka/publishing.rb](../lib/planka/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and resource operations. |
@@ -150,6 +151,35 @@ and API failures. No new endpoints are introduced; evidence remains the captured
 board fixture and local HTTP fake, without live compatibility claims. Unexpected
 collection types in the included snapshot fail as `api_error`. Missing optional
 collections become empty arrays, preserving existing snapshot behavior.
+
+## Canonical CLI architecture
+
+The coordinator in [canonical_cli.rb](../lib/planka/canonical_cli.rb) follows
+parse → validate → open session → execute → render. The executable alone exits
+for canonical commands; the coordinator and output module return a status.
+Legacy executables retain their existing argument/output adapters.
+
+| Owner | Interface and responsibility |
+| --- | --- |
+| [CLI::Invocation](../lib/planka/cli/invocation.rb) | `parse` resolves command aliases, validates local syntax, and supplies help or an executable request. Command definitions select the reader and human formatter. |
+| [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` validates and captures one invocation's settings; `resolve_reference` enforces the selected instance. Inspection redacts connection settings. |
+| [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, human output, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
+| [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
+| [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb) | `read(client, id, base_url:)` returns canonical data and validates the response shapes each reader needs. |
+
+Help runs before configuration or authentication. Canonical readers receive the
+validated base URL explicitly; they do not fetch settings from the environment.
+Malformed response documents, tokens, and required reader records raise
+`Planka::InvalidResponse` near their consumption and become sanitized `api_error`
+failures. Output does not disguise unexpected `TypeError`, `NoMethodError`, or
+`KeyError` programming exceptions as server failures.
+
+Legacy session/reader interfaces keep their default validation and coercion
+behavior. Canonical reads opt into stricter shape checks. Missing optional board
+snapshot collections still become empty arrays; card detail still fails if its
+related board cannot supply the fields required by its index. Credentials remain
+in memory and sign-out failures preserve the primary result. This restructuring
+adds no new commands or endpoints.
 
 ## Subsequent implementation sequence
 

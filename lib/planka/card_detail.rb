@@ -6,13 +6,19 @@ module Planka
   #
   # client answers #card(id), #comments(id) and #board(id).
   class CardDetail
-    def initialize(client, base_url: ENV.fetch("PLANKA_BASE_URL"))
+    def self.read(client, id, base_url:)
+      new(client, base_url: base_url, validate: true).for(id)
+    end
+
+    def initialize(client, base_url: ENV.fetch("PLANKA_BASE_URL"), validate: false)
+      @validate = validate
       @client = client
       @base_url = base_url.sub(%r{/+\z}, "")
     end
 
     def for(card_id)
       response = @client.card(card_id)
+      validate_response!(response) if @validate
       item = response.fetch("item")
       included = response.fetch("included")
       board = board_for(item["boardId"])
@@ -37,7 +43,38 @@ module Planka
 
     private
 
-    def board_for(board_id) = board_id && Board.new(@client.board(board_id), base_url: @base_url)
+    def board_for(board_id)
+      return unless board_id
+
+      included = @client.board(board_id)
+      Snapshot.validate!(included) if @validate
+      Board.new(included, base_url: @base_url)
+    rescue KeyError
+      raise InvalidResponse, "Invalid related board records" if @validate
+
+      raise
+    end
+
+    def validate_response!(response)
+      unless response.is_a?(Hash) && response["item"].is_a?(Hash) &&
+          response["item"]["id"].is_a?(String) && !response["item"]["id"].empty? && response["included"].is_a?(Hash)
+        raise InvalidResponse, "Invalid card response"
+      end
+      %w[cardLabels cardMemberships taskLists tasks].each do |key|
+        records = response["included"][key]
+        unless records.nil? || (records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) })
+          raise InvalidResponse, "Invalid card related records"
+        end
+      end
+      %w[taskLists tasks].each do |key|
+        Array(response["included"][key]).each do |record|
+          position = record["position"]
+          unless position.nil? || position.is_a?(Numeric) || position.is_a?(String)
+            raise InvalidResponse, "Invalid task position"
+          end
+        end
+      end
+    end
 
     def labels(included, board)
       Array(included["cardLabels"]).map do |cl|
@@ -70,7 +107,11 @@ module Planka
     end
 
     def comments(card_id)
-      @client.comments(card_id).map { |c| c.slice("id", "text", "userId", "createdAt") }
+      records = @client.comments(card_id)
+      if @validate && (!records.is_a?(Array) || !records.all? { |record| record.is_a?(Hash) })
+        raise InvalidResponse, "Invalid comment records"
+      end
+      records.map { |c| c.slice("id", "text", "userId", "createdAt") }
     end
   end
 end
