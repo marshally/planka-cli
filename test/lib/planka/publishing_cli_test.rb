@@ -232,6 +232,17 @@ class Planka::PublishingCLITest < Minitest::Test
     end
   end
 
+  def test_describe_malformed_auth_response_obeys_canonical_failure_contract
+    @server.inject("POST", %r{access-tokens$}, :malformed_auth)
+    out, err, status = planka("describe", "card", PARENT, "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    refute_includes err, "TypeError"
+    refute_includes err, "canonical_cli.rb"
+    assert_equal [["POST", "/api/access-tokens"]], @server.requests.map { |m, p, _| [m, p] }
+  end
+
   def test_publishes_reads_back_and_preserves_the_whole_workflow
     criteria = [ %(Handles "quoted" punctuation, commas.), "Supports\nmultiline and ünïcode 多行" ]
 

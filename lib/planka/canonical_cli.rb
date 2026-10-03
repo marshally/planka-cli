@@ -77,14 +77,14 @@ module Planka
       end
       cleanup_notice = ->(_error) { warn "planka describe card: session cleanup failed; the read result is unchanged" }
       Planka::Client.session(on_cleanup_error: cleanup_notice) do |client|
-        detail = read_detail(client, Planka.card_id(args.last))
+        detail = Planka::CardDetail.new(client).for(Planka.card_id(args.last))
         Planka::CLI.emit({ "data" => detail, "meta" => {}, "error" => nil },
           output: options[:output], human: Planka::CLI.card_detail(detail))
       end
     rescue Planka::Client::HTTPError => e
       code = { 401 => "authentication_error", 403 => "authorization_error", 404 => "not_found" }.fetch(e.status, "api_error")
       fail_command(options, code, "API request failed (HTTP #{e.status}); verify the card and access permissions", 1)
-    rescue Planka::Error, KeyError, JSON::ParserError
+    rescue Planka::Error, KeyError, JSON::ParserError, TypeError, NoMethodError
       fail_command(options, "api_error", "Could not read complete card details; verify server availability and API compatibility", 1)
     rescue SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError
       fail_command(options, "network_error", "Could not reach Planka; check the instance URL and network", 1)
@@ -92,14 +92,6 @@ module Planka
       fail_command(options, "configuration_error", "Invalid PLANKA_BASE_URL", 1)
     rescue OptionParser::ParseError
       fail_command(options, "invalid_input", "Invalid option or output format; see planka describe card --help", 2)
-    end
-
-    def read_detail(client, id)
-      Planka::CardDetail.new(client).for(id)
-    rescue NoMethodError, TypeError
-      # Unexpected upstream payload types are API failures at this adapter;
-      # legacy readers retain their existing behavior.
-      raise Planka::Error, "Invalid card detail payload"
     end
 
     def fail_command(options, code, message, status)
