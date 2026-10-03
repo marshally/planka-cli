@@ -114,8 +114,11 @@ stdin. Deletes require an explicit target; supported combinations of verbs and
 resources depend on the Planka API.
 
 An explicit `delete RESOURCE REF` executes without prompts or a `--yes` flag,
-with identical behavior in terminals and scripts. Cascade policy is still under
-discussion.
+with identical behavior in terminals and scripts. Deletion follows the server's
+native behavior and restrictions. The CLI issues only the target deletion, with
+no recursive client-side deletes or `--cascade` flag. See the
+[API deletion evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#upstream-deletion-evidence)
+for resource-specific effects.
 
 ### Attach and detach relationships
 

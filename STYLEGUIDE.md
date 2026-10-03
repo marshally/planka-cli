@@ -340,8 +340,18 @@ Provide an explicit resume operation instead of requiring a duplicate create.
 Delete requires an explicit resource reference and executes without confirmation
 prompts. The same invocation behaves identically in terminals and scripts; do
 not require `--yes` or an interactive session. An omitted target is an input error,
-not a request to delete a collection. Document cascading effects in command help
-and errors; the cascade opt-in policy remains to be settled separately.
+not a request to delete a collection. Follow the target API's native delete
+behavior and document its cascading effects and restrictions in help and errors.
+Issue only the target resource delete; never recursively delete children,
+implement cleanup cascades in the client, or bypass a server restriction by
+deleting dependencies. There is no `--cascade` flag. Resolution reads and session
+authentication/cleanup are separate from the single target mutation.
+
+Native behavior is resource-specific: a list deletion may move cards rather than
+delete them, and a project deletion may require an empty project. Preserve those
+semantics rather than imposing a generic parent/child deletion model. See the
+handoff's pinned upstream deletion evidence; verify the deployed release during
+implementation.
 
 ## Workflow commands
 
