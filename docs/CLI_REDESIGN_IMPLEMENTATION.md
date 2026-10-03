@@ -183,11 +183,14 @@ from API evidence. Future major releases require verification.
 
 Deletion confirmation is settled: an explicit `delete RESOURCE REF` executes
 without prompts or `--yes`, identically in terminals and scripts. Missing targets
-are invalid invocation. Cascade behavior remains a separate open decision.
+are invalid invocation. Cascades follow native API behavior only: one target
+delete mutation, no recursive client-side deletes, no dependency cleanup to
+bypass restrictions, and no `--cascade` flag. Preserve server errors and document
+resource-specific effects. Resolution reads and session lifecycle requests are
+not additional resource deletions.
 
 | Decision | Required outcome |
 | --- | --- |
-| Deletion cascades | Establish cascading effects and whether dependent-resource deletion needs an explicit opt-in. Confirmation is settled: no prompts or `--yes`. |
 | Legacy deprecation | Choose release timing, notice policy, and removal conditions for flat/direct executables and their schemas. |
 
 Do not choose a generic resource model or credential persistence scheme simply
@@ -214,6 +217,30 @@ Use sanitized fixtures and output; exclude credentials and unrelated board data.
 If live verification is unavailable, state the exact coverage limit in the PR
 instead of claiming live compatibility. Readback is particularly important after
 timeouts or multi-step workflows.
+
+## Upstream deletion evidence
+
+Inspected the official Planka Community server source at tag `v2.2.1`. This is
+source verification, not a live deletion test or proof for every 2.x release.
+The REST delete controllers accept a target ID; these handlers do not offer a
+generic cascade toggle. [Routes](https://github.com/plankanban/planka/blob/v2.2.1/server/config/routes.js)
+map the commands to native DELETE endpoints.
+
+| Target endpoint | Native behavior | Pinned server evidence |
+| --- | --- | --- |
+| `DELETE /api/projects/:id` | Refuses projects that still have boards; does not delete them to make the request succeed. | [Project helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/projects/delete-one.js) |
+| `DELETE /api/boards/:id` | Deletes the board and its lists/cards, labels, memberships, and related board data on the server. | [Board cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/boards/delete-related.js), [list cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/delete-related.js) |
+| `DELETE /api/lists/:id` | Deletes an eligible kanban list and moves its cards to the board's trash list. It does not permanently delete those cards. | [List controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/lists/delete.js), [list helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/delete-one.js) |
+| `DELETE /api/cards/:id` | Deletes the card and related task lists/tasks, attachments, comments, memberships, labels, subscriptions, and other card data. Clears linked-card references in other tasks instead of deleting those other cards. | [Card cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/cards/delete-related.js) |
+| `DELETE /api/task-lists/:id` | Deletes its tasks as part of server-side cleanup. | [Task-list cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/task-lists/delete-related.js) |
+| `DELETE /api/labels/:id` | Removes card-label assignments; cards themselves remain. | [Label cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/labels/delete-related.js) |
+
+The project nonempty restriction and list-to-trash behavior were also checked in
+tags `v2.0.0` and `2.1.1`. Recheck permissions, response schemas, and effects on
+the deployed version before implementing each delete capability. Test that a
+project rejection issues no child deletions and that deleting a list preserves
+the server's move-to-trash behavior. Do not assume a board deletion's internal
+list cleanup is identical to the standalone list-delete endpoint.
 
 ## Resume checklist
 
