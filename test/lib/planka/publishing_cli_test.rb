@@ -694,6 +694,21 @@ class Planka::PublishingCLITest < Minitest::Test
     end
   end
 
+  def test_pending_criteria_rejects_malformed_board_references_before_board_reads
+    [:malformed_board_reference, :malformed_board_path].each do |fault|
+      @server.inject("GET", %r{cards/#{PARENT}$}, fault)
+      start = @server.requests.length
+      out, err, status = planka("workflow", "pending-criteria", PARENT, "-o", "json")
+      assert_equal 1, status.exitstatus
+      assert_equal "api_error", JSON.parse(out).dig("error", "code")
+      assert_nil JSON.parse(out)["data"]
+      refute_includes out + err, "not-an-id"
+      refute_includes out + err, "../cards/123"
+      assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
+        ["DELETE", "/api/access-tokens/me"]], @server.requests.drop(start).map { |method, path, _| [method, path] }
+    end
+  end
+
   def test_pending_criteria_empty_results_are_successful_with_or_without_a_criteria_list
     assert_equal({ "data" => { "cardId" => PARENT, "criteria" => [] }, "meta" => {}, "error" => nil },
       JSON.parse(ok("workflow", "pending-criteria", PARENT, "-o", "json")))
