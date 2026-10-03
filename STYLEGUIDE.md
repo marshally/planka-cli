@@ -7,7 +7,7 @@ syntax, not a claim that every command is implemented or supported by every
 Planka release.
 
 The [implementation handoff](docs/CLI_REDESIGN_IMPLEMENTATION.md) records code
-entry points, staged implementation, acceptance criteria, and open decisions.
+entry points, staged implementation, acceptance criteria, and settled decisions.
 
 ## Command grammar
 
@@ -406,10 +406,22 @@ access. Show canonical commands in examples instead of an ungrouped list of alia
 
 ## Migration from the current interface
 
-The redesigned contract does not immediately remove existing commands or direct
-`planka-<command>` executables. Keep them as compatibility entry points with their
-existing argument conventions until a documented deprecation/removal release.
-Translate old arguments internally; do not make an alias require the new flags.
+All 21 current flat commands and their direct `planka-<command>` executables are
+deprecated compatibility entry points in the target contract. Retain them
+indefinitely; this redesign has no removal release, deadline, or automatic
+expiration. Any future removal belongs to a separate, explicitly scoped track of
+work. The gem currently has only its author as a user; no external-consumer
+migration window is required by this decision.
+
+Preserve legacy arguments, effects, JSON shapes, and exit behavior while these
+entry points remain available. Translate old arguments internally; do not make
+an alias require the new flags or adopt the canonical JSON envelope/exit codes.
+Mark the legacy interfaces as deprecated in documentation and, when command help
+is updated during implementation, in help with links or names for implemented
+replacements. Use release notes to describe the migration as replacements ship.
+Do not add automatic runtime deprecation warnings or change stdout, stderr, or
+exit codes merely to announce deprecation. Never direct users to a replacement
+as a working command before it is implemented.
 
 | Current command | Canonical target |
 | --- | --- |
@@ -437,12 +449,11 @@ Translate old arguments internally; do not make an alias require the new flags.
 | `spec-sweep` | `workflow complete-specs` |
 
 Translate legacy `--title` to canonical `--name`. Preserve existing JSON shapes
-for legacy entry points unless a separately documented compatibility change is
-made. Canonical commands may introduce documented schemas. A board description
-and card collection do not automatically reproduce the legacy snapshot schema;
-the snapshot alias must retain that behavior.
+for legacy entry points. Canonical commands may introduce documented schemas.
+A board description and card collection do not automatically reproduce the
+legacy snapshot schema; the snapshot alias must retain that behavior.
 
 New help and documentation use canonical names once those commands exist. Keep
 README examples aligned with actual implementation rather than replacing them
-with unimplemented target syntax. Announce alias deprecations and schema changes
-before removing them.
+with unimplemented target syntax. Deprecation does not authorize removal or
+changes to the legacy JSON/exit contracts.

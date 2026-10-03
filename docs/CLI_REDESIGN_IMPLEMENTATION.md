@@ -6,9 +6,8 @@ The goal is a general Planka administration CLI with a kubectl-like
 `planka <verb> <resource> [reference] [flags]` interface. Convention-based agent
 operations live under `planka workflow`.
 
-This PR changes documentation only. No nested command dispatcher,
-additional administration operations have been
-implemented. README's **Current interface** describes working commands; its
+This PR changes documentation only. No nested command dispatcher or additional
+administration operations have been implemented. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the target.
 
 Read [STYLEGUIDE.md](../STYLEGUIDE.md) for the design contract, including the full
@@ -119,17 +118,18 @@ criteria. Do not add command placeholders that claim these features work.
    canonical operations. Use project-supplied email/password, in-memory tokens,
    and sign-out cleanup; do not introduce persisted configuration or auth commands.
 5. Reconcile README, built-in workflow guidance, executable packaging, and
-   release notes with implemented behavior. Deprecate legacy entry points only
-   under a separately documented compatibility policy.
+   release notes with implemented behavior. Mark legacy help as deprecated under
+   the retention policy below; do not add runtime warnings or remove entry points.
 
 For every mutation slice, verify supplied-fields-only updates, idempotent
 relationships where applicable, unknown outcomes, partial completion, and readback.
 Do not rewrite retry behavior merely as a side effect of reorganizing commands.
 
-## Open decisions
+## Settled decisions and implementation deliverables
 
-These choices are not settled by the example invocations. Resolve the relevant
-ones in the implementation slice before claiming its contract is complete.
+The design decisions below are settled. Per-command schemas, error codes,
+recovery actions, and API capability evidence remain deliverables of each
+implementation slice; they do not reopen the shared contract.
 
 JSON envelope and error/recovery rules are settled. Canonical commands always
 include `data`, `meta`, and `error`; resource collections use arrays. Errors have
@@ -189,9 +189,16 @@ bypass restrictions, and no `--cascade` flag. Preserve server errors and documen
 resource-specific effects. Resolution reads and session lifecycle requests are
 not additional resource deletions.
 
-| Decision | Required outcome |
-| --- | --- |
-| Legacy deprecation | Choose release timing, notice policy, and removal conditions for flat/direct executables and their schemas. |
+Legacy deprecation is settled: all 21 flat commands and their direct executables
+are deprecated compatibility entry points, retained indefinitely. Preserve their
+arguments, effects, JSON shapes, and exit behavior. Mark deprecation in
+documentation and in help when help is updated, and describe implemented
+replacements in release notes. Do not add automatic runtime warnings. There is
+no removal release, deadline, or automatic expiration; any later sweep/removal
+belongs to a separate, explicitly scoped track. The author is currently the only
+gem user, so this decision imposes no external-consumer migration window. Never
+present an unimplemented replacement as available. See the style guide
+[Migration section](../STYLEGUIDE.md#migration-from-the-current-interface).
 
 Do not choose a generic resource model or credential persistence scheme simply
 because kubectl has one. Use Planka's actual model and this project's deployment
@@ -247,7 +254,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
 3. Select the bounded first task or the next unfinished slice from its successor PR.
-4. Record that slice's unresolved contracts, add meaningful failing acceptance
-   tests, implement, and verify the packaged entry points.
+4. Record that slice's schemas, error/recovery details, and API evidence; add
+   meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,
    verification limits, and remaining work in the implementation PR.
