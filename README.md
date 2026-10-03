@@ -37,8 +37,9 @@ planka <verb> <resource> [reference] [flags]
 planka workflow <operation> [arguments] [flags]
 ```
 
-**The invocations below describe the proposed interface, which is not yet
-implemented.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
+**The invocations below describe the target interface. Only `planka describe
+card CARD` and its root/group/leaf help are implemented so far; the other
+redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
 [Workflow examples](#workflow-examples) for an end-to-end publishing sequence.
 See the [implementation handoff](docs/CLI_REDESIGN_IMPLEMENTATION.md) for the
@@ -195,16 +196,39 @@ before retrying; incomplete workflows retain recovery state in JSON output.
 
 ## Current interface
 
-The installed CLI currently uses the flat commands below. Run
+### Canonical card detail
+
+```sh
+planka describe card CARD
+planka -o json describe card CARD
+planka describe cards CARD --output json
+planka describe --help
+planka describe card --help
+```
+
+This read-only command accepts numeric card IDs and card URLs belonging to
+`PLANKA_BASE_URL`. It requires nonempty `PLANKA_BASE_URL`, `PLANKA_AGENT_EMAIL`,
+and `PLANKA_AGENT_PASSWORD` before network access; no board setting is required.
+Common output flags work before or after the command path. Human output matches
+legacy `show`; JSON wraps the detail in `data`, alongside `meta: {}` and `error: null`.
+On failure, `data` is null and `error` contains a code and message. Invalid input
+exits 2; configuration, API, and network failures exit 1. Session cleanup
+failures are reported on stderr without replacing the read result. See the
+[leaf contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#first-leaf-output-contract)
+for fields and error codes. No live-version capability check is implemented.
+
+### Legacy compatibility commands
+
+The installed CLI also retains the flat commands below. Run
 `planka <command> --help` for full arguments and options. Each operation also
 has a direct `planka-<command>` executable.
 
 These flat commands and direct executables are deprecated in the redesign
 contract and retained indefinitely with their existing arguments, behavior, JSON
 shapes, and exit codes. No removal is scheduled; a later sweep belongs to a
-separate track of work. Deprecation notices belong in documentation, help, and
-release notes, with no automatic runtime warnings. The planned canonical
-replacements above are not yet implemented.
+separate track of work. Deprecation notices appear in documentation, help, and
+release notes, with no automatic runtime warnings. `describe card` replaces
+`show`; the remaining canonical replacements are not yet implemented.
 
 ### Configuration
 

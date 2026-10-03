@@ -6,9 +6,10 @@ The goal is a general Planka administration CLI with a kubectl-like
 `planka <verb> <resource> [reference] [flags]` interface. Convention-based agent
 operations live under `planka workflow`.
 
-This PR changes documentation only. No nested command dispatcher or additional
-administration operations have been implemented. README's **Current interface** describes working commands; its
-**Usage — planned interface** section describes the target.
+The first slice is implemented: nested dispatch/help and `planka describe card
+CARD`, with all legacy entry points preserved. Other administration operations
+remain planned. README's **Current interface** describes working commands; its
+**Usage — planned interface** section describes the broader target.
 
 Read [STYLEGUIDE.md](../STYLEGUIDE.md) for the design contract, including the full
 legacy-to-canonical mapping, and [README.md](../README.md) for examples. This
@@ -44,19 +45,39 @@ card moves, and membership/label attachment. Inspect actual methods before
 reusing them. Reading board IDs through the projects response does not establish
 a complete project or board administration interface.
 
-## First task: nested dispatch and one read-only vertical slice
+## Implemented first slice: nested dispatch and card detail
 
-Deliver `planka describe card CARD` using the existing card-detail behavior,
+The first slice delivers `planka describe card CARD` using existing card-detail behavior,
 along with root, `describe`, and leaf help. Keep every current command and direct
 executable callable. This slice establishes command routing and compatibility
 without requiring new API endpoints, configuration storage, or mutation behavior.
 
-Before changing implementation, record the first leaf's JSON schema and successful
-human output contract. Canonical output uses the approved `data`/`meta`/`error`
+The first leaf's JSON schema and human output contract are recorded below. Canonical output uses the approved `data`/`meta`/`error`
 envelope: put the existing card-detail object in `data`, with `meta: {}` and
 `error: null` on success. Preserve the unwrapped legacy `show` JSON shape and test
 the two contracts independently. Use the approved error/recovery rules in the
 style guide and document the leaf's applicable error codes.
+
+### First leaf output contract
+
+`describe card CARD` returns the existing card-detail object in `data`, an empty
+`meta` object, and `error: null`. Detail fields are `id`, `name`, `description`,
+`type`, `boardId`, `listId`, `listName`, `position`, `url`, `labels`, `members`,
+`taskLists`, `blockers`, and `comments`. Labels contain `id`/`name`; members are
+user IDs; task lists contain `id`/`name`/`position`/`tasks`, whose fields are
+`id`, `name`, `isCompleted`, `linkedCardId`, and `position` when available.
+Blockers contain `cardId`/`taskId`/`completed`; comments contain
+`id`/`text`/`userId`/`createdAt` when available. Missing optional scalar values
+may be null; empty related collections are arrays.
+
+Human output preserves the existing `show` rendering: name and URL, list,
+labels, and nonempty description, members, task lists, blockers, and comments.
+Failure JSON contains `data: null`, `meta: {}`, and an error with `code` and
+`message`; this read-only leaf has no mutation recovery action. Exit 2 uses
+`invalid_input`; exit 1 uses `configuration_error`, `authentication_error`,
+`authorization_error`, `not_found`, `api_error`, or `network_error`. Failed
+related reads do not claim a complete detail result. Diagnostic messages identify
+the canonical command without exposing credentials or raw server response bodies.
 
 ### Acceptance criteria
 
@@ -253,7 +274,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the bounded first task or the next unfinished slice from its successor PR.
+3. Select the next unfinished slice; nested dispatch/help and card detail are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

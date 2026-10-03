@@ -109,7 +109,8 @@ class FakePlanka
 
   def dispatch(socket, method, path, body)
     @requests << [ method, path, body ]
-    case take_fault(method, path)
+    case (fault = take_fault(method, path))
+    when Integer then return write(socket, fault, { "message" => "private upstream body" })
     when :drop then return
     when :server_error then return write(socket, 500, { "message" => "injected failure" })
     when :apply_then_drop

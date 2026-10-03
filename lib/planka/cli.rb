@@ -76,6 +76,7 @@ module Planka
 
     def output_option(parser, options)
       options[:output] = "human"
+      parser.separator "Deprecated compatibility entry point; retained indefinitely."
       parser.on("--output FORMAT", %w[human json], "output format: human or json (default human)") do |format|
         options[:output] = format
       end

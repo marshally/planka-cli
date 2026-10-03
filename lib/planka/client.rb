@@ -22,9 +22,11 @@ module Planka
       @token = request(:post, "/api/access-tokens", { emailOrUsername: email, password: password }).fetch("item")
     end
 
-    def sign_out
+    def sign_out(suppress_errors: true)
       request(:delete, "/api/access-tokens/me") if @token
     rescue Error
+      raise unless suppress_errors
+
       nil
     end
 
@@ -66,6 +68,15 @@ module Planka
     def move_card(card_id, list_id, position: 65_535) = request(:patch, "/api/cards/#{card_id}", { listId: list_id, position: }).fetch("item")
 
     def comment(card_id, text) = request(:post, "/api/cards/#{card_id}/comments", { text: }, idempotent: false)
+
+    class HTTPError < Error
+      attr_reader :status
+
+      def initialize(message, status)
+        super(message)
+        @status = status
+      end
+    end
 
     ServerError = Class.new(Error)
     # A non-idempotent request failed after Planka may already have applied it.
@@ -110,7 +121,7 @@ module Planka
       end
       res = http.request(req)
       raise ServerError, "#{method.upcase} #{path}: #{res.code} #{res.body}" if res.is_a?(Net::HTTPServerError)
-      raise Error, "#{method.upcase} #{path}: #{res.code} #{res.body}" unless res.is_a?(Net::HTTPSuccess)
+      raise HTTPError.new("#{method.upcase} #{path}: #{res.code} #{res.body}", res.code.to_i) unless res.is_a?(Net::HTTPSuccess)
 
       JSON.parse(res.body)
     end

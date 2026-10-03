@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+Added `planka describe card CARD` (also `describe cards`) with nested help and
+common `-o`/`--output` flags. Human output matches `show`; JSON uses the canonical
+`data`/`meta`/`error` envelope. Input and required environment are validated
+before authentication. API errors use stable codes and omit raw server bodies.
+
+All 21 flat commands and direct executables are deprecated and retained
+indefinitely with their existing arguments, effects, JSON, and exit behavior.
+Help labels deprecation; there are no automatic runtime warnings. `show` has
+an implemented replacement in `describe card`; other canonical operations
+remain planned. Removal belongs to a separate track of work.
+
 Added `planka prime` (also `planka-prime`) to print a concise, built-in agent
 workflow guide without credentials or API access. Supports `--output json`.
 
