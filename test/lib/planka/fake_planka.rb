@@ -160,6 +160,8 @@ class FakePlanka
     when :invalid_token then return write(socket, 200, { "item" => { "private" => "private upstream body" } })
     when :malformed_auth then return write(socket, 200, [])
     when :malformed_card then return write(socket, 200, { "item" => nil, "included" => {} })
+    when :malformed_board_reference then return write(socket, 200, { "item" => { "boardId" => "not-an-id" } })
+    when :malformed_board_path then return write(socket, 200, { "item" => { "boardId" => "../cards/123" } })
     when :malformed_description then return write(socket, 200, { "item" => { "id" => PARENT_CARD, "description" => 42 }, "included" => {} })
     when :malformed_included then return write(socket, 200, { "item" => find_card(PARENT_CARD), "included" => [] })
     when :drop then return

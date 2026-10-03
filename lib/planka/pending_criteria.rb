@@ -4,7 +4,7 @@ module Planka
     def self.read(client, id, base_url:)
       response = client.card(id)
       board_id = response.is_a?(Hash) && response["item"].is_a?(Hash) && response["item"]["boardId"]
-      unless board_id.is_a?(String) && !board_id.empty?
+      unless board_id.is_a?(String) && board_id.match?(/\A\d+\z/)
         raise InvalidResponse, "Invalid card board reference"
       end
       included = client.board(board_id)

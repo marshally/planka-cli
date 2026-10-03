@@ -178,6 +178,7 @@ existing included records. It shares `Board`/`Card` inspection logic with legacy
 existing read path, captured fixtures, and local HTTP fake; no new endpoint or
 live-version compatibility claim is introduced.
 
+The card's board reference must be a numeric ID before any board request.
 Malformed card board references, required board records, task-list identity/name
 fields, and task names/completion flags fail as sanitized `api_error` with null
 data and exit 1. Missing/invalid input, conflicting flags, unsupported flags, or
