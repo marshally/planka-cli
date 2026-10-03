@@ -7,11 +7,9 @@ commands = %w[prime link next-card branch-name claim comment unticked spec-sweep
   create-label apply-label create-task-list rename-task-list]
 if ARGV == ["--version"]
   puts Planka::VERSION
-elsif ARGV.empty? || ARGV == ["--help"] || ARGV == ["-h"]
-  puts Planka::CanonicalCLI.root_help(commands)
-elsif !commands.include?(ARGV.first)
-  Planka::CanonicalCLI.run(ARGV, legacy_commands: commands)
-else
+elsif commands.include?(ARGV.first)
   command = ARGV.shift
   load File.expand_path("planka-#{command}", __dir__)
+else
+  exit Planka::CanonicalCLI.run(ARGV, legacy_commands: commands)
 end
