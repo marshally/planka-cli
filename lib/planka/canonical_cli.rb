@@ -65,14 +65,19 @@ module Planka
         fail_command(options, "configuration_error", "PLANKA_BASE_URL must be an HTTP(S) instance URL without credentials, query, or fragment", 1)
       end
       unless args.last.match?(/\A\d+\z/)
-        reference = URI(args.last)
+        begin
+          reference = URI(args.last)
+        rescue URI::InvalidURIError
+          fail_command(options, "invalid_input", "Invalid card URL; use a numeric card ID or same-instance card URL", 2)
+        end
         unless [reference.scheme, reference.host, reference.port] == [base.scheme, base.host, base.port] &&
             reference.path.match?(%r{\A#{Regexp.escape(base.path.sub(%r{/+\z}, ''))}/cards/\d+/?\z}) && !reference.userinfo && !reference.query && !reference.fragment
           fail_command(options, "invalid_input", "Card URL must belong to PLANKA_BASE_URL", 2)
         end
       end
-      with_session do |client|
-        detail = Planka::CardDetail.new(client).for(Planka.card_id(args.last))
+      cleanup_notice = ->(_error) { warn "planka describe card: session cleanup failed; the read result is unchanged" }
+      Planka::Client.session(on_cleanup_error: cleanup_notice) do |client|
+        detail = read_detail(client, Planka.card_id(args.last))
         Planka::CLI.emit({ "data" => detail, "meta" => {}, "error" => nil },
           output: options[:output], human: Planka::CLI.card_detail(detail))
       end
@@ -81,7 +86,7 @@ module Planka
       fail_command(options, code, "API request failed (HTTP #{e.status}); verify the card and access permissions", 1)
     rescue Planka::Error, KeyError, JSON::ParserError
       fail_command(options, "api_error", "Could not read complete card details; verify server availability and API compatibility", 1)
-    rescue SystemCallError, SocketError, Timeout::Error, EOFError, IOError
+    rescue SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError
       fail_command(options, "network_error", "Could not reach Planka; check the instance URL and network", 1)
     rescue URI::InvalidURIError
       fail_command(options, "configuration_error", "Invalid PLANKA_BASE_URL", 1)
@@ -89,16 +94,12 @@ module Planka
       fail_command(options, "invalid_input", "Invalid option or output format; see planka describe card --help", 2)
     end
 
-    def with_session
-      client = Planka::Client.new(ENV.fetch("PLANKA_BASE_URL"))
-      client.sign_in(ENV.fetch("PLANKA_AGENT_EMAIL"), ENV.fetch("PLANKA_AGENT_PASSWORD"))
-      yield client
-    ensure
-      begin
-        client&.sign_out(suppress_errors: false)
-      rescue Planka::Error, SystemCallError, SocketError, Timeout::Error, EOFError, IOError, JSON::ParserError
-        warn "planka describe card: session cleanup failed; the read result is unchanged"
-      end
+    def read_detail(client, id)
+      Planka::CardDetail.new(client).for(id)
+    rescue NoMethodError, TypeError
+      # Unexpected upstream payload types are API failures at this adapter;
+      # legacy readers retain their existing behavior.
+      raise Planka::Error, "Invalid card detail payload"
     end
 
     def fail_command(options, code, message, status)

@@ -10,6 +10,7 @@ require "optparse"
 options = {}
 parser = OptionParser.new do |o|
   o.banner = "usage: planka show <card> [--output human|json]"
+  o.separator "Canonical replacement: planka describe card CARD (same human output; new JSON envelope)."
   Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka show")

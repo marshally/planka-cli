@@ -41,6 +41,15 @@ class Planka::CLITest < Minitest::Test
     assert_includes out, "planka <command> --help"
   end
 
+  def test_legacy_show_help_identifies_its_implemented_canonical_replacement
+    out, err, status = run_cli("show", "--help")
+    assert status.success?, err
+    assert_includes out, "planka describe card CARD"
+    direct, direct_err, direct_status = run_cli("--help", executable: "planka-show")
+    assert direct_status.success?, direct_err
+    assert_equal out, direct
+  end
+
   def test_option_errors_use_the_documented_command_name_for_both_entry_points
     COMMANDS.each do |command|
       _out, err, status = run_cli(command, "--unknown")
