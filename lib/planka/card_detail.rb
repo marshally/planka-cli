@@ -60,6 +60,10 @@ module Planka
           response["item"]["id"].is_a?(String) && !response["item"]["id"].empty? && response["included"].is_a?(Hash)
         raise InvalidResponse, "Invalid card response"
       end
+      description = response["item"]["description"]
+      unless description.nil? || description.is_a?(String)
+        raise InvalidResponse, "Invalid card description"
+      end
       %w[cardLabels cardMemberships taskLists tasks].each do |key|
         records = response["included"][key]
         unless records.nil? || (records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) })
