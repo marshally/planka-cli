@@ -42,7 +42,7 @@ implemented.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
 [Workflow examples](#workflow-examples) for an end-to-end publishing sequence.
 See the [implementation handoff](docs/CLI_REDESIGN_IMPLEMENTATION.md) for the
-first implementation task, acceptance criteria, and open decisions.
+first implementation task, acceptance criteria, and settled decisions.
 
 Uppercase references such as `BOARD`, `LIST`, and `CARD` are placeholders for
 IDs, supported resource URLs, or exact names within a known parent scope.
@@ -198,6 +198,13 @@ before retrying; incomplete workflows retain recovery state in JSON output.
 The installed CLI currently uses the flat commands below. Run
 `planka <command> --help` for full arguments and options. Each operation also
 has a direct `planka-<command>` executable.
+
+These flat commands and direct executables are deprecated in the redesign
+contract and retained indefinitely with their existing arguments, behavior, JSON
+shapes, and exit codes. No removal is scheduled; a later sweep belongs to a
+separate track of work. Deprecation notices belong in documentation, help, and
+release notes, with no automatic runtime warnings. The planned canonical
+replacements above are not yet implemented.
 
 ### Configuration
 
