@@ -16,6 +16,8 @@ parser = OptionParser.new do |o|
   o.banner = "usage: planka snapshot [--board ID] [--list ID|NAME] [--output human|json]"
   o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
   o.on("--list LIST", "only this list's cards, by id or name") { |v| options[:list] = v }
+  o.separator "Board view replacement: planka describe board BOARD (new JSON envelope)."
+  o.separator "List views remain available through snapshot --list; get cards is not yet implemented."
   Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka snapshot")

@@ -7,7 +7,8 @@ The goal is a general Planka administration CLI with a kubectl-like
 operations live under `planka workflow`.
 
 The first slice is implemented: nested dispatch/help and `planka describe card
-CARD`, with all legacy entry points preserved. Other administration operations
+CARD`. The second slice adds `planka describe board BOARD`. All legacy entry
+points are preserved. Other administration operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
 
@@ -123,6 +124,32 @@ The first task adds no new deletion, relationship removal, user administration,
 saved credentials, pagination, declarative apply, or API-version support.
 Those are separate capabilities with their own API contracts and acceptance
 criteria. Do not add command placeholders that claim these features work.
+
+## Implemented second slice: board description
+
+The second slice delivers `planka describe board BOARD` (alias `boards`) using the existing
+board snapshot read. Accept numeric board IDs and same-instance `/boards/ID`
+URLs; require the positional target even when `PLANKA_BOARD_ID` is set. Board
+names/project lookup and explicit parent flags are outside this slice.
+
+Success JSON has `data` containing `boardId`, `lists`, `cards`, `labels`,
+`cardLabels`, `taskLists`, `tasks`, and `cardMemberships`; `meta` is `{}` and
+`error` is null. Related arrays preserve snapshot records, while cards gain URLs
+and sort by position. Human output matches legacy `snapshot --board BOARD`.
+This is a detailed board read, not a paginated collection command: no
+`meta.complete`, filters, or `--limit` are introduced. The endpoint supplies only
+its included snapshot; do not claim completeness beyond that response.
+
+Use the first leaf's canonical environment, JSON failure, exit, URL validation,
+and session-cleanup rules, with board-specific help and diagnostics. Legacy
+`snapshot` and `planka-snapshot` retain their arguments, human/JSON output, and
+exit behavior, including their `--list` mode. Test at the established subprocess
+and local HTTP seams: envelope/data/human equivalence, all entry points, request
+boundaries, missing target/configuration, same-instance URLs, malformed payloads,
+and API failures. No new endpoints are introduced; evidence remains the captured
+board fixture and local HTTP fake, without live compatibility claims. Unexpected
+collection types in the included snapshot fail as `api_error`. Missing optional
+collections become empty arrays, preserving existing snapshot behavior.
 
 ## Subsequent implementation sequence
 
@@ -274,7 +301,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice; nested dispatch/help and card detail are complete.
+3. Select the next unfinished slice; nested dispatch/help, card detail, and board description are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

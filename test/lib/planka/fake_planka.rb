@@ -151,6 +151,7 @@ class FakePlanka
     @requests << [ method, path, body ]
     case (fault = take_fault(method, path))
     when Integer then return write(socket, fault, { "message" => "private upstream body" })
+    when :malformed_board then return write(socket, 200, { "included" => { "lists" => "invalid" } })
     when :malformed_auth then return write(socket, 200, [])
     when :malformed_card then return write(socket, 200, { "item" => nil, "included" => {} })
     when :malformed_included then return write(socket, 200, { "item" => find_card(PARENT_CARD), "included" => [] })

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+Added `planka describe board BOARD` (also `describe boards`) to read the existing
+board snapshot through the canonical JSON/error and session contract. Explicit
+board IDs or same-instance URLs are required; environment defaults do not replace
+the target. Human output matches `snapshot --board`; legacy snapshot and its
+`--list` mode retain their output. Malformed snapshot collections fail clearly.
+
+
 Added `planka describe card CARD` (also `describe cards`) with nested help and
 common `-o`/`--output` flags. Human output matches `show`; JSON uses the canonical
 `data`/`meta`/`error` envelope. Input and required environment are validated
@@ -10,7 +17,7 @@ before authentication. API errors use stable codes and omit raw server bodies.
 All 21 flat commands and direct executables are deprecated and retained
 indefinitely with their existing arguments, effects, JSON, and exit behavior.
 Help labels deprecation; there are no automatic runtime warnings. `show` has
-an implemented replacement in `describe card`; other canonical operations
+an implemented replacement in `describe card`; the board view of `snapshot` has `describe board`; other canonical operations
 remain planned. Removal belongs to a separate track of work.
 
 Added `planka prime` (also `planka-prime`) to print a concise, built-in agent
