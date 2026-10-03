@@ -38,7 +38,8 @@ planka workflow <operation> [arguments] [flags]
 ```
 
 **The invocations below describe the target interface. Only `planka describe
-card CARD` and its root/group/leaf help are implemented so far; the other
+card CARD`, `planka describe board BOARD`, and their root/group/leaf help are
+implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
 [Workflow examples](#workflow-examples) for an end-to-end publishing sequence.
@@ -217,6 +218,27 @@ failures are reported on stderr without replacing the read result. See the
 [leaf contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#first-leaf-output-contract)
 for fields and error codes. No live-version capability check is implemented.
 
+### Canonical board description
+
+```sh
+planka describe board BOARD
+planka -o json describe boards BOARD
+planka describe board --help
+```
+
+Supply a numeric board ID or a board URL belonging to `PLANKA_BASE_URL`.
+The target is required even when `PLANKA_BOARD_ID` is set. The same connection
+and credential validation applies as for card detail. Board names and project
+lookup are not yet supported.
+
+Human output matches `snapshot --board BOARD`. JSON puts the board snapshot in
+`data`, with `boardId`, `lists`, `cards`, `labels`, `cardLabels`, `taskLists`,
+`tasks`, and `cardMemberships`, alongside `meta: {}` and `error: null`. Cards have
+URLs and sort by position. This read describes the endpoint's included snapshot;
+it does not implement collection pagination, filters, `--limit`, or completeness
+metadata. See the [board contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-second-slice-board-description).
+Legacy `snapshot --list` remains available with its existing output.
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -228,7 +250,8 @@ contract and retained indefinitely with their existing arguments, behavior, JSON
 shapes, and exit codes. No removal is scheduled; a later sweep belongs to a
 separate track of work. Deprecation notices appear in documentation, help, and
 release notes, with no automatic runtime warnings. `describe card` replaces
-`show`; the remaining canonical replacements are not yet implemented.
+`show`, and `describe board` replaces the board view of `snapshot`; remaining
+canonical replacements are not yet implemented.
 
 ### Configuration
 

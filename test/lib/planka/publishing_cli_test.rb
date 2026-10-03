@@ -59,6 +59,108 @@ class Planka::PublishingCLITest < Minitest::Test
     client&.sign_out
   end
 
+  def test_describe_board_preserves_snapshot_data_and_human_output_without_writes
+    board = FakePlanka::BOARD_ID
+    out, err, status = planka("describe", "board", board, "-o", "json",
+      env: { "PLANKA_BOARD_ID" => "999999" })
+    assert status.success?, err
+    assert_empty err
+    document = JSON.parse(out)
+    assert_equal ["data", "error", "meta"], document.keys.sort
+    assert_equal({}, document["meta"])
+    assert_nil document["error"]
+    data = document["data"]
+    assert_equal board, data["boardId"]
+    assert_equal %w[boardId cardLabels cardMemberships cards labels lists taskLists tasks], data.keys.sort
+    assert_equal [PARENT], data["cards"].map { |card| card["id"] }
+    assert_equal "#{@server.base_url}/cards/#{PARENT}", data["cards"].first["url"]
+    assert_equal %w[ready-for-agent in-progress done], data["lists"].map { |list| list["name"] }
+    assert_empty data["tasks"]
+    assert_equal [ ["POST", "/api/access-tokens"], ["GET", "/api/boards/#{board}"],
+      ["DELETE", "/api/access-tokens/me"] ], @server.requests.map { |m, p, _| [m, p] }
+    assert_equal ok_json("snapshot", "--board", board), data
+    direct, direct_err, direct_status = planka_executable("snapshot", "--board", board, "--output", "json")
+    assert direct_status.success?, direct_err
+    assert_equal data, JSON.parse(direct)
+    assert_equal ok("snapshot", "--board", board), ok("describe", "board", board)
+  end
+
+  def test_describe_board_urls_aliases_and_common_flags_use_explicit_instance
+    board = FakePlanka::BOARD_ID
+    url = "#{@server.base_url}/boards/#{board}/"
+    [ ["-o", "json", "describe", "board", url],
+      ["describe", "--output", "json", "boards", board],
+      ["describe", "boards", "-o", "json", board] ].each do |args|
+      out, err, status = planka(*args, env: { "PLANKA_BOARD_ID" => nil })
+      assert status.success?, err
+      assert_empty err
+      assert_equal board, JSON.parse(out).dig("data", "boardId")
+    end
+    @server.requests.clear
+    ["https://other.example/boards/#{board}", "#{@server.base_url}/cards/#{PARENT}",
+      "http://[bad]/boards/123"].each do |reference|
+      out, err, status = planka("describe", "board", reference, "-o", "json")
+      assert_equal 2, status.exitstatus
+      assert_equal "invalid_input", JSON.parse(out).dig("error", "code")
+      assert_match(/\Aplanka describe board:/, err)
+      assert_empty @server.requests
+    end
+  end
+
+  def test_board_cleanup_failure_keeps_the_read_result_and_names_the_board_command
+    @server.inject("DELETE", %r{access-tokens/me$}, 403)
+    out, err, status = planka("describe", "board", FakePlanka::BOARD_ID, "-o", "json")
+    assert status.success?, err
+    assert_nil JSON.parse(out)["error"]
+    assert_equal FakePlanka::BOARD_ID, JSON.parse(out).dig("data", "boardId")
+    assert_includes err, "planka describe board: session cleanup failed"
+    refute_includes err, "private upstream body"
+  end
+
+  def test_board_invalid_invocations_do_not_authenticate_or_fall_back_to_environment
+    [ ["describe", "board"], ["describe", "board", "Ready"],
+      ["describe", "board", FakePlanka::BOARD_ID, "--unknown"],
+      ["describe", "board", FakePlanka::BOARD_ID, "--board", FakePlanka::BOARD_ID],
+      ["describe", "board", FakePlanka::BOARD_ID, "extra"] ].each do |args|
+      out, err, status = planka("-o", "json", *args)
+      assert_equal 2, status.exitstatus
+      assert_equal "invalid_input", JSON.parse(out).dig("error", "code")
+      refute_includes err, "describe card"
+      assert_empty @server.requests
+    end
+  end
+
+  def test_board_description_does_not_report_malformed_snapshot_as_success
+    @server.inject("GET", %r{boards/#{FakePlanka::BOARD_ID}$}, :malformed_board)
+    out, err, status = planka("describe", "board", FakePlanka::BOARD_ID, "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    assert_match(/\Aplanka describe board:/, err)
+    refute_includes err, "canonical_cli.rb"
+    assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+  end
+
+  def test_board_description_configuration_checks_precede_network_and_api_errors_are_sanitized
+    %w[PLANKA_BASE_URL PLANKA_AGENT_EMAIL PLANKA_AGENT_PASSWORD].each do |key|
+      [nil, ""].each do |value|
+        out, err, status = planka("describe", "board", FakePlanka::BOARD_ID, "-o", "json", env: { key => value })
+        assert_equal 1, status.exitstatus
+        assert_equal "configuration_error", JSON.parse(out).dig("error", "code")
+        assert_includes err, key
+        assert_empty @server.requests
+      end
+    end
+    @server.inject("GET", %r{boards/#{FakePlanka::BOARD_ID}$}, 404)
+    out, err, status = planka("describe", "board", FakePlanka::BOARD_ID, "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "not_found", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    assert_match(/\Aplanka describe board:/, err)
+    refute_includes out + err, "private upstream body"
+    assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+  end
+
   def test_describe_card_wraps_legacy_detail_and_only_reads_resources
     out, err, status = planka("describe", "card", PARENT, "-o", "json",
       env: { "PLANKA_BOARD_ID" => nil })
@@ -99,7 +201,7 @@ class Planka::PublishingCLITest < Minitest::Test
   end
 
   def test_canonical_invalid_invocations_fail_before_authentication
-    invocations = [ ["describe"], ["describe", "card"], ["describe", "board", PARENT],
+    invocations = [ ["describe"], ["describe", "card"], ["describe", "project", PARENT],
       ["describe", "cards", PARENT, "extra"], ["describe", "card", "not-a-card"], ["describe", "card", "http://[bad]/cards/123"],
       ["describe", "card", PARENT, "--unknown"], ["describe", "card", PARENT, "--output", "yaml"],
       ["describe", "dragon", "--help"], ["describe", "card", PARENT, "extra", "--help"],

@@ -34,6 +34,19 @@ class Planka::CLITest < Minitest::Test
     assert_includes out, "-o, --output"
   end
 
+  def test_board_description_help_is_available_without_credentials
+    [ ["--help"], ["describe", "--help"], ["describe", "board", "--help"] ].each do |args|
+      out, err, status = run_cli(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_includes out, "board BOARD"
+    end
+    out, = run_cli("describe", "boards", "-h")
+    assert_includes out, "planka describe board BOARD"
+    assert_includes out, "PLANKA_AGENT_PASSWORD"
+    assert_includes out, "-o, --output"
+  end
+
   def test_root_help_with_common_output_flags_keeps_legacy_discoverability
     out, err, status = run_cli("-o", "json", "--help")
     assert status.success?, err
@@ -46,6 +59,16 @@ class Planka::CLITest < Minitest::Test
     assert status.success?, err
     assert_includes out, "planka describe card CARD"
     direct, direct_err, direct_status = run_cli("--help", executable: "planka-show")
+    assert direct_status.success?, direct_err
+    assert_equal out, direct
+  end
+
+  def test_snapshot_help_names_the_board_replacement_and_keeps_list_arguments
+    out, err, status = run_cli("snapshot", "--help")
+    assert status.success?, err
+    assert_includes out, "planka describe board BOARD"
+    assert_includes out, "--list LIST"
+    direct, direct_err, direct_status = run_cli("--help", executable: "planka-snapshot")
     assert direct_status.success?, direct_err
     assert_equal out, direct
   end
