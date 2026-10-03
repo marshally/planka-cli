@@ -59,6 +59,142 @@ class Planka::PublishingCLITest < Minitest::Test
     client&.sign_out
   end
 
+  def test_describe_card_wraps_legacy_detail_and_only_reads_resources
+    out, err, status = planka("describe", "card", PARENT, "-o", "json",
+      env: { "PLANKA_BOARD_ID" => nil })
+    assert status.success?, err
+    assert_empty err
+    document = JSON.parse(out)
+    assert_equal ["data", "error", "meta"], document.keys.sort
+    assert_equal({}, document["meta"])
+    assert_nil document["error"]
+    assert_equal PARENT, document["data"]["id"]
+    assert_equal "Original description.", document["data"]["description"]
+    assert_equal "ready-for-agent", document["data"]["listName"]
+    assert_equal ["Parent context note."], document["data"]["comments"].map { |c| c["text"] }
+    assert_equal [ ["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
+      ["GET", "/api/boards/#{FakePlanka::BOARD_ID}"], ["GET", "/api/cards/#{PARENT}/comments"],
+      ["DELETE", "/api/access-tokens/me"] ], @server.requests.map { |m, p, _| [m, p] }
+    assert_equal ok_json("show", PARENT), document["data"]
+    direct, direct_err, direct_status = planka_executable("show", PARENT, "--output", "json")
+    assert direct_status.success?, direct_err
+    assert_equal document["data"], JSON.parse(direct)
+    assert_equal ok("show", PARENT), ok("describe", "card", PARENT)
+  end
+
+  def test_describe_validates_all_required_environment_before_network_access
+    %w[PLANKA_BASE_URL PLANKA_AGENT_EMAIL PLANKA_AGENT_PASSWORD].each do |key|
+      [nil, "", "  "].each do |value|
+        out, err, status = planka("describe", "card", PARENT, "-o", "json", env: { key => value })
+        assert_equal 1, status.exitstatus
+        document = JSON.parse(out)
+        assert_nil document["data"]
+        assert_equal "configuration_error", document.dig("error", "code")
+        assert_includes err, key
+        refute_includes out + err, PASSWORD
+        refute_includes err, "canonical_cli.rb"
+        assert_empty @server.requests
+      end
+    end
+  end
+
+  def test_canonical_invalid_invocations_fail_before_authentication
+    invocations = [ ["describe"], ["describe", "card"], ["describe", "board", PARENT],
+      ["describe", "cards", PARENT, "extra"], ["describe", "card", "not-a-card"],
+      ["describe", "card", PARENT, "--unknown"], ["describe", "card", PARENT, "--output", "yaml"],
+      ["describe", "dragon", "--help"], ["describe", "card", PARENT, "extra", "--help"],
+      ["describe", "card", PARENT, "--output", "human"], ["create", "card"], ["unknown"] ]
+    invocations.each do |args|
+      out, err, status = planka("-o", "json", *args)
+      assert_equal 2, status.exitstatus, args.inspect
+      document = JSON.parse(out)
+      assert_equal "invalid_input", document.dig("error", "code")
+      assert_nil document["data"]
+      refute_empty err
+      refute_includes err, "canonical_cli.rb"
+      assert_empty @server.requests
+    end
+  end
+
+  def test_describe_accepts_same_instance_urls_and_common_flags_anywhere
+    url = "#{@server.base_url}/cards/#{PARENT}/"
+    [ ["-o", "json", "describe", "card", url],
+      ["describe", "--output", "json", "cards", PARENT],
+      ["describe", "card", "-o", "json", PARENT] ].each do |args|
+      out, err, status = planka(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_equal PARENT, JSON.parse(out).dig("data", "id")
+    end
+    @server.requests.clear
+    out, err, status = planka("describe", "card", "https://other.example/cards/#{PARENT}", "-o", "json")
+    assert_equal 2, status.exitstatus
+    assert_equal "invalid_input", JSON.parse(out).dig("error", "code")
+    assert_includes err, "PLANKA_BASE_URL"
+    assert_empty @server.requests
+  end
+
+  def test_describe_reports_sanitized_api_errors_and_cleans_up_sessions
+    [ [401, "POST", %r{access-tokens$}, "authentication_error"],
+      [403, "GET", %r{cards/#{PARENT}$}, "authorization_error"],
+      [404, "GET", %r{cards/#{PARENT}$}, "not_found"],
+      [500, "GET", %r{cards/#{PARENT}/comments$}, "api_error"] ].each do |code, method, path, expected|
+      @server.requests.clear
+      @server.inject(method, path, code, times: code >= 500 ? 3 : 1)
+      out, err, status = planka("describe", "card", PARENT, "-o", "json")
+      assert_equal 1, status.exitstatus
+      document = JSON.parse(out)
+      assert_equal expected, document.dig("error", "code")
+      assert_nil document["data"]
+      assert_equal({}, document["meta"])
+      refute_includes out + err, "private upstream body"
+      refute_includes out + err, PASSWORD
+      refute_includes err, "canonical_cli.rb"
+      if method == "GET"
+        assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+      end
+    end
+  end
+
+  def test_describe_cleanup_failure_does_not_mask_read_success
+    @server.inject("DELETE", %r{access-tokens/me$}, 403)
+    out, err, status = planka("describe", "card", PARENT, "-o", "json")
+    assert status.success?, err
+    assert_nil JSON.parse(out)["error"]
+    assert_equal PARENT, JSON.parse(out).dig("data", "id")
+    assert_includes err, "session cleanup failed"
+    refute_includes out + err, "private upstream body"
+  end
+
+  def test_json_invocation_errors_preserve_output_selection_after_bad_flags
+    out, err, status = planka("describe", "card", PARENT, "--unknown", "-o", "json")
+    assert_equal 2, status.exitstatus
+    assert_equal "invalid_input", JSON.parse(out).dig("error", "code")
+    assert_includes err, "help"
+    assert_empty @server.requests
+  end
+
+  def test_describe_network_failure_retains_primary_error_when_cleanup_also_fails
+    # Net::HTTP retries a GET internally before the client retry loop.
+    @server.inject("GET", %r{cards/#{PARENT}$}, :drop, times: 6)
+    @server.inject("DELETE", %r{access-tokens/me$}, 403)
+    out, err, status = planka("describe", "card", PARENT, "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "network_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    assert_includes err, "session cleanup failed"
+    refute_includes out + err, "private upstream body"
+    refute_includes err, "canonical_cli.rb"
+  end
+
+  def test_describe_accepts_card_urls_with_the_configured_instance_path
+    base = "#{@server.base_url}/planka/"
+    out, err, status = planka("describe", "card", "#{base}cards/#{PARENT}", "-o", "json",
+      env: { "PLANKA_BASE_URL" => base })
+    assert status.success?, err
+    assert_equal "#{base}cards/#{PARENT}", JSON.parse(out).dig("data", "url")
+  end
+
   def test_publishes_reads_back_and_preserves_the_whole_workflow
     criteria = [ %(Handles "quoted" punctuation, commas.), "Supports\nmultiline and ünïcode 多行" ]
 

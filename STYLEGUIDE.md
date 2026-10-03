@@ -1,10 +1,10 @@
 # CLI style guide
 
 This document defines the target interface for a general Planka administration
-CLI. It is a design contract for future changes; the current executable still
-uses the flat commands documented in README.md. Examples below are target
-syntax, not a claim that every command is implemented or supported by every
-Planka release.
+CLI. It is a design contract for staged changes; the current executable supports
+`describe card` and nested help alongside all flat commands documented in
+README.md. Other examples below remain target syntax, not a claim that every
+command is implemented or supported by every Planka release.
 
 The [implementation handoff](docs/CLI_REDESIGN_IMPLEMENTATION.md) records code
 entry points, staged implementation, acceptance criteria, and settled decisions.

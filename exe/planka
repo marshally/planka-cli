@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require "planka-cli"
+require "planka/canonical_cli"
 
 commands = %w[prime link next-card branch-name claim comment unticked spec-sweep loop-lock
   snapshot show create-list create-spec create-ticket update-card move-card labels
@@ -7,8 +8,9 @@ commands = %w[prime link next-card branch-name claim comment unticked spec-sweep
 if ARGV == ["--version"]
   puts Planka::VERSION
 elsif ARGV.empty? || ARGV == ["--help"] || ARGV == ["-h"]
-  puts "usage: planka <command> [arguments]\ncommands: #{commands.join(', ')}"
-  puts "\nRun planka <command> --help for command usage and options."
+  puts Planka::CanonicalCLI.root_help(commands)
+elsif !commands.include?(ARGV.first)
+  Planka::CanonicalCLI.run(ARGV, legacy_commands: commands)
 else
   command = ARGV.shift
   abort "planka: unknown command #{command.inspect}; see planka --help" unless commands.include?(command)

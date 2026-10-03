@@ -20,6 +20,27 @@ class Planka::CLITest < Minitest::Test
       RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args, chdir: Dir.tmpdir)
   end
 
+  def test_nested_help_lists_only_implemented_canonical_commands
+    [[], ["--help"], ["describe", "--help"], ["describe", "card", "-h"]].each do |args|
+      out, err, status = run_cli(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_includes out, "describe"
+      assert_includes out, "card"
+      refute_includes out, "create card"
+    end
+    out, = run_cli("describe", "card", "--help")
+    assert_includes out, "planka describe card CARD"
+    assert_includes out, "-o, --output"
+  end
+
+  def test_root_help_with_common_output_flags_keeps_legacy_discoverability
+    out, err, status = run_cli("-o", "json", "--help")
+    assert status.success?, err
+    assert_includes out, "next-card"
+    assert_includes out, "planka <command> --help"
+  end
+
   def test_option_errors_use_the_documented_command_name_for_both_entry_points
     COMMANDS.each do |command|
       _out, err, status = run_cli(command, "--unknown")
@@ -39,6 +60,7 @@ class Planka::CLITest < Minitest::Test
       assert_empty err
       assert_match(/\Ausage: planka #{command}(?: |\n)/, out)
       assert_includes out, "--output FORMAT"
+      assert_includes out, "Deprecated compatibility entry point; retained indefinitely."
       assert_includes out, "-h, --help"
 
       direct_out, direct_err, direct_status = run_cli("--help", executable: "planka-#{command}")
