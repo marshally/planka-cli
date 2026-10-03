@@ -54,6 +54,26 @@ class Planka::CLITest < Minitest::Test
     assert_includes out, "planka <command> --help"
   end
 
+  def test_workflow_help_is_offline_and_legacy_unticked_names_its_replacement
+    [["--help"], ["workflow", "--help"], ["workflow", "pending-criteria", "--help"]].each do |args|
+      out, err, status = run_cli(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_includes out, "pending-criteria CARD"
+      refute_includes out, "workflow branch-name"
+    end
+    out, = run_cli("workflow", "pending-criteria", "--help")
+    assert_includes out, "Acceptance criteria"
+    assert_includes out, "-o, --output"
+    out, err, status = run_cli("unticked", "--help")
+    assert status.success?, err
+    assert_includes out, "Deprecated"
+    assert_includes out, "planka workflow pending-criteria CARD"
+    direct, direct_err, direct_status = run_cli("--help", executable: "planka-unticked")
+    assert direct_status.success?, direct_err
+    assert_equal out, direct
+  end
+
   def test_legacy_show_help_identifies_its_implemented_canonical_replacement
     out, err, status = run_cli("show", "--help")
     assert status.success?, err

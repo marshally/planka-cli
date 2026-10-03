@@ -93,6 +93,8 @@ module Planka
       end
     end
 
+    def pending_criteria(data) = data.fetch("criteria").join("\n")
+
     def card_detail(detail)
       lines = [
         "#{detail.fetch("name")} (#{detail.fetch("url")})",

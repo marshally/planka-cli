@@ -153,6 +153,10 @@ class FakePlanka
     when Integer then return write(socket, fault, { "message" => "private upstream body" })
     when :malformed_board then return write(socket, 200, { "included" => { "lists" => "invalid" } })
     when :missing_board_records then return write(socket, 200, { "included" => { "cards" => [] } })
+    when :malformed_criteria
+      payload = board_payload(BOARD_ID)
+      payload["included"]["tasks"] = [{ "taskListId" => "999", "name" => 42, "isCompleted" => false }]
+      return write(socket, 200, payload)
     when :invalid_token then return write(socket, 200, { "item" => { "private" => "private upstream body" } })
     when :malformed_auth then return write(socket, 200, [])
     when :malformed_card then return write(socket, 200, { "item" => nil, "included" => {} })

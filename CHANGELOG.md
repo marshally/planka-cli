@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+Added read-only `planka workflow pending-criteria CARD` and offline workflow help.
+It preserves the `unticked` acceptance-criteria rules and human output, with
+canonical JSON/error handling and explicit card IDs or same-instance URLs.
+Empty criteria succeed; malformed required records fail clearly. Legacy
+`unticked` and its direct executable retain their behavior; help names the
+implemented replacement.
+
 Separated canonical invocation parsing, configuration/reference validation, and
 output/status handling from the command coordinator. Canonical sessions use
 explicit validated settings, and readers report malformed response shapes as
@@ -24,7 +31,8 @@ before authentication. API errors use stable codes and omit raw server bodies.
 All 21 flat commands and direct executables are deprecated and retained
 indefinitely with their existing arguments, effects, JSON, and exit behavior.
 Help labels deprecation; there are no automatic runtime warnings. `show` has
-an implemented replacement in `describe card`; the board view of `snapshot` has `describe board`; other canonical operations
+an implemented replacement in `describe card`; the board view of `snapshot` has `describe board`;
+`unticked` has `workflow pending-criteria`; other canonical operations
 remain planned. Removal belongs to a separate track of work.
 
 Added `planka prime` (also `planka-prime`) to print a concise, built-in agent

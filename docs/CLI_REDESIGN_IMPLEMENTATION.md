@@ -7,7 +7,8 @@ The goal is a general Planka administration CLI with a kubectl-like
 operations live under `planka workflow`.
 
 The first slice is implemented: nested dispatch/help and `planka describe card
-CARD`. The second slice adds `planka describe board BOARD`. All legacy entry
+CARD`. The second slice adds `planka describe board BOARD`; the third adds
+`planka workflow pending-criteria CARD`. All legacy entry
 points are preserved. Other administration operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -152,6 +153,47 @@ board fixture and local HTTP fake, without live compatibility claims. Unexpected
 collection types in the included snapshot fail as `api_error`. Missing optional
 collections become empty arrays, preserving existing snapshot behavior.
 
+## Implemented third slice: pending criteria
+
+`planka workflow pending-criteria CARD` is a read-only migration of `unticked`.
+Accept an explicit numeric card ID or same-instance `/cards/ID` URL, including
+the configured instance path. There is no operation alias or board fallback.
+The command requires `PLANKA_BASE_URL`, `PLANKA_AGENT_EMAIL`, and
+`PLANKA_AGENT_PASSWORD`, validated before network access. Root, workflow-group,
+and leaf help work offline and advertise only implemented workflow operations.
+
+Success JSON is `{"data":{"cardId":"123","criteria":["Verify behavior"]},"meta":{},"error":null}`.
+Criteria are unfinished tasks from every task list named exactly
+`Acceptance criteria` on the target card, in board-response order, using the
+existing `Card#unticked_criteria` rule. Other task lists and completed tasks are
+excluded. No criteria list or all-completed criteria succeed with `criteria: []`.
+Human output is one criterion per line, or a blank line for an empty result,
+matching legacy `unticked`. This is workflow inspection, without collection
+pagination, filtering, limits, or `meta.complete`.
+
+The [PendingCriteria reader](../lib/planka/pending_criteria.rb) reads
+`GET /api/cards/:id` for its board reference, then `GET /api/boards/:id` for the
+existing included records. It shares `Board`/`Card` inspection logic with legacy
+`unticked`. No comment read or resource writes are needed. API evidence is the
+existing read path, captured fixtures, and local HTTP fake; no new endpoint or
+live-version compatibility claim is introduced.
+
+Malformed card board references, required board records, task-list identity/name
+fields, and task names/completion flags fail as sanitized `api_error` with null
+data and exit 1. Missing/invalid input, conflicting flags, unsupported flags, or
+foreign-instance URLs fail as `invalid_input` with exit 2 before network access.
+Missing configuration exits 1 as `configuration_error`. HTTP 401/403/404 map to
+`authentication_error`/`authorization_error`/`not_found`; transport failures use
+`network_error`. Sign-out failures preserve the read result and status and emit
+a cleanup diagnostic. Failures do not provide partial criteria or retry writes.
+
+`unticked` and `planka-unticked` retain their arguments, bare JSON, human output,
+and exits indefinitely. Their help names the implemented replacement without
+runtime warnings. Acceptance checks use the established subprocess/local HTTP
+seams for legacy equivalence, task-list/completion conventions, empty success,
+help, explicit references, pre-network validation, malformed records, API errors,
+request boundaries, and cleanup preserving success.
+
 ## Canonical CLI architecture
 
 The coordinator in [canonical_cli.rb](../lib/planka/canonical_cli.rb) follows
@@ -165,7 +207,7 @@ Legacy executables retain their existing argument/output adapters.
 | [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` validates and captures one invocation's settings; `resolve_reference` enforces the selected instance. Inspection redacts connection settings. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, human output, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
-| [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb) | `read(client, id, base_url:)` returns canonical data and validates the response shapes each reader needs. |
+| [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb), [PendingCriteria](../lib/planka/pending_criteria.rb) | `read(client, id, base_url:)` returns canonical data and validates the response shapes each reader needs. |
 
 Help runs before configuration or authentication. Canonical readers receive the
 validated base URL explicitly; they do not fetch settings from the environment.
@@ -331,7 +373,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice; nested dispatch/help, card detail, and board description are complete.
+3. Select the next unfinished slice; nested dispatch/help, card detail, board description, and workflow pending criteria are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,
