@@ -38,7 +38,7 @@ planka workflow <operation> [arguments] [flags]
 ```
 
 **The invocations below describe the target interface. Only `planka describe
-card CARD`, `planka describe board BOARD`, and their root/group/leaf help are
+card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`, and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
@@ -239,6 +239,23 @@ it does not implement collection pagination, filters, `--limit`, or completeness
 metadata. See the [board contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-second-slice-board-description).
 Legacy `snapshot --list` remains available with its existing output.
 
+### Canonical pending criteria
+
+```sh
+planka workflow pending-criteria CARD
+planka -o json workflow pending-criteria CARD
+planka workflow --help
+```
+
+This read-only workflow accepts an explicit card ID or same-instance card URL.
+It requires the three connection/credential variables above, without a board
+setting. It reads the card's board and returns unfinished tasks from lists named
+exactly `Acceptance criteria`, preserving board-response order. Human output is
+one criterion per line; JSON has `data: {cardId, criteria}`, `meta: {}`, and
+`error: null`. No criteria, including a card without that task list, is a
+successful empty array. Human output is then a blank line, matching `unticked`.
+See the [pending-criteria contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-third-slice-pending-criteria).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -250,7 +267,8 @@ contract and retained indefinitely with their existing arguments, behavior, JSON
 shapes, and exit codes. No removal is scheduled; a later sweep belongs to a
 separate track of work. Deprecation notices appear in documentation, help, and
 release notes, with no automatic runtime warnings. `describe card` replaces
-`show`, and `describe board` replaces the board view of `snapshot`; remaining
+`show`, `describe board` replaces the board view of `snapshot`, and
+`workflow pending-criteria` replaces `unticked`; remaining
 canonical replacements are not yet implemented.
 
 ### Configuration

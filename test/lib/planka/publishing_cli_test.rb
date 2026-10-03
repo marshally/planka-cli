@@ -652,6 +652,108 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_equal criteria, doc["criteria"]
   end
 
+  def test_pending_criteria_preserves_workflow_rules_and_legacy_output_without_writes
+    ticket = ok_json("create-ticket", "--list", "ready-for-agent", "--title", "Criteria ticket",
+      "--criteria-file", file("pending.json", JSON.generate(["Done criterion", "Second pending", "First pending"])))
+    id = ticket.dig("card", "id")
+    @server.tasks.first["isCompleted"] = true
+    @server.tasks.last["position"] = 1
+    @server.task_lists << { "id" => "999", "cardId" => id, "name" => "Other tasks" }
+    @server.tasks << { "id" => "998", "taskListId" => "999", "name" => "Not acceptance criteria", "isCompleted" => false }
+    start = @server.requests.length
+    out, err, status = planka("workflow", "pending-criteria", id, "-o", "json")
+    assert status.success?, err
+    assert_empty err
+    expected = { "cardId" => id, "criteria" => ["Second pending", "First pending"] }
+    assert_equal({ "data" => expected, "meta" => {}, "error" => nil }, JSON.parse(out))
+    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{id}"],
+      ["GET", "/api/boards/#{FakePlanka::BOARD_ID}"], ["DELETE", "/api/access-tokens/me"]],
+      @server.requests.drop(start).map { |method, path, _| [method, path] }
+    assert_equal expected, ok_json("unticked", id)
+    direct, direct_err, direct_status = planka_executable("unticked", id, "--output", "json")
+    assert direct_status.success?, direct_err
+    assert_equal expected, JSON.parse(direct)
+    assert_equal "Second pending\nFirst pending\n", ok("workflow", "pending-criteria", id)
+    assert_equal ok("unticked", id), ok("workflow", "pending-criteria", id)
+  end
+
+  def test_pending_criteria_rejects_malformed_task_records_in_both_output_modes
+    %w[human json].each do |output|
+      @server.inject("GET", %r{boards/#{FakePlanka::BOARD_ID}$}, :malformed_criteria)
+      out, err, status = planka("workflow", "pending-criteria", PARENT, "-o", output)
+      assert_equal 1, status.exitstatus
+      if output == "json"
+        assert_equal "api_error", JSON.parse(out).dig("error", "code")
+        assert_nil JSON.parse(out)["data"]
+      else
+        assert_empty out
+      end
+      assert_match(/\Aplanka workflow pending-criteria: Could not read complete resource details/, err)
+      refute_includes err, ".rb:"
+      assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+    end
+  end
+
+  def test_pending_criteria_empty_results_are_successful_with_or_without_a_criteria_list
+    assert_equal({ "data" => { "cardId" => PARENT, "criteria" => [] }, "meta" => {}, "error" => nil },
+      JSON.parse(ok("workflow", "pending-criteria", PARENT, "-o", "json")))
+    assert_equal "\n", ok("workflow", "pending-criteria", PARENT)
+    ticket = ok_json("create-ticket", "--list", "ready-for-agent", "--title", "Completed ticket",
+      "--criteria-file", file("done.json", '["Done"]'))
+    @server.tasks.first["isCompleted"] = true
+    id = ticket.dig("card", "id")
+    assert_equal [], JSON.parse(ok("workflow", "pending-criteria", id, "-o", "json")).dig("data", "criteria")
+    assert_equal ok("unticked", id), ok("workflow", "pending-criteria", id)
+  end
+
+  def test_pending_criteria_validates_input_and_configuration_before_network
+    [ [[], {}, "invalid_input", 2],
+      [[PARENT, "extra"], {}, "invalid_input", 2],
+      [[PARENT, "--limit", "1"], {}, "invalid_input", 2],
+      [[PARENT, "--output", "human"], {}, "invalid_input", 2],
+      [["https://other.example/cards/#{PARENT}"], {}, "invalid_input", 2],
+      [[PARENT], { "PLANKA_AGENT_PASSWORD" => nil }, "configuration_error", 1] ].each do |args, env, code, exit_status|
+      out, err, status = planka("-o", "json", "workflow", "pending-criteria", *args, env: env)
+      assert_equal exit_status, status.exitstatus
+      assert_equal code, JSON.parse(out).dig("error", "code")
+      assert_nil JSON.parse(out)["data"]
+      refute_includes err, PASSWORD
+    end
+    assert_empty @server.requests
+  end
+
+  def test_pending_criteria_accepts_instance_path_urls_and_common_output_flag_positions
+    base = "#{@server.base_url}/planka/"
+    url = "#{base}cards/#{PARENT}/"
+    [["-o", "json", "workflow", "pending-criteria", url],
+      ["workflow", "-ojson", "pending-criteria", url],
+      ["workflow", "pending-criteria", url, "--output=json"]].each do |args|
+      out, err, status = planka(*args, env: { "PLANKA_BASE_URL" => base, "PLANKA_BOARD_ID" => "999999" })
+      assert status.success?, err
+      assert_empty err
+      assert_equal PARENT, JSON.parse(out).dig("data", "cardId")
+    end
+  end
+
+  def test_pending_criteria_api_failures_and_cleanup_obey_canonical_contract
+    { 401 => "authentication_error", 403 => "authorization_error", 404 => "not_found",
+      :malformed_card => "api_error" }.each do |fault, code|
+      @server.inject("GET", %r{cards/#{PARENT}$}, fault)
+      out, err, status = planka("workflow", "pending-criteria", PARENT, "-o", "json")
+      assert_equal 1, status.exitstatus
+      assert_equal code, JSON.parse(out).dig("error", "code")
+      assert_nil JSON.parse(out)["data"]
+      refute_includes out + err, "private upstream body"
+      assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+    end
+    @server.inject("DELETE", %r{access-tokens/me$}, 403)
+    out, err, status = planka("workflow", "pending-criteria", PARENT, "-o", "json")
+    assert status.success?, err
+    assert_nil JSON.parse(out)["error"]
+    assert_equal [], JSON.parse(out).dig("data", "criteria")
+    assert_includes err, "planka workflow pending-criteria: session cleanup failed"
+  end
+
   def test_comment_confirms_human_success_and_returns_created_comment_as_json
     out = ok("comment", PARENT, "Human note")
     assert_includes out, "Commented on card #{PARENT}"

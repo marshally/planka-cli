@@ -11,12 +11,27 @@ module Planka
         Administration:
           describe card CARD  Read card details and related data (read-only)
           describe board BOARD  Read board snapshot and related data (read-only)
+        Workflows:
+          workflow pending-criteria CARD  Read unfinished acceptance criteria (read-only)
         Legacy commands (deprecated, retained indefinitely):
       HELP
       GROUP_HELP = <<~HELP
         usage: planka describe <resource> REF [flags]
           card CARD  Read card details and related data (read-only)
           board BOARD  Read board snapshot and related data (read-only)
+      HELP
+      WORKFLOW_HELP = <<~HELP
+        usage: planka workflow <operation> [arguments] [flags]
+          pending-criteria CARD  Read unfinished acceptance criteria (read-only)
+      HELP
+      PENDING_CRITERIA_HELP = <<~HELP
+        usage: planka workflow pending-criteria CARD [--output human|json]
+        Read-only: card ID or same-instance card URL; no board setting required.
+        Prints unfinished tasks from lists named exactly "Acceptance criteria", in board-response order.
+        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+        JSON data has cardId and criteria; empty criteria are a successful empty array.
+        Human output is one criterion per line. Failures exit 1 or 2.
+        Example: planka workflow pending-criteria 123 -o json
       HELP
       LEAF_HELP = <<~HELP
         usage: planka describe card CARD [--output human|json]
@@ -34,10 +49,12 @@ module Planka
         Example: planka describe board 123 -o json
       HELP
 
-      RESOURCES = {
-        "card" => { collection: "cards", help: LEAF_HELP, reader: Planka::CardDetail, formatter: :card_detail }.freeze,
-        "board" => { collection: "boards", help: BOARD_HELP, reader: Planka::Snapshot, formatter: :board_snapshot }.freeze,
+      COMMANDS = {
+        ["describe", "card"] => { resource: "card", collection: "cards", help: LEAF_HELP, reader: Planka::CardDetail, formatter: :card_detail }.freeze,
+        ["describe", "board"] => { resource: "board", collection: "boards", help: BOARD_HELP, reader: Planka::Snapshot, formatter: :board_snapshot }.freeze,
+        ["workflow", "pending-criteria"] => { resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: Planka::PendingCriteria, formatter: :pending_criteria }.freeze,
       }.freeze
+      GROUPS = { "describe" => GROUP_HELP, "workflow" => WORKFLOW_HELP }.freeze
 
       attr_reader :program, :output, :resource, :reference
 
@@ -52,7 +69,9 @@ module Planka
         requested = argv.each_cons(2).filter_map { |flag, value| value if %w[-o --output].include?(flag) }.last
         requested = "json" if argv.include?("--output=json") || argv.include?("-ojson")
         @output = requested == "json" ? "json" : "human"
-        @program = argv.include?("describe") ? "planka describe" : "planka"
+        @program = "planka"
+        group = argv.find { |arg| GROUPS.key?(arg) }
+        @program = "planka #{group}" if group
       end
 
       def parse
@@ -64,17 +83,19 @@ module Planka
           parser.on("-h", "--help") { @show_help = true }
         end
         @parser.parse!(@args)
-        @resource = @args[1].to_s.delete_suffix("s")
-        @command = RESOURCES[@resource]
-        unless @args.empty? || (@args.first == "describe" && (@args.size == 1 || @command))
+        operation = @args[1].to_s
+        operation = operation.delete_suffix("s") if @args.first == "describe"
+        @command = COMMANDS[[@args.first, operation]]
+        @resource = @command&.fetch(:resource)
+        unless @args.empty? || (GROUPS.key?(@args.first) && (@args.size == 1 || @command))
           invalid!("unknown command; see planka --help")
         end
-        @program = "planka describe #{@resource}" if @command
-        invalid!("Unexpected arguments; see planka describe --help") if @args.size > 3
+        @program = "planka #{@args.first} #{operation}" if @command
+        invalid!("Unexpected arguments; see #{@program} --help") if @args.size > 3
         return self if help?
 
         unless @command && @args.size == 3
-          invalid!("Expected planka describe RESOURCE REF; see planka describe --help")
+          invalid!("Expected a command and reference; see #{@program} --help")
         end
         @reference = @args.last
         unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{collection}/\d+/?\z})
@@ -82,7 +103,7 @@ module Planka
         end
         self
       rescue OptionParser::ParseError
-        invalid!("Invalid option or output format; see planka describe --help")
+        invalid!("Invalid option or output format; see #{@program} --help")
       end
 
       def help? = @show_help
@@ -94,7 +115,7 @@ module Planka
           [ROOT_HELP, "commands: #{@legacy_commands.join(', ')}",
             "\nRun planka <command> --help for command usage and options."].join("\n")
         elsif @args.size == 1
-          GROUP_HELP
+          GROUPS.fetch(@args.first)
         else
           @command.fetch(:help)
         end
