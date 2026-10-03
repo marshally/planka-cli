@@ -5,12 +5,18 @@ require "uri"
 module Planka
   # A signed-in session against Planka's REST API as the board's bot user.
   class Client
-    def self.session
+    def self.session(on_cleanup_error: nil)
       client = new(ENV.fetch("PLANKA_BASE_URL"))
       client.sign_in(ENV.fetch("PLANKA_AGENT_EMAIL"), ENV.fetch("PLANKA_AGENT_PASSWORD"))
       yield client
     ensure
-      client&.sign_out
+      begin
+        client&.sign_out(suppress_errors: on_cleanup_error.nil?)
+      rescue Error, SystemCallError, SocketError, Timeout::Error, EOFError, IOError, JSON::ParserError, OpenSSL::SSL::SSLError => e
+        raise unless on_cleanup_error
+
+        on_cleanup_error.call(e)
+      end
     end
 
     def initialize(base_url)

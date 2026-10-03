@@ -100,7 +100,7 @@ class Planka::PublishingCLITest < Minitest::Test
 
   def test_canonical_invalid_invocations_fail_before_authentication
     invocations = [ ["describe"], ["describe", "card"], ["describe", "board", PARENT],
-      ["describe", "cards", PARENT, "extra"], ["describe", "card", "not-a-card"],
+      ["describe", "cards", PARENT, "extra"], ["describe", "card", "not-a-card"], ["describe", "card", "http://[bad]/cards/123"],
       ["describe", "card", PARENT, "--unknown"], ["describe", "card", PARENT, "--output", "yaml"],
       ["describe", "dragon", "--help"], ["describe", "card", PARENT, "extra", "--help"],
       ["describe", "card", PARENT, "--output", "human"], ["create", "card"], ["unknown"] ]
@@ -193,6 +193,43 @@ class Planka::PublishingCLITest < Minitest::Test
       env: { "PLANKA_BASE_URL" => base })
     assert status.success?, err
     assert_equal "#{base}cards/#{PARENT}", JSON.parse(out).dig("data", "url")
+  end
+
+  def test_describe_malformed_api_payloads_emit_sanitized_failure_json
+    [:malformed_card, :malformed_included].each do |fault|
+      @server.inject("GET", %r{cards/#{PARENT}$}, fault)
+      out, err, status = planka("describe", "card", PARENT, "-o", "json")
+      assert_equal 1, status.exitstatus
+      assert_equal "api_error", JSON.parse(out).dig("error", "code")
+      assert_nil JSON.parse(out)["data"]
+      refute_includes err, "NoMethodError"
+      refute_includes err, "TypeError"
+      refute_includes err, "canonical_cli.rb"
+      assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+    end
+  end
+
+  def test_describe_tls_failures_obey_failure_and_cleanup_contracts
+    [0, 4].each do |failure_after|
+      @server.stop
+      @server = FakePlanka.new(tls_failure_after: failure_after)
+      cert_path = file("trusted-test.pem", @server.trusted_certificate)
+      out, err, status = planka("describe", "card", PARENT, "-o", "json",
+        env: { "SSL_CERT_FILE" => cert_path, "SSL_CERT_DIR" => File.dirname(cert_path) })
+      document = JSON.parse(out)
+      if failure_after.zero?
+        assert_equal 1, status.exitstatus
+        assert_equal "network_error", document.dig("error", "code")
+        assert_nil document["data"]
+      else
+        assert status.success?, err
+        assert_equal PARENT, document.dig("data", "id")
+        assert_nil document["error"]
+        assert_includes err, "session cleanup failed"
+      end
+      refute_includes err, "SSL_connect"
+      refute_includes err, "canonical_cli.rb"
+    end
   end
 
   def test_publishes_reads_back_and_preserves_the_whole_workflow

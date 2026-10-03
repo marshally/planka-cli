@@ -13,6 +13,5 @@ elsif !commands.include?(ARGV.first)
   Planka::CanonicalCLI.run(ARGV, legacy_commands: commands)
 else
   command = ARGV.shift
-  abort "planka: unknown command #{command.inspect}; see planka --help" unless commands.include?(command)
   load File.expand_path("planka-#{command}", __dir__)
 end

@@ -1,5 +1,6 @@
 require "socket"
 require "json"
+require "openssl"
 
 # A small in-memory Planka that speaks the REST endpoints the CLI uses, so the
 # publishing commands can be driven end to end over real HTTP without a live
@@ -18,7 +19,12 @@ class FakePlanka
   PARENT_CARD = "400000000000000001".freeze
   attr_reader :requests
 
-  def initialize
+  def initialize(tls_failure_after: nil)
+    @tls_failure_after = tls_failure_after
+    if tls_failure_after
+      @trusted_context = tls_context
+      @untrusted_context = tls_context
+    end
     @seq = 1_900_000_000_000_000_000
     @requests = []
     @faults = []
@@ -28,7 +34,8 @@ class FakePlanka
     @thread = Thread.new { serve }
   end
 
-  def base_url = "http://127.0.0.1:#{@server.addr[1]}"
+  def base_url = "#{@tls_failure_after ? 'https' : 'http'}://127.0.0.1:#{@server.addr[1]}"
+  def trusted_certificate = @trusted_context.cert.to_pem
   def board_id = BOARD_ID
 
   def stop
@@ -61,6 +68,28 @@ class FakePlanka
 
   private
 
+  # Each context uses a different self-signed certificate. Tests trust only the
+  # first, allowing a real TLS handshake failure at sign-in or cleanup.
+  def tls_context
+    key = OpenSSL::PKey::RSA.new(2048)
+    cert = OpenSSL::X509::Certificate.new
+    cert.version = 2
+    cert.serial = 1
+    cert.subject = cert.issuer = OpenSSL::X509::Name.parse("/CN=127.0.0.1")
+    cert.public_key = key.public_key
+    cert.not_before = Time.now - 60
+    cert.not_after = Time.now + 3600
+    factory = OpenSSL::X509::ExtensionFactory.new
+    factory.subject_certificate = factory.issuer_certificate = cert
+    cert.add_extension(factory.create_extension("basicConstraints", "CA:TRUE", true))
+    cert.add_extension(factory.create_extension("subjectAltName", "IP:127.0.0.1"))
+    cert.sign(key, OpenSSL::Digest::SHA256.new)
+    context = OpenSSL::SSL::SSLContext.new
+    context.cert = cert
+    context.key = key
+    context
+  end
+
   def seed
     @state = {
       lists: [
@@ -87,6 +116,17 @@ class FakePlanka
   def serve
     loop do
       socket = @server.accept
+      if @tls_failure_after
+        context = @requests.size < @tls_failure_after ? @trusted_context : @untrusted_context
+        socket = OpenSSL::SSL::SSLSocket.new(socket, context)
+        socket.sync_close = true
+        begin
+          socket.accept
+        rescue OpenSSL::SSL::SSLError
+          socket.close
+          next
+        end
+      end
       handle(socket)
     end
   rescue IOError, Errno::EBADF, Errno::EINVAL
@@ -111,6 +151,8 @@ class FakePlanka
     @requests << [ method, path, body ]
     case (fault = take_fault(method, path))
     when Integer then return write(socket, fault, { "message" => "private upstream body" })
+    when :malformed_card then return write(socket, 200, { "item" => nil, "included" => {} })
+    when :malformed_included then return write(socket, 200, { "item" => find_card(PARENT_CARD), "included" => [] })
     when :drop then return
     when :server_error then return write(socket, 500, { "message" => "injected failure" })
     when :apply_then_drop
