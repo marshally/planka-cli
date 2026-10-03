@@ -9,11 +9,12 @@ module Planka
       attr_reader :base_url
 
       def self.from_env(env)
-        missing = REQUIRED.select { |key| env[key].to_s.strip.empty? }
+        values = REQUIRED.map { |key| env[key] }
+        missing = REQUIRED.zip(values).filter_map { |key, value| key if value.to_s.strip.empty? }
         unless missing.empty?
           raise Failure.new(code: "configuration_error", message: "Missing required environment: #{missing.join(', ')}")
         end
-        new(*REQUIRED.map { |key| env.fetch(key) })
+        new(*values)
       end
 
       def initialize(base_url, email, password)

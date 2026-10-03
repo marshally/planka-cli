@@ -334,6 +334,24 @@ class Planka::PublishingCLITest < Minitest::Test
     end
   end
 
+  def test_describe_rejects_malformed_descriptions_in_both_output_modes
+    %w[human json].each do |output|
+      @server.inject("GET", %r{cards/#{PARENT}$}, :malformed_description)
+      out, err, status = planka("describe", "card", PARENT, "-o", output)
+      assert_equal 1, status.exitstatus
+      if output == "json"
+        assert_equal "api_error", JSON.parse(out).dig("error", "code")
+        assert_nil JSON.parse(out)["data"]
+      else
+        assert_empty out
+      end
+      assert_includes err, "Could not read complete resource details"
+      refute_includes err, "NoMethodError"
+      refute_includes err, ".rb:"
+      assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+    end
+  end
+
   def test_describe_malformed_auth_response_obeys_canonical_failure_contract
     @server.inject("POST", %r{access-tokens$}, :malformed_auth)
     out, err, status = planka("describe", "card", PARENT, "-o", "json")
