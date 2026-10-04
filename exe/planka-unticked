@@ -2,7 +2,7 @@
 # Prints a card's unticked acceptance criteria, one per line. Read-only.
 #
 #   planka unticked <card>     an id or card URL
-require "planka"
+require "planka/legacy"
 require "planka/client"
 
 options = {}
@@ -15,7 +15,7 @@ begin
   card_id = Planka.card_id(ARGV.first)
 
   Planka::Client.session do |client|
-    board = Planka::Board.new(client.board(client.card(card_id).dig("item", "boardId")))
+    board = Planka::Workflow::Board.new(Planka::Board.new(client.board(client.card(card_id).dig("item", "boardId"))))
     criteria = board.card(card_id).unticked_criteria
     Planka::CLI.emit({ "cardId" => card_id, "criteria" => criteria }, output: options[:output], human: criteria.join("\n"))
   end

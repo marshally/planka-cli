@@ -15,7 +15,7 @@
 #
 # The planka MCP server drops card labels and card memberships, so this reads
 # the board from Planka's API instead. The logic lives in lib/planka.
-require "planka"
+require "planka/legacy"
 require "planka/client"
 
 options = {}
@@ -25,7 +25,7 @@ abort parser.banner if ARGV.size > 1
 
 begin
   Planka::Client.session do |client|
-    board = Planka::Board.new(client.board(ENV.fetch("PLANKA_BOARD_ID")))
+    board = Planka::Workflow::Board.new(Planka::Board.new(client.board(ENV.fetch("PLANKA_BOARD_ID"))))
     report = Planka::NextCard.for(ARGV.first, board:, comments: client, pull_requests: Planka::PullRequest)
     Planka::CLI.emit(Planka::CLI.next_card(report), output: options[:output], human: report.to_s)
   end

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require "planka-cli"
 require "planka/canonical_cli"
+require "planka/workflow/cli"
 
 commands = %w[prime link next-card branch-name claim comment unticked spec-sweep loop-lock
   snapshot show create-list create-spec create-ticket update-card move-card labels
@@ -11,5 +12,5 @@ elsif commands.include?(ARGV.first)
   command = ARGV.shift
   load File.expand_path("planka-#{command}", __dir__)
 else
-  exit Planka::CanonicalCLI.run(ARGV, legacy_commands: commands)
+  exit Planka::CanonicalCLI.run(ARGV, legacy_commands: commands, extensions: [Planka::Workflow::CLI])
 end

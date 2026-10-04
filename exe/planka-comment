@@ -5,6 +5,7 @@
 #
 # Runs as the user configured in PLANKA_AGENT_EMAIL.
 require "planka"
+require "planka/cli"
 require "planka/client"
 
 options = {}

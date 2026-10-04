@@ -4,6 +4,7 @@
 #
 #   planka labels [--board ID]     board defaults to PLANKA_BOARD_ID
 require "planka"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 

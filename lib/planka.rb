@@ -1,6 +1,6 @@
 require "time"
 
-# Planka board workflows, shared by the library and CLI.
+# General Planka resource models and operations.
 module Planka
   Error = Class.new(StandardError)
   InvalidResponse = Class.new(Error)
@@ -23,23 +23,13 @@ module Planka
   end
 end
 
+require_relative "planka/client"
 require_relative "planka/board"
 require_relative "planka/card"
-require_relative "planka/handoff"
-require_relative "planka/pull_request"
-require_relative "planka/blocker"
-require_relative "planka/next_card"
-require_relative "planka/branch_name"
-require_relative "planka/loop_lock"
-require_relative "planka/spec_sweep"
-require_relative "planka/blocking"
 require_relative "planka/snapshot"
 require_relative "planka/card_detail"
-require_relative "planka/pending_criteria"
-require_relative "planka/publishing"
 require_relative "planka/labels"
 require_relative "planka/lists"
 require_relative "planka/task_lists"
-require_relative "planka/cli"
 
 require_relative "planka/version"

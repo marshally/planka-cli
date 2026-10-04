@@ -3,6 +3,7 @@
 #
 #   planka create-task-list <card> --name NAME [--position N]
 require "planka"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 

@@ -25,53 +25,12 @@ module Planka
       "#{action} #{kind}: #{name}#{details.empty? ? "" : " (#{details.join(", ")})"}"
     end
 
-    def ticket_result(result)
-      "#{resource_result("Created", "ticket", result.fetch("card"))}\nAcceptance criteria: #{Array(result["tasks"]).size}"
-    end
-
     def label_application(result)
       if result["created"]
         "Applied label #{result["labelId"]} to card #{result["cardId"]}"
       else
         "Card #{result["cardId"]} already has label #{result["labelId"]}"
       end
-    end
-
-    def card_ref(card) = { "id" => card.id, "name" => card.name, "url" => card.url }
-
-    def next_card(report)
-      case report
-      when Planka::NextCard::Pick
-        {
-          "card" => card_ref(report.card),
-          "specs" => report.spec.map { |card| card_ref(card) },
-          "number" => report.nn,
-          "blockers" => report.blockers.map { |blocker| blocker_ref(blocker) },
-          "parent" => Planka::Blocker.parent_branch(report.blockers),
-        }
-      when Planka::NextCard::Waiting
-        {
-          "card" => nil,
-          "waiting" => report.cards.map do |card|
-            card_ref(card).merge("claimed" => card.claimed?, "blockedBy" => card.open_blockers.map { |blocker| card_ref(blocker) })
-          end,
-        }
-      when Planka::NextCard::FrontierReport
-        {
-          "card" => report.frontier.first && card_ref(report.frontier.first),
-          "maps" => report.maps.map { |card| card_ref(card) },
-          "frontier" => report.frontier.map { |card| card_ref(card) },
-        }
-      end
-    end
-
-    def blocker_ref(blocker)
-      {
-        "card" => card_ref(blocker.card),
-        "branch" => blocker.branch,
-        "pullRequest" => blocker.handoff&.pr_url,
-        "pullRequestState" => blocker.pr&.state,
-      }
     end
 
     def output_option(parser, options)
@@ -92,9 +51,6 @@ module Planka
         output_option(parser, options)
       end
     end
-
-    def pending_criteria(data) = data.fetch("criteria").join("\n")
-    def branch_name(data) = data.fetch("branch")
 
     def card_detail(detail)
       lines = [

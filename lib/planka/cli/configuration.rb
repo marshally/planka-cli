@@ -14,12 +14,11 @@ module Planka
         unless missing.empty?
           raise Failure.new(code: "configuration_error", message: "Missing required environment: #{missing.join(', ')}")
         end
-        new(*values, branch_prefix: env["PLANKA_BRANCH_PREFIX"] || "")
+        new(*values)
       end
 
-      def initialize(base_url, email, password, branch_prefix: "")
+      def initialize(base_url, email, password)
         @base_url, @email, @password = [base_url, email, password].map { |value| value.dup.freeze }
-        @branch_prefix = branch_prefix.dup.freeze
         @base = URI(@base_url)
         unless %w[http https].include?(@base.scheme) && @base.host && !@base.userinfo && !@base.query && !@base.fragment
           raise Failure.new(code: "configuration_error", message: "PLANKA_BASE_URL must be an HTTP(S) instance URL without credentials, query, or fragment")
@@ -30,13 +29,6 @@ module Planka
 
       def connection_options = { base_url: @base_url, email: @email, password: @password }
       def inspect = "#<#{self.class} connection settings redacted>"
-
-      def branch_prefix
-        Planka::BranchName.max_length(@branch_prefix)
-        @branch_prefix
-      rescue Planka::Error
-        raise Failure.new(code: "configuration_error", message: "PLANKA_BRANCH_PREFIX leaves too little space; use at most 55 characters")
-      end
 
       def resolve_reference(invocation)
         return invocation.reference if invocation.reference.match?(/\A\d+\z/)

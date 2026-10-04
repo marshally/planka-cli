@@ -9,7 +9,7 @@
 #   --title TITLE          card title (required)
 #   --description-file F   description from a file, or - for stdin
 #   --position N           explicit position; otherwise appended below the list
-require "planka"
+require "planka/legacy"
 require "planka/client"
 require "optparse"
 

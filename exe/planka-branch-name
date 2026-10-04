@@ -4,8 +4,8 @@
 #
 #   planka branch-name <card>     an id or card URL
 #
-# The logic lives in lib/planka/branch_name.rb.
-require "planka"
+# The logic lives in lib/planka/workflow/branch_name.rb.
+require "planka/legacy"
 require "planka/client"
 
 options = {}
@@ -18,7 +18,7 @@ begin
   card_id = Planka.card_id(ARGV.first)
 
   Planka::Client.session do |client|
-    board = Planka::Board.new(client.board(client.card(card_id).dig("item", "boardId")))
+    board = Planka::Workflow::Board.new(Planka::Board.new(client.board(client.card(card_id).dig("item", "boardId"))))
     branch = Planka::BranchName.for(board.card(card_id))
     Planka::CLI.emit({ "cardId" => card_id, "branch" => branch }, output: options[:output], human: branch)
   end

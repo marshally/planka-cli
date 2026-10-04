@@ -16,7 +16,7 @@
 #
 # Card creation cannot be retried safely, so if a later step fails the created
 # card and task-list ids are still printed; resume with --card to finish.
-require "planka"
+require "planka/legacy"
 require "planka/client"
 require "optparse"
 

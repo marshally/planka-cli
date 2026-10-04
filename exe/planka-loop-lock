@@ -7,8 +7,8 @@
 #                            "claimed: <ISO 8601 time>" and "age: <seconds>"
 #
 # Run it with the loop user's resolved credentials.
-# The logic lives in lib/planka/loop_lock.rb.
-require "planka"
+# The logic lives in lib/planka/workflow/loop_lock.rb.
+require "planka/legacy"
 require "planka/client"
 
 options = {}
@@ -18,19 +18,8 @@ abort parser.banner unless ARGV.empty?
 
 begin
   Planka::Client.session do |client|
-    boards = client.board_ids.map { |id| Planka::Board.new(client.board(id)) }
-    me = client.me.fetch("id")
-    card = Planka::LoopLock.held(boards:, user_id: me, comments: client)
-    if card
-      claimed = card.claimed_at(me)
-      age = (Time.now - claimed).to_i
-      result = { "held" => true, "card" => Planka::CLI.card_ref(card), "claimedAt" => claimed.iso8601, "ageSeconds" => age }
-      human = [ "held: #{card}", "claimed: #{claimed.iso8601}", "age: #{age}" ].join("\n")
-    else
-      result = { "held" => false, "card" => nil }
-      human = "free"
-    end
-    Planka::CLI.emit(result, output: options[:output], human:)
+    result = Planka::Workflow::LoopLock.report(client, base_url: ENV.fetch("PLANKA_BASE_URL"))
+    Planka::CLI.emit(result, output: options[:output], human: Planka::Workflow::Format.loop_lock(result))
   end
 rescue Planka::Error, KeyError => e
   abort "planka loop-lock: #{e.message}"
