@@ -78,12 +78,15 @@ module Planka
           invalid!("unknown command; see planka --help")
         end
         @program = "planka #{@args.first} #{operation}" if @command
-        invalid!("Unexpected arguments; see #{@program} --help") if @args.size > 3
+        argument_count = @command && !@command.fetch(:reference, true) ? 2 : 3
+        invalid!("Unexpected arguments; see #{@program} --help") if @args.size > argument_count
         return self if help?
 
-        unless @command && @args.size == 3
+        unless @command && @args.size == argument_count
           invalid!("Expected a command and reference; see #{@program} --help")
         end
+        return self unless @command.fetch(:reference, true)
+
         @reference = @args.last
         unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{collection}/\d+/?\z})
           invalid!("Expected a numeric #{@resource} ID or supported #{@resource} URL")
@@ -116,7 +119,8 @@ module Planka
       end
 
       def execute(client, target, **options)
-        @command.fetch(:reader).read(client, target, **options)
+        arguments = @command.fetch(:reference, true) ? [client, target] : [client]
+        @command.fetch(:reader).read(*arguments, **options)
       end
 
       private

@@ -15,6 +15,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka loop-lock [--output human|json]")
+parser.separator "Canonical replacement: planka workflow claim-status (same human output; new JSON envelope)."
 Planka::CLI.parse!(parser, "planka loop-lock")
 abort parser.banner unless ARGV.empty?
 

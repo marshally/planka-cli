@@ -84,7 +84,18 @@ module Planka
     def me = request(:get, "/api/users/me").fetch("item")
 
     # Every board the signed-in user can see, across projects.
-    def board_ids = request(:get, "/api/projects").dig("included", "boards").map { |board| board["id"] }
+    def board_ids
+      document = request(:get, "/api/projects")
+      if @validate_responses
+        boards = document["included"].is_a?(Hash) && document["included"]["boards"]
+        unless boards.is_a?(Array) && boards.all? { |board|
+          board.is_a?(Hash) && board["id"].is_a?(String) && board["id"].match?(/\A\d+\z/)
+        }
+          raise InvalidResponse, "Invalid accessible board records"
+        end
+      end
+      document.dig("included", "boards").map { |board| board["id"] }
+    end
 
     def add_card_member(card_id, user_id) = request(:post, "/api/cards/#{card_id}/card-memberships", { userId: user_id }, idempotent: false)
 

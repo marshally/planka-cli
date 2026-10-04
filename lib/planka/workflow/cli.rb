@@ -10,11 +10,23 @@ module Planka
         Workflows:
           workflow pending-criteria CARD  Read unfinished acceptance criteria (read-only)
           workflow branch-name CARD  Read the card's branch name (read-only)
+          workflow claim-status  Inspect claims across all accessible boards (read-only)
       HELP
       GROUP_HELP = <<~HELP
         usage: planka workflow <operation> [arguments] [flags]
           pending-criteria CARD  Read unfinished acceptance criteria (read-only)
           branch-name CARD  Read the card's branch name (read-only)
+          claim-status  Inspect claims across all accessible boards (read-only)
+      HELP
+      CLAIM_STATUS_HELP = <<~HELP
+        usage: planka workflow claim-status [--output human|json]
+        Read-only: inspects the signed-in user's claims across all accessible boards.
+        Returns the first open claimed card without a PR handoff, or free.
+        This does not acquire a lock and makes no GitHub requests.
+        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+        No target or board setting is required; PLANKA_BOARD_ID does not restrict scope.
+        Human output matches loop-lock; JSON data has held and card, plus claimedAt and ageSeconds when held.
+        Failures exit 1 or 2. Example: planka workflow claim-status -o json
       HELP
       BRANCH_NAME_HELP = <<~HELP
         usage: planka workflow branch-name CARD [--output human|json]
@@ -42,6 +54,7 @@ module Planka
       end
 
       COMMANDS = {
+        ["workflow", "claim-status"] => { resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock) }.freeze,
         ["workflow", "pending-criteria"] => { resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: PendingCriteria, formatter: Format.method(:pending_criteria) }.freeze,
         ["workflow", "branch-name"] => { resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: BranchName, formatter: Format.method(:branch_name), options: method(:branch_options) }.freeze,
       }.freeze

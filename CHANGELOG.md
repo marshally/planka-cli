@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+Added read-only `planka workflow claim-status` using the existing cross-board
+claim and latest-handoff rules, with canonical JSON/errors and offline help.
+Malformed required discovery, board, membership, identity, and comment records
+fail safely. Legacy `loop-lock` retains its contracts; help names the replacement.
+
 Isolated agent conventions and workflow operations under `Planka::Workflow`,
 with explicit workflow loading and CLI attachment. Core resource loading no
 longer implicitly loads workflow or CLI helpers; Ruby callers can explicitly

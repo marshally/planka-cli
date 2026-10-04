@@ -39,7 +39,8 @@ planka workflow <operation> [arguments] [flags]
 
 **The invocations below describe the target interface. Only `planka describe
 card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`,
-`planka workflow branch-name CARD`, and their root/group/leaf help are
+`planka workflow branch-name CARD`, `planka workflow claim-status`, and their
+root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
@@ -281,6 +282,26 @@ Workflow conventions now live in an explicitly loaded `Planka::Workflow` module,
 with separate core resource models and workflow CLI integration. See the
 [module architecture and future gem extraction](docs/WORKFLOW_MODULE.md).
 
+### Canonical claim status
+
+```sh
+planka workflow claim-status
+planka workflow claim-status -o json
+planka workflow claim-status --help
+```
+
+This read-only inspection uses the signed-in user's claims across all accessible
+boards. It reports the first open claimed card without a PR handoff, following
+legacy `loop-lock` rules. It does not acquire a lock, change resources, or query
+GitHub. An empty board scope or no eligible card is a successful `free` result.
+
+The three connection/credential variables are required. There is no positional
+target or `--board` flag; `PLANKA_BOARD_ID` does not restrict this operation.
+Human output matches `loop-lock`. JSON has `data: {held, card}`, with `claimedAt`
+and integer `ageSeconds` when held, plus `meta: {}` and `error: null`. Malformed
+required records produce a sanitized error rather than a guessed `free` result.
+See the [claim-status contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-fifth-slice-claim-status).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -294,7 +315,7 @@ separate track of work. Deprecation notices appear in documentation, help, and
 release notes, with no automatic runtime warnings. `describe card` replaces
 `show`, `describe board` replaces the board view of `snapshot`, and
 `workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
-replaces `branch-name`; remaining
+replaces `branch-name`, and `workflow claim-status` replaces `loop-lock`; remaining
 canonical replacements are not yet implemented.
 
 ### Configuration
