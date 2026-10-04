@@ -94,6 +94,7 @@ module Planka
     end
 
     def pending_criteria(data) = data.fetch("criteria").join("\n")
+    def branch_name(data) = data.fetch("branch")
 
     def card_detail(detail)
       lines = [

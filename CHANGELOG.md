@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+Added read-only `planka workflow branch-name CARD` with canonical JSON/error
+handling and offline help. It preserves legacy feature-label selection, title
+slugging, truncation, and human output. Optional `PLANKA_BRANCH_PREFIX` is captured
+once and validated before network access for this workflow. Legacy `branch-name`
+and its direct executable retain their behavior; help names the replacement.
+
 Added read-only `planka workflow pending-criteria CARD` and offline workflow help.
 It preserves the `unticked` acceptance-criteria rules and human output, with
 canonical JSON/error handling and explicit card IDs or same-instance URLs.

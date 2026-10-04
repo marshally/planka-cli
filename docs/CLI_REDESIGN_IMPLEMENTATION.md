@@ -8,7 +8,8 @@ operations live under `planka workflow`.
 
 The first slice is implemented: nested dispatch/help and `planka describe card
 CARD`. The second slice adds `planka describe board BOARD`; the third adds
-`planka workflow pending-criteria CARD`. All legacy entry
+`planka workflow pending-criteria CARD`; the fourth adds
+`planka workflow branch-name CARD`. All legacy entry
 points are preserved. Other administration operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -195,6 +196,46 @@ seams for legacy equivalence, task-list/completion conventions, empty success,
 help, explicit references, pre-network validation, malformed records, API errors,
 request boundaries, and cleanup preserving success.
 
+## Implemented fourth slice: branch name
+
+`planka workflow branch-name CARD` is a read-only migration of `branch-name`.
+Accept an explicit numeric card ID or same-instance `/cards/ID` URL, including
+the configured instance path. No board setting, operation alias, or parent
+fallback is introduced. Root, workflow-group, and leaf help work offline.
+
+Success JSON is `{"data":{"cardId":"123","branch":"card/fix-login"},"meta":{},"error":null}`.
+Human output is the branch followed by a newline, matching legacy `branch-name`.
+The existing `BranchName.for` algorithm selects the first `feature:` label in
+board association order, otherwise uses `card/`; it slugs the title and applies
+the existing word-boundary truncation. This slice does not change naming rules,
+validate Git ref names, create a Git branch, or write to Planka resources.
+
+The three required connection settings and target are validated before network
+access. Optional `PLANKA_BRANCH_PREFIX` is captured once from the supplied
+environment and reserves space in the 63-character budget. It is not prepended
+to the branch. The existing rule requires at least eight characters of remaining
+space; a prefix longer than 55 characters yields `configuration_error`, null
+data, and exit 1 before authentication. This optional setting is validated only
+for branch-name; unrelated canonical reads do not use it.
+
+The [BranchName reader](../lib/planka/branch_name.rb) reads the card for its
+numeric board reference and then reads the board's included records, reusing
+`Board`/`Card` and the legacy naming algorithm. Required card/index fields and
+label associations used for naming must be present and well shaped. Malformed
+board references, titles, label records, or unresolved target-card labels yield
+sanitized `api_error` with null data and exit 1. No comment read is required.
+Input/configuration/HTTP/network/cleanup errors follow the pending-criteria
+contract, including successful reads surviving sign-out failure.
+
+`branch-name` and `planka-branch-name` retain their arguments, bare JSON, human
+output, and exits indefinitely. Only help names the implemented replacement;
+no runtime warning is added. Acceptance uses subprocess/local HTTP seams for
+legacy equivalence, first-feature selection, slug/truncation/prefix behavior,
+offline help, explicit references, pre-network validation, malformed records,
+API failures, request boundaries, and cleanup. Evidence is existing read logic,
+captured fixtures, and local HTTP tests, without new endpoints or live-version
+compatibility claims.
+
 ## Canonical CLI architecture
 
 The coordinator in [canonical_cli.rb](../lib/planka/canonical_cli.rb) follows
@@ -208,10 +249,12 @@ Legacy executables retain their existing argument/output adapters.
 | [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` validates and captures one invocation's settings; `resolve_reference` enforces the selected instance. Inspection redacts connection settings. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, human output, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
-| [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb), [PendingCriteria](../lib/planka/pending_criteria.rb) | `read(client, id, base_url:)` returns canonical data and validates the response shapes each reader needs. |
+| [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb), [PendingCriteria](../lib/planka/pending_criteria.rb), [BranchName](../lib/planka/branch_name.rb) | `read(client, id, base_url:, ...)` returns canonical data and validates the response shapes each reader needs. BranchName additionally takes an explicit `prefix:`. |
 
 Help runs before configuration or authentication. Canonical readers receive the
 validated base URL explicitly; they do not fetch settings from the environment.
+Invocation selects command-specific reader options from configuration before
+the session opens, including the validated branch prefix when needed.
 Malformed response documents, tokens, and required reader records raise
 `Planka::InvalidResponse` near their consumption and become sanitized `api_error`
 failures. Output does not disguise unexpected `TypeError`, `NoMethodError`, or
@@ -374,7 +417,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice; nested dispatch/help, card detail, board description, and workflow pending criteria are complete.
+3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, and workflow branch name are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

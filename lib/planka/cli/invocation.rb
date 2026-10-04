@@ -13,6 +13,7 @@ module Planka
           describe board BOARD  Read board snapshot and related data (read-only)
         Workflows:
           workflow pending-criteria CARD  Read unfinished acceptance criteria (read-only)
+          workflow branch-name CARD  Read the card's branch name (read-only)
         Legacy commands (deprecated, retained indefinitely):
       HELP
       GROUP_HELP = <<~HELP
@@ -23,6 +24,16 @@ module Planka
       WORKFLOW_HELP = <<~HELP
         usage: planka workflow <operation> [arguments] [flags]
           pending-criteria CARD  Read unfinished acceptance criteria (read-only)
+          branch-name CARD  Read the card's branch name (read-only)
+      HELP
+      BRANCH_NAME_HELP = <<~HELP
+        usage: planka workflow branch-name CARD [--output human|json]
+        Read-only: card ID or same-instance card URL; no board setting required.
+        Uses the existing feature-label, title-slug, and length rules of branch-name.
+        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+        PLANKA_BRANCH_PREFIX optionally reserves room within the 63-character limit.
+        Human output is the branch name; JSON data has cardId and branch.
+        Failures exit 1 or 2. Example: planka workflow branch-name 123 -o json
       HELP
       PENDING_CRITERIA_HELP = <<~HELP
         usage: planka workflow pending-criteria CARD [--output human|json]
@@ -53,6 +64,7 @@ module Planka
         ["describe", "card"] => { resource: "card", collection: "cards", help: LEAF_HELP, reader: Planka::CardDetail, formatter: :card_detail }.freeze,
         ["describe", "board"] => { resource: "board", collection: "boards", help: BOARD_HELP, reader: Planka::Snapshot, formatter: :board_snapshot }.freeze,
         ["workflow", "pending-criteria"] => { resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: Planka::PendingCriteria, formatter: :pending_criteria }.freeze,
+        ["workflow", "branch-name"] => { resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: Planka::BranchName, formatter: :branch_name, branch_prefix: true }.freeze,
       }.freeze
       GROUPS = { "describe" => GROUP_HELP, "workflow" => WORKFLOW_HELP }.freeze
 
@@ -122,8 +134,14 @@ module Planka
         "#{text}\n#{@parser.help}"
       end
 
-      def execute(client, target, base_url:)
-        @command.fetch(:reader).read(client, target, base_url: base_url)
+      def reader_options(configuration)
+        options = { base_url: configuration.base_url }
+        options[:prefix] = configuration.branch_prefix if @command[:branch_prefix]
+        options
+      end
+
+      def execute(client, target, **options)
+        @command.fetch(:reader).read(client, target, **options)
       end
 
       private

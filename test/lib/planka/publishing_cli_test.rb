@@ -640,6 +640,136 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_equal PARENT, doc["cardId"]
   end
 
+  def test_workflow_branch_name_preserves_legacy_naming_and_has_no_resource_writes
+    start = @server.requests.length
+    out, err, status = planka("workflow", "branch-name", PARENT, "-o", "json")
+    assert status.success?, err
+    assert_empty err
+    expected = { "cardId" => PARENT, "branch" => "card/spec-work-next-refinement" }
+    assert_equal({ "data" => expected, "meta" => {}, "error" => nil }, JSON.parse(out))
+    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
+      ["GET", "/api/boards/#{FakePlanka::BOARD_ID}"], ["DELETE", "/api/access-tokens/me"]],
+      @server.requests.drop(start).map { |method, path, _| [method, path] }
+    assert_equal expected, ok_json("branch-name", PARENT)
+    direct, direct_err, direct_status = planka_executable("branch-name", PARENT, "--output", "json")
+    assert direct_status.success?, direct_err
+    assert_equal expected, JSON.parse(direct)
+    assert_equal "card/spec-work-next-refinement\n", ok("workflow", "branch-name", PARENT)
+  end
+
+  def test_workflow_branch_name_rejects_an_unusable_prefix_before_network
+    out, err, status = planka("workflow", "branch-name", PARENT, "-o", "json",
+      env: { "PLANKA_BRANCH_PREFIX" => "x" * 56 })
+    assert_equal 1, status.exitstatus
+    assert_equal "configuration_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    assert_includes err, "PLANKA_BRANCH_PREFIX"
+    refute_includes err, "x" * 56
+    assert_empty @server.requests
+  end
+
+  def test_workflow_branch_name_rejects_malformed_naming_records_in_both_formats
+    [:malformed_branch_title, :malformed_feature_label, :missing_feature_label].each do |fault|
+      %w[human json].each do |output|
+        @server.inject("GET", %r{boards/#{FakePlanka::BOARD_ID}$}, fault)
+        out, err, status = planka("workflow", "branch-name", PARENT, "-o", output)
+        assert_equal 1, status.exitstatus
+        if output == "json"
+          assert_equal "api_error", JSON.parse(out).dig("error", "code")
+          assert_nil JSON.parse(out)["data"]
+        else
+          assert_empty out
+        end
+        assert_includes err, "Could not read complete resource details"
+        refute_includes err, ".rb:"
+        assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+      end
+    end
+  end
+
+  def test_workflow_branch_name_uses_the_first_feature_and_reserves_prefix_space
+    @server.find_card(PARENT)["name"] = "1.2 An account signs in; the first admin exists"
+    @server.add_label("feature:tracer")
+    first = @server.labels.last["id"]
+    @server.add_label("feature:other")
+    second = @server.labels.last["id"]
+    @server.card_labels << { "cardId" => PARENT, "labelId" => first }
+    @server.card_labels << { "cardId" => PARENT, "labelId" => second }
+    env = { "PLANKA_BRANCH_PREFIX" => "lucenta-" }
+    expected = { "cardId" => PARENT, "branch" => "feature/tracer-1.2-an-account-signs-in-the-first-admin" }
+    out, err, status = planka("workflow", "branch-name", PARENT, "-o", "json", env: env)
+    assert status.success?, err
+    assert_equal expected, JSON.parse(out)["data"]
+    assert_equal expected, JSON.parse(ok("branch-name", PARENT, "-o", "json", env: env))
+    assert_equal "#{expected['branch']}\n", ok("workflow", "branch-name", PARENT, env: env)
+  end
+
+  def test_workflow_branch_name_keeps_prefix_boundaries_and_other_reads_independent
+    { 40 => "card/spec-work-next", 55 => "card/spe" }.each do |length, branch|
+      env = { "PLANKA_BRANCH_PREFIX" => "x" * length }
+      out, err, status = planka("workflow", "branch-name", PARENT, "-o", "json", env: env)
+      assert status.success?, err
+      assert_equal branch, JSON.parse(out).dig("data", "branch")
+      assert_equal branch, JSON.parse(ok("branch-name", PARENT, "-o", "json", env: env))["branch"]
+    end
+    out, err, status = planka("describe", "card", PARENT, "-o", "json",
+      env: { "PLANKA_BRANCH_PREFIX" => "x" * 56 })
+    assert status.success?, err
+    assert_equal PARENT, JSON.parse(out).dig("data", "id")
+  end
+
+  def test_workflow_branch_name_validates_input_and_settings_before_network
+    [ [[], {}, "invalid_input", 2],
+      [[PARENT, "extra"], {}, "invalid_input", 2],
+      [[PARENT, "--limit", "1"], {}, "invalid_input", 2],
+      [[PARENT, "--output", "human"], {}, "invalid_input", 2],
+      [["https://other.example/cards/#{PARENT}"], {}, "invalid_input", 2],
+      [[PARENT], { "PLANKA_AGENT_PASSWORD" => nil }, "configuration_error", 1] ].each do |args, env, code, exit_status|
+      out, err, status = planka("-o", "json", "workflow", "branch-name", *args, env: env)
+      assert_equal exit_status, status.exitstatus
+      assert_equal code, JSON.parse(out).dig("error", "code")
+      assert_nil JSON.parse(out)["data"]
+      refute_includes err, PASSWORD
+    end
+    assert_empty @server.requests
+  end
+
+  def test_workflow_branch_name_accepts_instance_urls_and_output_flag_positions
+    base = "#{@server.base_url}/planka/"
+    url = "#{base}cards/#{PARENT}/"
+    [["-o", "json", "workflow", "branch-name", url],
+      ["workflow", "-ojson", "branch-name", url],
+      ["workflow", "branch-name", url, "--output=json"]].each do |args|
+      out, err, status = planka(*args, env: { "PLANKA_BASE_URL" => base, "PLANKA_BOARD_ID" => "999999", "PLANKA_BRANCH_PREFIX" => nil })
+      assert status.success?, err
+      assert_empty err
+      assert_equal PARENT, JSON.parse(out).dig("data", "cardId")
+      assert_equal "card/spec-work-next-refinement", JSON.parse(out).dig("data", "branch")
+    end
+  end
+
+  def test_workflow_branch_name_reports_api_failures_and_preserves_reads_after_cleanup_failure
+    { 401 => "authentication_error", 403 => "authorization_error", 404 => "not_found",
+      :malformed_card => "api_error", :malformed_board_reference => "api_error",
+      :malformed_board_path => "api_error" }.each do |fault, code|
+      @server.inject("GET", %r{cards/#{PARENT}$}, fault)
+      start = @server.requests.length
+      out, err, status = planka("workflow", "branch-name", PARENT, "-o", "json")
+      assert_equal 1, status.exitstatus
+      assert_equal code, JSON.parse(out).dig("error", "code")
+      assert_nil JSON.parse(out)["data"]
+      refute_includes out + err, "private upstream body"
+      assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
+        ["DELETE", "/api/access-tokens/me"]], @server.requests.drop(start).map { |method, path, _| [method, path] }
+    end
+    @server.inject("DELETE", %r{access-tokens/me$}, 403)
+    out, err, status = planka("workflow", "branch-name", PARENT, "-o", "json")
+    assert status.success?, err
+    assert_nil JSON.parse(out)["error"]
+    assert_equal "card/spec-work-next-refinement", JSON.parse(out).dig("data", "branch")
+    assert_includes err, "planka workflow branch-name: session cleanup failed"
+  end
+
   def test_unticked_keeps_one_criterion_per_line_and_offers_json
     criteria = [ "First criterion", "Second criterion" ]
     ticket = ok_json("create-ticket", "--list", "ready-for-agent", "--title", "Criteria ticket",

@@ -60,7 +60,7 @@ class Planka::CLITest < Minitest::Test
       assert status.success?, err
       assert_empty err
       assert_includes out, "pending-criteria CARD"
-      refute_includes out, "workflow branch-name"
+      refute_includes out, "workflow claim"
     end
     out, = run_cli("workflow", "pending-criteria", "--help")
     assert_includes out, "Acceptance criteria"
@@ -103,6 +103,24 @@ class Planka::CLITest < Minitest::Test
       refute direct_status.success?
       assert_equal err, direct_err
     end
+  end
+
+  def test_branch_name_workflow_help_is_offline_and_legacy_help_names_replacement
+    [["--help"], ["workflow", "--help"], ["workflow", "branch-name", "--help"]].each do |args|
+      out, err, status = run_cli(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_includes out, "branch-name CARD"
+    end
+    out, = run_cli("workflow", "branch-name", "--help")
+    assert_includes out, "PLANKA_BRANCH_PREFIX"
+    assert_includes out, "-o, --output"
+    out, err, status = run_cli("branch-name", "--help")
+    assert status.success?, err
+    assert_includes out, "planka workflow branch-name CARD"
+    direct, direct_err, direct_status = run_cli("--help", executable: "planka-branch-name")
+    assert direct_status.success?, direct_err
+    assert_equal out, direct
   end
 
   def test_every_command_has_matching_help_through_both_entry_points
