@@ -382,4 +382,15 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     assert_empty @server.requests
   end
 
+  def test_duplicate_task_identity_is_rejected_before_it_changes_the_parent
+    blocked_ticket
+    add_handoff("Branch: recorded/branch")
+    @server.tasks << @server.tasks.first.dup
+    out, err, status = planka("workflow", "next", "-o", "json")
+    assert_equal 1, status.exitstatus, err
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    refute_includes out, "AMBIGUOUS"
+  end
+
 end
