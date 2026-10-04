@@ -25,7 +25,7 @@ class Planka::BlockingTest < Minitest::Test
     end
   end
 
-  def link(client, blockers) = Planka::Blocking.new(client).link("10", blockers)
+  def link(client, blockers) = Planka::Workflow::Blocking.new(client).link("10", blockers)
 
   def test_creates_the_blocked_by_list_after_existing_lists
     client = FakeClient.new(task_lists: [ { "id" => "ac", "name" => "Acceptance criteria", "position" => 65_536 } ])

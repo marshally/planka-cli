@@ -3,7 +3,8 @@ require "minitest/autorun"
 
 ENV["PLANKA_BASE_URL"] = "https://planka.home.yountlabs.com"
 ENV["PLANKA_BRANCH_PREFIX"] = "lucenta-"
-require_relative "../../../lib/planka/legacy"
+require_relative "../../../lib/planka"
+require_relative "../../../lib/planka/workflow"
 
 # The fixture is the markdocs board as Plan 3 was published: a spec card and
 # nine ticket cards in ready-for-agent, each blocked on its predecessor(s).

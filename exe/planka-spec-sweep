@@ -7,7 +7,9 @@
 #   planka spec-sweep
 #
 # The logic lives in lib/planka/workflow/spec_sweep.rb.
-require "planka/legacy"
+require "planka/workflow"
+require "planka/workflow/format"
+require "planka/cli"
 require "planka/client"
 
 options = {}

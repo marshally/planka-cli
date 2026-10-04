@@ -7,7 +7,8 @@
 # Cards are ids or card URLs. Each blocker becomes a task linked to that card
 # in a "Blocked by" task list on the blocked card. Re-running is safe: blockers
 # already linked are skipped. The logic lives in lib/planka/workflow/blocking.rb.
-require "planka/legacy"
+require "planka/workflow"
+require "planka/cli"
 require "planka/client"
 
 options = {}
@@ -19,7 +20,7 @@ begin
   blocked, *blockers = ARGV.map { |arg| Planka.card_id(arg) }
 
   Planka::Client.session do |client|
-    lines = Planka::Blocking.new(client).link(blocked, blockers)
+    lines = Planka::Workflow::Blocking.new(client).link(blocked, blockers)
     links = blockers.uniq.zip(lines).map do |blocker, line|
       {
         "blockerCardId" => blocker,

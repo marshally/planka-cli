@@ -246,11 +246,11 @@ class Planka::CLITest < Minitest::Test
 
   def test_branch_prefix_is_optional_and_configurable
     card = Struct.new(:name, :features).new("A very long card name " * 10, [])
-    assert_operator Planka::BranchName.for(card, prefix: "").length, :<=, 63
-    assert_operator Planka::BranchName.for(card, prefix: "another-project-").length, :<=, 47
+    assert_operator Planka::Workflow::BranchName.for(card, prefix: "").length, :<=, 63
+    assert_operator Planka::Workflow::BranchName.for(card, prefix: "another-project-").length, :<=, 47
     single_word = Struct.new(:name, :features).new("x" * 100, [])
-    assert_equal "card/" + "x" * 58, Planka::BranchName.for(single_word, prefix: "")
-    assert_raises(Planka::Error) { Planka::BranchName.for(card, prefix: "x" * 60) }
+    assert_equal "card/" + "x" * 58, Planka::Workflow::BranchName.for(single_word, prefix: "")
+    assert_raises(Planka::Error) { Planka::Workflow::BranchName.for(card, prefix: "x" * 60) }
   end
 
   def test_next_card_signs_in_reads_configured_board_and_signs_out

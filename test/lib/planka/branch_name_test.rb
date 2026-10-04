@@ -5,7 +5,7 @@ class Planka::BranchNameTest < Minitest::Test
 
   def branch(name, features: [])
     card = Struct.new(:name, :features).new(name, features)
-    Planka::BranchName.for(card)
+    Planka::Workflow::BranchName.for(card, prefix: "lucenta-")
   end
 
   def test_a_feature_ticket_names_its_feature_number_and_title
@@ -31,6 +31,6 @@ class Planka::BranchNameTest < Minitest::Test
 
   def test_a_fixture_card_takes_its_feature_from_its_labels
     assert_equal "feature/workspaces-contract-edits-by-direct-request",
-      Planka::BranchName.for(board.card(card_id("Contract edits")))
+      Planka::Workflow::BranchName.for(board.card(card_id("Contract edits")), prefix: "lucenta-")
   end
 end

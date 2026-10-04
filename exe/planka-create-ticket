@@ -16,7 +16,9 @@
 #
 # Card creation cannot be retried safely, so if a later step fails the created
 # card and task-list ids are still printed; resume with --card to finish.
-require "planka/legacy"
+require "planka/workflow"
+require "planka/workflow/format"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 
@@ -39,7 +41,7 @@ Planka::CLI.run("planka create-ticket", output: options[:output]) do |client|
   criteria = JSON.parse(raw)
   raise Planka::Error, "criteria must be a JSON array of strings" unless criteria.is_a?(Array) && criteria.all?(String)
 
-  publishing = Planka::Publishing.new(client)
+  publishing = Planka::Workflow::Publishing.new(client, base_url: ENV.fetch("PLANKA_BASE_URL"))
   result =
     if options[:card]
       publishing.resume_ticket(card_id: Planka.card_id(options[:card]), criteria:)
@@ -51,5 +53,5 @@ Planka::CLI.run("planka create-ticket", output: options[:output]) do |client|
       publishing.create_ticket(list_id:, name: title, description: Planka::CLI.source(options[:description]), criteria:, position:)
     end
 
-  Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.ticket_result(result))
+  Planka::CLI.emit(result, output: options[:output], human: Planka::Workflow::Format.ticket_result(result))
 end

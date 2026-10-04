@@ -5,7 +5,8 @@
 #   planka claim <card>     an id or card URL
 #
 # Runs as the user configured in PLANKA_AGENT_EMAIL.
-require "planka/legacy"
+require "planka/workflow"
+require "planka/cli"
 require "planka/client"
 
 options = {}

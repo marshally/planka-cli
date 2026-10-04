@@ -3,7 +3,7 @@ require_relative "planka_test_helper"
 class Planka::SpecSweepTest < Minitest::Test
   include PlankaTestHelper
 
-  def finished = Planka::SpecSweep.finished(board).map(&:id)
+  def finished = Planka::Workflow::SpecSweep.finished(board).map(&:id)
 
   def test_a_spec_in_progress_whose_tickets_are_all_closed_is_finished
     move(card_id("Spec:"), "in-progress")

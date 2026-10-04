@@ -8,7 +8,9 @@
 #
 # Run it with the loop user's resolved credentials.
 # The logic lives in lib/planka/workflow/loop_lock.rb.
-require "planka/legacy"
+require "planka/workflow"
+require "planka/workflow/format"
+require "planka/cli"
 require "planka/client"
 
 options = {}
