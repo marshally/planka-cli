@@ -12,6 +12,7 @@ module Planka
       class Reads
         def initialize(client)
           @client = client
+          @comments = HandoffComments.new(client)
         end
 
         def board_ids = @client.board_ids
@@ -22,14 +23,7 @@ module Planka
           end
           user
         end
-        def comments(id)
-          records = @client.comments(id)
-          unless records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) && record["text"].is_a?(String) }
-            raise InvalidResponse, "Invalid handoff comments"
-          end
-          records.each { |record| timestamp!(record["createdAt"]) }
-          records
-        end
+        def comments(id) = @comments.comments(id)
 
         def board(id)
           included = @client.board(id)

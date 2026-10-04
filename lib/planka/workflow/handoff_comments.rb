@@ -14,8 +14,14 @@ module Planka
           record["text"].is_a?(String) && record["createdAt"].is_a?(String) }
           raise InvalidResponse, "Invalid handoff comments"
         end
-        records.each { |record| Time.iso8601(record["createdAt"]) }
+        records.each { |record| timestamp!(record["createdAt"]) }
         records
+      end
+
+      private
+
+      def timestamp!(value)
+        Time.iso8601(value)
       rescue ArgumentError
         raise InvalidResponse, "Invalid handoff comment timestamp"
       end
