@@ -152,6 +152,19 @@ class FakePlanka
     case (fault = take_fault(method, path))
     when Integer then return write(socket, fault, { "message" => "private upstream body" })
     when :malformed_board then return write(socket, 200, { "included" => { "lists" => "invalid" } })
+    when :malformed_branch_title
+      payload = board_payload(BOARD_ID)
+      payload["included"]["cards"] = payload["included"]["cards"].map { |card| card.merge("name" => 42) }
+      return write(socket, 200, payload)
+    when :malformed_feature_label
+      payload = board_payload(BOARD_ID)
+      payload["included"]["labels"] = [{ "id" => "991", "name" => 42 }]
+      payload["included"]["cardLabels"] = [{ "cardId" => PARENT_CARD, "labelId" => "991" }]
+      return write(socket, 200, payload)
+    when :missing_feature_label
+      payload = board_payload(BOARD_ID)
+      payload["included"]["cardLabels"] = [{ "cardId" => PARENT_CARD, "labelId" => "991" }]
+      return write(socket, 200, payload)
     when :missing_board_records then return write(socket, 200, { "included" => { "cards" => [] } })
     when :malformed_criteria
       payload = board_payload(BOARD_ID)

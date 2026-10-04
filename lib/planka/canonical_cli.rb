@@ -14,9 +14,10 @@ module Planka
 
       configuration = CLI::Configuration.from_env(env)
       target = configuration.resolve_reference(invocation)
+      reader_options = invocation.reader_options(configuration)
       cleanup = ->(_error) { output.cleanup_failure(invocation) }
       data = Client.session(**configuration.connection_options, validate_responses: true, on_cleanup_error: cleanup) do |client|
-        invocation.execute(client, target, base_url: configuration.base_url)
+        invocation.execute(client, target, **reader_options)
       end
       output.success(invocation, data)
     rescue StandardError => error

@@ -2,7 +2,8 @@
 
 This document defines the target interface for a general Planka administration
 CLI. It is a design contract for staged changes; the current executable supports
-`describe card`, `describe board`, `workflow pending-criteria`, and nested help alongside all flat commands in
+`describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
+and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 

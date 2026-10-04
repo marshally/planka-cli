@@ -10,6 +10,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka branch-name <card> [--output human|json]")
+parser.separator "Canonical replacement: planka workflow branch-name CARD (same human output; new JSON envelope)."
 Planka::CLI.parse!(parser, "planka branch-name")
 abort parser.banner unless ARGV.size == 1
 

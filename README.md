@@ -38,7 +38,8 @@ planka workflow <operation> [arguments] [flags]
 ```
 
 **The invocations below describe the target interface. Only `planka describe
-card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`, and their root/group/leaf help are
+card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`,
+`planka workflow branch-name CARD`, and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
@@ -256,6 +257,26 @@ one criterion per line; JSON has `data: {cardId, criteria}`, `meta: {}`, and
 successful empty array. Human output is then a blank line, matching `unticked`.
 See the [pending-criteria contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-third-slice-pending-criteria).
 
+### Canonical branch name
+
+```sh
+planka workflow branch-name CARD
+planka -o json workflow branch-name CARD
+planka workflow branch-name --help
+```
+
+This read-only workflow accepts an explicit card ID or same-instance card URL
+and requires the three connection/credential variables. It uses the first
+`feature:` label in the existing board association order, the card's title slug,
+and legacy truncation rules. Human output is the branch name; JSON has
+`data: {cardId, branch}`, `meta: {}`, and `error: null`.
+
+Optional `PLANKA_BRANCH_PREFIX` reserves space in the 63-character length budget;
+it is not prepended to the returned branch. A prefix longer than 55 characters
+fails before network access as a configuration error. A board setting is not
+required. This command computes a name without creating a Git branch or changing
+Planka. See the [branch-name contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-fourth-slice-branch-name).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -268,7 +289,8 @@ shapes, and exit codes. No removal is scheduled; a later sweep belongs to a
 separate track of work. Deprecation notices appear in documentation, help, and
 release notes, with no automatic runtime warnings. `describe card` replaces
 `show`, `describe board` replaces the board view of `snapshot`, and
-`workflow pending-criteria` replaces `unticked`; remaining
+`workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
+replaces `branch-name`; remaining
 canonical replacements are not yet implemented.
 
 ### Configuration
