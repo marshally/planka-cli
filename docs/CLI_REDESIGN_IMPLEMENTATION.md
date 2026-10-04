@@ -236,6 +236,10 @@ API failures, request boundaries, and cleanup. Evidence is existing read logic,
 captured fixtures, and local HTTP tests, without new endpoints or live-version
 compatibility claims.
 
+`Board.included_for_card(client, id)` owns the shared validated card-to-board
+lookup for both workflow readers. Criteria and naming-specific validation stay
+with their readers; legacy construction and adapters retain their defaults.
+
 ## Canonical CLI architecture
 
 The coordinator in [canonical_cli.rb](../lib/planka/canonical_cli.rb) follows

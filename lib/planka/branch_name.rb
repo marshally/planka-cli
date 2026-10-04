@@ -5,13 +5,7 @@ module Planka
   # DNS label of at most 63 characters, so it is cut on a word to fit.
   module BranchName
     def self.read(client, id, base_url:, prefix:)
-      response = client.card(id)
-      board_id = response.is_a?(Hash) && response["item"].is_a?(Hash) && response["item"]["boardId"]
-      unless board_id.is_a?(String) && board_id.match?(/\A\d+\z/)
-        raise InvalidResponse, "Invalid card board reference"
-      end
-      included = client.board(board_id)
-      Snapshot.validate!(included)
+      included = Board.included_for_card(client, id)
       board = Board.new(included, base_url: base_url)
       card = board.card(id)
       valid_labels = included.fetch("cardLabels").all? do |relation|
