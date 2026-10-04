@@ -64,6 +64,9 @@ class FakePlanka
   def tasks = @state[:tasks]
   def card_labels = @state[:cardLabels]
   def memberships = @state[:cardMemberships]
+  def comments = @state[:comments]
+  def lists = @state[:lists]
+  def boards = @boards
   def find_card(id) = @state[:cards].find { |c| c["id"] == id }
 
   private
@@ -91,6 +94,7 @@ class FakePlanka
   end
 
   def seed
+    @boards = [{ "id" => BOARD_ID }]
     @state = {
       lists: [
         list(LIST_READY, "ready-for-agent", "active"),
@@ -151,6 +155,10 @@ class FakePlanka
     @requests << [ method, path, body ]
     case (fault = take_fault(method, path))
     when Integer then return write(socket, fault, { "message" => "private upstream body" })
+    when :malformed_projects then return write(socket, 200, { "included" => { "boards" => nil } })
+    when :unsafe_board_id then return write(socket, 200, { "included" => { "boards" => [{ "id" => "../users/me" }] } })
+    when :malformed_user then return write(socket, 200, { "item" => nil })
+    when :malformed_comments then return write(socket, 200, { "items" => [{ "text" => 42, "createdAt" => "2026-10-01T00:00:00Z" }] })
     when :malformed_board then return write(socket, 200, { "included" => { "lists" => "invalid" } })
     when :malformed_branch_title
       payload = board_payload(BOARD_ID)
@@ -213,7 +221,7 @@ class FakePlanka
     in [ "DELETE", [ "api", "access-tokens", "me" ] ] then [ 200, {} ]
     in [ "GET", [ "api", "boards", id ] ] then [ 200, board_payload(id) ]
     in [ "GET", [ "api", "users", "me" ] ] then [ 200, { "item" => { "id" => "user-bot" } } ]
-    in [ "GET", [ "api", "projects" ] ] then [ 200, { "included" => { "boards" => [ { "id" => BOARD_ID } ] } } ]
+    in [ "GET", [ "api", "projects" ] ] then [ 200, { "included" => { "boards" => @boards } } ]
     in [ "GET", [ "api", "cards", id, "comments" ] ] then [ 200, { "items" => comments_for(id) } ]
     in [ "GET", [ "api", "cards", id ] ] then [ 200, card_payload(id) ]
     in [ "GET", [ "api", "lists", id, "cards" ] ] then [ 200, { "items" => @state[:cards].select { |c| c["listId"] == id }, "included" => {} } ]
@@ -234,7 +242,18 @@ class FakePlanka
   end
 
   def board_payload(id)
-    { "item" => { "id" => id, "name" => "Board" }, "included" => @state.slice(:lists, :cards, :labels, :cardLabels, :taskLists, :tasks, :cardMemberships).transform_keys(&:to_s) }
+    cards = @state[:cards].select { |card| card["boardId"] == id }
+    card_ids = cards.map { |card| card["id"] }
+    task_lists = @state[:taskLists].select { |list| card_ids.include?(list["cardId"]) }
+    task_list_ids = task_lists.map { |list| list["id"] }
+    included = {
+      "lists" => @state[:lists].select { |list| list["boardId"] == id },
+      "cards" => cards, "labels" => @state[:labels].select { |label| label["boardId"] == id },
+      "cardLabels" => @state[:cardLabels].select { |relation| card_ids.include?(relation["cardId"]) },
+      "taskLists" => task_lists, "tasks" => @state[:tasks].select { |task| task_list_ids.include?(task["taskListId"]) },
+      "cardMemberships" => @state[:cardMemberships].select { |record| card_ids.include?(record["cardId"]) },
+    }
+    { "item" => { "id" => id, "name" => "Board" }, "included" => included }
   end
 
   def card_payload(id)

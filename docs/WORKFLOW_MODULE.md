@@ -36,6 +36,7 @@ Workflow readers accept an authenticated client and explicit inputs:
 ```ruby
 Planka::Workflow::PendingCriteria.read(client, card_id, base_url: base_url)
 Planka::Workflow::BranchName.read(client, card_id, base_url: base_url, prefix: prefix)
+Planka::Workflow::ClaimStatus.read(client, base_url: base_url)
 ```
 
 Pure selection algorithms accept workflow board/card interpretations and their

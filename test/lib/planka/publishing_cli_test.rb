@@ -954,6 +954,200 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_kind_of Integer, doc["ageSeconds"]
   end
 
+  def test_workflow_claim_status_reports_free_without_a_target_or_resource_writes
+    out, err, status = planka("workflow", "claim-status", "-o", "json",
+      env: { "PLANKA_BOARD_ID" => nil, "PLANKA_BRANCH_PREFIX" => "x" * 56 })
+    assert status.success?, err
+    assert_empty err
+    assert_equal({ "data" => { "held" => false, "card" => nil }, "meta" => {}, "error" => nil }, JSON.parse(out))
+    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/projects"],
+      ["GET", "/api/boards/#{@server.board_id}"], ["GET", "/api/users/me"],
+      ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |method, path, _| [method, path] }
+    assert_equal "free\n", ok("workflow", "claim-status")
+    assert_equal "free\n", ok("loop-lock")
+  end
+
+  def test_workflow_claim_status_rejects_malformed_board_discovery_before_board_reads
+    @server.inject("GET", %r{/api/projects\z}, :malformed_projects)
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    refute_match(/NoMethodError|private|undefined method/, err)
+    assert_equal 0, @server.counts("GET", %r{/api/boards/})
+    assert_equal 1, @server.counts("DELETE", %r{/api/access-tokens/me\z})
+  end
+
+  def test_workflow_claim_status_sanitizes_an_invalid_claim_timestamp_in_both_formats
+    @server.memberships << { "cardId" => PARENT, "userId" => "user-bot", "createdAt" => "private-invalid-date" }
+    %w[human json].each do |format|
+      out, err, status = planka("workflow", "claim-status", "-o", format)
+      assert_equal 1, status.exitstatus
+      refute_match(/ArgumentError|private-invalid|backtrace|xmlschema/, err)
+      if format == "json"
+        assert_equal "api_error", JSON.parse(out).dig("error", "code")
+        assert_nil JSON.parse(out)["data"]
+      else
+        assert_empty out
+      end
+    end
+    assert_equal 2, @server.counts("DELETE", %r{/api/access-tokens/me\z})
+  end
+
+  def test_workflow_claim_status_rejects_a_malformed_signed_in_identity
+    @server.inject("GET", %r{/api/users/me\z}, :malformed_user)
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert_equal 1, status.exitstatus
+    refute_match(/NoMethodError|undefined method/, err)
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    assert_equal 1, @server.counts("DELETE", %r{/api/access-tokens/me\z})
+  end
+
+  def test_workflow_claim_status_sanitizes_malformed_handoff_comments
+    @server.memberships << { "cardId" => PARENT, "userId" => "user-bot", "createdAt" => "2026-10-01T00:00:00Z" }
+    @server.inject("GET", %r{/api/cards/#{PARENT}/comments\z}, :malformed_comments, times: 2)
+    %w[human json].each do |format|
+      out, err, status = planka("workflow", "claim-status", "-o", format)
+      assert_equal 1, status.exitstatus
+      refute_match(/TypeError|NoMethodError|private/, err)
+      if format == "json"
+        assert_equal "api_error", JSON.parse(out).dig("error", "code")
+        assert_nil JSON.parse(out)["data"]
+      else
+        assert_empty out
+      end
+    end
+  end
+
+  def test_workflow_claim_status_rejects_a_malformed_card_name
+    @server.memberships << { "cardId" => PARENT, "userId" => "user-bot", "createdAt" => "2026-10-01T00:00:00Z" }
+    @server.inject("GET", %r{/api/boards/.+\z}, :malformed_branch_title)
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    refute_match(/TypeError|NoMethodError|private/, err)
+  end
+
+  def test_workflow_claim_status_does_not_report_free_for_invalid_membership_or_list_records
+    membership = { "cardId" => PARENT, "userId" => 42, "createdAt" => "2026-10-01T00:00:00Z" }
+    @server.memberships << membership
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    membership["userId"] = "user-bot"
+    @server.find_card(PARENT)["listId"] = "999"
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    refute_match(/TypeError|NoMethodError/, err)
+  end
+
+  def test_workflow_claim_status_preserves_held_and_latest_handoff_rules
+    @server.memberships << { "cardId" => PARENT, "userId" => "user-bot", "createdAt" => "2026-10-01T00:00:00Z" }
+    data = ok_json("workflow", "claim-status")["data"]
+    assert_equal true, data["held"]
+    assert_equal({ "id" => PARENT, "name" => "Spec: Work-next refinement", "url" => "#{@server.base_url}/cards/#{PARENT}" }, data["card"])
+    assert_equal "2026-10-01T00:00:00Z", data["claimedAt"]
+    assert_kind_of Integer, data["ageSeconds"]
+    human = ok("workflow", "claim-status")
+    legacy = ok("loop-lock")
+    assert_equal legacy.gsub(/^age: -?\d+$/, "age: seconds"), human.gsub(/^age: -?\d+$/, "age: seconds")
+    legacy_data = ok_json("loop-lock")
+    assert_equal data.reject { |key, _| key == "ageSeconds" }, legacy_data.reject { |key, _| key == "ageSeconds" }
+    @server.comments << { "cardId" => PARENT, "text" => "Branch: topic\nPR: https://github.com/example/repo/pull/1", "createdAt" => "2026-10-02T00:00:00Z" }
+    assert_equal({ "held" => false, "card" => nil }, ok_json("workflow", "claim-status")["data"])
+    @server.comments << { "cardId" => PARENT, "text" => "Branch: newer-topic", "createdAt" => "2026-10-03T00:00:00Z" }
+    assert_equal true, ok_json("workflow", "claim-status").dig("data", "held")
+    @server.find_card(PARENT)["listId"] = FakePlanka::LIST_DONE
+    assert_equal false, ok_json("workflow", "claim-status").dig("data", "held")
+    assert_equal 0, @server.counts("GET", %r{/api/cards/[^/]+\z})
+    assert @server.requests.all? { |method, path, _| method == "GET" || path.start_with?("/api/access-tokens") }
+  end
+
+  def test_workflow_claim_status_reads_other_boards_despite_a_configured_board
+    board_id, list_id, card_id = "100000000000000002", "200000000000000004", "400000000000000002"
+    @server.boards << { "id" => board_id }
+    @server.lists << { "id" => list_id, "name" => "Any active list", "type" => "active", "boardId" => board_id }
+    @server.cards << @server.find_card(PARENT).merge("id" => card_id, "boardId" => board_id, "listId" => list_id, "name" => "Other board claim")
+    @server.memberships << { "cardId" => PARENT, "userId" => "someone-else", "createdAt" => "2026-10-01T00:00:00Z" }
+    @server.memberships << { "cardId" => card_id, "userId" => "user-bot", "createdAt" => "2026-10-01T00:00:00Z" }
+    data = ok_json("workflow", "claim-status")["data"]
+    assert_equal card_id, data.dig("card", "id")
+    assert_equal ["/api/boards/#{@server.board_id}", "/api/boards/#{board_id}"], @server.requests.filter_map { |method, path, _| path if method == "GET" && path.start_with?("/api/boards/") }
+    assert_equal 0, @server.counts("GET", %r{/api/cards/#{PARENT}/comments\z})
+    assert_equal 1, @server.counts("GET", %r{/api/cards/#{card_id}/comments\z})
+  end
+
+  def test_workflow_claim_status_validates_arguments_and_configuration_before_network
+    cases = [
+      [["workflow", "claim-status", PARENT], {}, 2, "invalid_input"],
+      [["workflow", "claim-status", "--board", @server.board_id], {}, 2, "invalid_input"],
+      [["workflow", "claim-status", "--limit", "1"], {}, 2, "invalid_input"],
+      [["workflow", "claim-statuses"], {}, 2, "invalid_input"],
+      [["workflow", "claim-status", "-o", "json", "-o", "human"], {}, 2, "invalid_input"],
+      [["workflow", "claim-status"], { "PLANKA_AGENT_PASSWORD" => nil }, 1, "configuration_error"],
+      [["workflow", "claim-status"], { "PLANKA_BASE_URL" => "https://private:password@planka.test" }, 1, "configuration_error"],
+    ]
+    cases.each do |args, env, expected_status, code|
+      out, err, status = planka(*args, "-o", "json", env: env)
+      assert_equal expected_status, status.exitstatus
+      assert_equal code, JSON.parse(out).dig("error", "code")
+      refute_includes err, PASSWORD
+    end
+    assert_empty @server.requests
+  end
+
+  def test_workflow_claim_status_accepts_output_flag_positions_and_empty_board_scope
+    @server.boards.clear
+    [["-o", "json", "workflow", "claim-status"], ["workflow", "-o", "json", "claim-status"],
+      ["workflow", "claim-status", "--output=json"]].each do |args|
+      out, err, status = planka(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_equal({ "data" => { "held" => false, "card" => nil }, "meta" => {}, "error" => nil }, JSON.parse(out))
+    end
+    assert_equal 0, @server.counts("GET", %r{/api/boards/})
+  end
+
+  def test_workflow_claim_status_rejects_unsafe_board_ids_without_requesting_them
+    @server.inject("GET", %r{/api/projects\z}, :unsafe_board_id)
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_equal 0, @server.counts("GET", %r{/api/boards/})
+    assert_equal 0, @server.counts("GET", %r{/api/users/me\z})
+    refute_match(/\.\.\/|TypeError|NoMethodError/, err)
+  end
+
+  def test_workflow_claim_status_preserves_api_failures_and_success_after_cleanup_failure
+    [[403, %r{/api/projects\z}, "authorization_error"], [404, %r{/api/boards/.+\z}, "not_found"],
+      [401, %r{/api/users/me\z}, "authentication_error"]].each do |http_status, path, code|
+      @server.inject("GET", path, http_status)
+      out, err, status = planka("workflow", "claim-status", "-o", "json")
+      assert_equal 1, status.exitstatus
+      assert_equal code, JSON.parse(out).dig("error", "code")
+      assert_nil JSON.parse(out)["data"]
+      refute_match(/private upstream|TypeError|NoMethodError/, err)
+    end
+    @server.inject("DELETE", %r{/api/access-tokens/me\z}, 403)
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert status.success?, err
+    assert_equal({ "data" => { "held" => false, "card" => nil }, "meta" => {}, "error" => nil }, JSON.parse(out))
+    assert_includes err, "cleanup failed"
+    assert_equal 4, @server.counts("DELETE", %r{/api/access-tokens/me\z})
+  end
+
+  def test_workflow_claim_status_refuses_to_guess_between_duplicate_card_records
+    @server.memberships << { "cardId" => PARENT, "userId" => "user-bot", "createdAt" => "2026-10-01T00:00:00Z" }
+    @server.cards << @server.find_card(PARENT).merge("listId" => FakePlanka::LIST_DONE)
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_nil JSON.parse(out)["data"]
+    refute_match(/TypeError|NoMethodError/, err)
+  end
+
   def test_spec_sweep_reports_no_work_for_humans_and_json
     assert_equal "No finished specs\n", ok("spec-sweep")
 

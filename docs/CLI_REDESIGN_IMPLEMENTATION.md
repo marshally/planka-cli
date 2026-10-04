@@ -9,7 +9,8 @@ operations live under `planka workflow`.
 The first slice is implemented: nested dispatch/help and `planka describe card
 CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow pending-criteria CARD`; the fourth adds
-`planka workflow branch-name CARD`. All legacy entry
+`planka workflow branch-name CARD`; the fifth adds
+`planka workflow claim-status`. All legacy entry
 points are preserved. Other administration operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -240,6 +241,54 @@ compatibility claims.
 lookup for both workflow readers. Criteria and naming-specific validation stay
 with their readers; legacy construction and adapters retain their defaults.
 
+## Implemented fifth slice: claim status
+
+`planka workflow claim-status` is a read-only migration of `loop-lock`. It accepts
+no positional target, scope flag, or alias. The three connection settings are
+validated before authentication. `PLANKA_BOARD_ID` and `PLANKA_BRANCH_PREFIX`
+do not restrict or configure this inspection. Root, workflow, and leaf help
+work without credentials or network access.
+
+Success without an eligible card is
+`{"data":{"held":false,"card":null},"meta":{},"error":null}`. When held, data has
+`held: true`, `card: {id, name, url}`, `claimedAt` as the existing ISO timestamp,
+and integer `ageSeconds` using the existing elapsed-time calculation. This is a
+single Planka-side workflow gate result, not an inventory of all memberships or
+a report of GitHub's separate PR gate. Human output retains legacy `free`, or
+`held`, `claimed`, and `age` lines. A successful empty scope returns `free`.
+
+The reader uses existing `GET /api/projects` board discovery, reads every
+accessible board in response order, and obtains the signed-in user's identity.
+It then reuses `LoopLock` selection: first claimed open card in board/card
+response order whose latest parsed `Branch:` handoff has no `PR:` URL. Comments
+are read only for candidate open cards claimed by this user, until one qualifies.
+A newer branch-only handoff supersedes an older PR handoff under the existing
+rule. Closed cards and claims by other users do not hold this gate. There are
+no GitHub requests, resource writes, or lock acquisition.
+
+[ClaimStatus](../lib/planka/workflow/claim_status.rb) supplies validated reads to
+existing `LoopLock.report`, leaving legacy behavior intact. Canonical client
+board discovery validates its collection shape and numeric board IDs before
+board requests. The reader validates native list types/references, numeric card
+IDs, card names, duplicate card IDs, membership identities/references and ISO
+timestamps, signed-in identity, and inspected comment text/timestamps. Missing
+required index collections and malformed records yield sanitized `api_error`
+with null data and exit 1. HTTP/network errors follow the shared canonical
+contract; cleanup failure preserves both the primary failure and successful
+read results. Expected timestamp parse failures are converted near consumption,
+without broadly masking programming errors.
+
+The generic invocation descriptor supports a command without a reference;
+workflow naming, help, formatter, and operation remain in the workflow module.
+`loop-lock` and `planka-loop-lock` retain their arguments, bare JSON, human
+output, and exits indefinitely, with replacement help and no runtime warnings.
+Acceptance uses the existing public subprocess/local HTTP seams for free/held,
+legacy equivalence, latest handoff, closed/other-user claims, cross-board scope,
+offline help, flag placement, pre-network validation, malformed records, API
+failures, read boundaries, and cleanup. Endpoint evidence is existing client
+operations and captured/local fixtures; no new live-version compatibility or
+live-resource mutation claim is made.
+
 ## Canonical CLI architecture
 
 The coordinator in [canonical_cli.rb](../lib/planka/canonical_cli.rb) follows
@@ -425,7 +474,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, and workflow branch name are complete.
+3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, and workflow claim status are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

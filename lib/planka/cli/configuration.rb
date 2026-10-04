@@ -31,6 +31,7 @@ module Planka
       def inspect = "#<#{self.class} connection settings redacted>"
 
       def resolve_reference(invocation)
+        return nil unless invocation.reference
         return invocation.reference if invocation.reference.match?(/\A\d+\z/)
 
         reference = URI(invocation.reference)
