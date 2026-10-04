@@ -59,12 +59,13 @@ provides `commands`, `groups`, and `root_help`; command definitions select a
 reader, callable formatter, and optional pre-session settings function. Shared
 parsing and output contain no workflow command names or branch-prefix rules.
 
-`require "planka/legacy"` loads the existing CLI compatibility adapters and old
-workflow constant names. Historical workflow require paths remain forwarding
-files; legacy environment defaults stay in adapters for `BranchName` and
-`Publishing`. The core `require "planka"` entry point intentionally stops
-implicitly loading CLI/workflow helpers. Ruby callers using those helpers must
-explicitly load workflows or the legacy adapter.
+Historical workflow Ruby paths and constant aliases are removed. There is no
+legacy Ruby loader or formatting forwarding module. Ruby callers use
+`Planka::Workflow` directly and load CLI presentation explicitly when needed.
+The bundled executables retain the legacy CLI contracts while calling current
+workflow interfaces; environment defaults are supplied by those executables,
+not by library compatibility wrappers. The core `require "planka"` entry point
+loads only general capabilities.
 
 All 21 flat commands and direct executables retain their existing arguments,
 effects, output, and exit contracts. No canonical operations, warning policy,
@@ -73,7 +74,7 @@ naming rules, or deletion behavior change as part of this restructuring.
 ## Later extraction
 
 Create a workflow gemspec that owns workflow implementation, CLI integration,
-and its compatibility paths, and declares a dependency on the core library.
+and declares a dependency on the core library.
 Keep the core library and shared CLI machinery available without a workflow
 dependency. The CLI distribution can depend on both packages and keep the
 existing `planka workflow ...` grammar. Decide package names, version constraints,

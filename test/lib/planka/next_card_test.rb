@@ -12,12 +12,12 @@ class Planka::NextCardTest < Minitest::Test
   end
 
   def next_card(label, comments: {}, prs: {})
-    Planka::NextCard.for(label, board:, comments: Comments.new(comments), pull_requests: PullRequests.new(prs)).to_s
+    Planka::Workflow::NextCard.for(label, board:, comments: Comments.new(comments), pull_requests: PullRequests.new(prs)).to_s
   end
 
   def handoff(branch, pr) = [ { "createdAt" => "2026-09-24T10:00:00Z", "text" => "Branch: #{branch}\nPR: #{pr}" } ]
 
-  def pr(state, head) = Planka::PullRequest.new(state:, head:)
+  def pr(state, head) = Planka::Workflow::PullRequest.new(state:, head:)
 
   def line(prefix) = board.card(card_id(prefix)).to_s
 

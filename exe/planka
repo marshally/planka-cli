@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require "planka-cli"
+require "planka"
 require "planka/canonical_cli"
 require "planka/workflow/cli"
 

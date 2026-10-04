@@ -6,12 +6,12 @@ class Planka::BlockerTest < Minitest::Test
   end
 
   def blocker(name, branch: nil, state: nil, head: branch)
-    handoff = Planka::Handoff.new(branch:, pr_url: state && "https://github.com/x/y/pull/#{name}") if branch
-    pr = Planka::PullRequest.new(state:, head:) if state
-    Planka::Blocker.new(card: Card.new(name), handoff:, pr:)
+    handoff = Planka::Workflow::Handoff.new(branch:, pr_url: state && "https://github.com/x/y/pull/#{name}") if branch
+    pr = Planka::Workflow::PullRequest.new(state:, head:) if state
+    Planka::Workflow::Blocker.new(card: Card.new(name), handoff:, pr:)
   end
 
-  def parent(*blockers) = Planka::Blocker.parent_branch(blockers)
+  def parent(*blockers) = Planka::Workflow::Blocker.parent_branch(blockers)
 
   def test_no_blockers_stack_on_main
     assert_equal "main", parent

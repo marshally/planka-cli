@@ -34,8 +34,8 @@ record. Use an isolated implementation branch and preserve unrelated work.
 | [lib/planka/canonical_cli.rb](../lib/planka/canonical_cli.rb), [lib/planka/cli/](../lib/planka/cli/) | Canonical coordinator, parsed invocations, validated configuration, output/status handling, and expected failures. |
 | [lib/planka/client.rb](../lib/planka/client.rb) | HTTP endpoints, session lifecycle, retries, and unknown-write-outcome detection. |
 | [lib/planka/card_detail.rb](../lib/planka/card_detail.rb), [lib/planka/snapshot.rb](../lib/planka/snapshot.rb) | Existing detailed card and board/list read models. |
-| [lib/planka/publishing.rb](../lib/planka/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and resource operations. |
-| [lib/planka/prime.rb](../lib/planka/prime.rb) | Built-in, credential-free agent guide. |
+| [lib/planka/workflow/publishing.rb](../lib/planka/workflow/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and resource operations. |
+| [lib/planka/workflow/prime.rb](../lib/planka/workflow/prime.rb) | Built-in, credential-free agent guide. |
 | [test/lib/planka/cli_test.rb](../test/lib/planka/cli_test.rb) | Subprocess help, argument, environment, and direct-executable checks. |
 | [test/lib/planka/publishing_cli_test.rb](../test/lib/planka/publishing_cli_test.rb) | End-to-end subprocess commands against a local HTTP fake, including recovery. |
 | [test/lib/planka/fake_planka.rb](../test/lib/planka/fake_planka.rb) | In-memory API test server; useful regression evidence, not proof of a real API contract. |

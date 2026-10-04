@@ -9,7 +9,7 @@ class Planka::LoopLockTest < Minitest::Test
     def comments(card_id) = by_card.fetch(card_id, [])
   end
 
-  def held(comments: {}) = Planka::LoopLock.held(boards: [ board ], user_id: BOT, comments: Comments.new(comments))
+  def held(comments: {}) = Planka::Workflow::LoopLock.held(boards: [ board ], user_id: BOT, comments: Comments.new(comments))
 
   def claim_as_bot(id) = payload["cardMemberships"] << { "cardId" => id, "userId" => BOT }
 

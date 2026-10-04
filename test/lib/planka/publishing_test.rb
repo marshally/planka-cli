@@ -40,7 +40,7 @@ class Planka::PublishingTest < Minitest::Test
     end
   end
 
-  def publishing(client) = Planka::Publishing.new(client, base_url: "https://planka.test///")
+  def publishing(client) = Planka::Workflow::Publishing.new(client, base_url: "https://planka.test///")
 
   def test_create_spec_makes_a_project_card_with_no_criteria
     client = FakeClient.new

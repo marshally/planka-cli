@@ -9,7 +9,8 @@
 #   --title TITLE          card title (required)
 #   --description-file F   description from a file, or - for stdin
 #   --position N           explicit position; otherwise appended below the list
-require "planka/legacy"
+require "planka/workflow"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 
@@ -32,6 +33,6 @@ Planka::CLI.run("planka create-spec", output: options[:output]) do |client|
   position = options[:position] || Planka::CLI.append_position(client, list_id)
   description = Planka::CLI.source(options[:description])
 
-  result = Planka::Publishing.new(client).create_spec(list_id:, name: title, description:, position:)
+  result = Planka::Workflow::Publishing.new(client, base_url: ENV.fetch("PLANKA_BASE_URL")).create_spec(list_id:, name: title, description:, position:)
   Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.resource_result("Created", "card", result["card"]))
 end

@@ -2,7 +2,8 @@
 # Prints a card's unticked acceptance criteria, one per line. Read-only.
 #
 #   planka unticked <card>     an id or card URL
-require "planka/legacy"
+require "planka/workflow"
+require "planka/cli"
 require "planka/client"
 
 options = {}

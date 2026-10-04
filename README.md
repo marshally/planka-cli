@@ -396,7 +396,7 @@ repeated, and `create-label` reuses an existing label with the same name.
 ## Library
 
 ```ruby
-require "planka-cli"
+require "planka"
 
 Planka::Client.session do |client|
   board = Planka::Board.new(client.board(ENV.fetch("PLANKA_BOARD_ID")),
@@ -406,8 +406,11 @@ end
 ```
 
 `Board` also accepts a captured API `included` payload. Supply `base_url:` when
-using multiple instances in one process. `BranchName.for(card, prefix: "app-")`
-accepts a per-call prefix. The library preserves the `Planka` namespace.
+using multiple instances in one process. Load `planka/workflow` explicitly for
+agent conventions, then wrap a core board with `Planka::Workflow::Board.new(board)`.
+`Planka::Workflow::BranchName.for(workflow_card, prefix: "app-")` accepts a
+per-call prefix. Historical workflow Ruby paths and constant aliases are removed;
+legacy CLI commands remain available.
 
 ## Development and extraction boundary
 

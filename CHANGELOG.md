@@ -5,8 +5,8 @@
 Isolated agent conventions and workflow operations under `Planka::Workflow`,
 with explicit workflow loading and CLI attachment. Core resource loading no
 longer implicitly loads workflow or CLI helpers; Ruby callers can explicitly
-require `planka/workflow` or `planka/legacy`. Existing CLI entry points retain
-their contracts. Separate workflow gem packaging remains deferred.
+require `planka/workflow`. Historical Ruby paths, constant aliases, and
+formatting forwarders are removed. Existing CLI entry points retain their contracts. Separate workflow gem packaging remains deferred.
 
 Added read-only `planka workflow branch-name CARD` with canonical JSON/error
 handling and offline help. It preserves legacy feature-label selection, title
