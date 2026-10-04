@@ -8,6 +8,7 @@
 # With --list, prints only that list's cards, by id or name. The board defaults
 # to PLANKA_BOARD_ID.
 require "planka"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 

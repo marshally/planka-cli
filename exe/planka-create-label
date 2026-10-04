@@ -6,6 +6,7 @@
 #
 # COLOR is one of Planka's label colors (default berry-red).
 require "planka"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 

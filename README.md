@@ -277,6 +277,10 @@ fails before network access as a configuration error. A board setting is not
 required. This command computes a name without creating a Git branch or changing
 Planka. See the [branch-name contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-fourth-slice-branch-name).
 
+Workflow conventions now live in an explicitly loaded `Planka::Workflow` module,
+with separate core resource models and workflow CLI integration. See the
+[module architecture and future gem extraction](docs/WORKFLOW_MODULE.md).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run

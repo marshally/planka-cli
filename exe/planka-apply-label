@@ -4,6 +4,7 @@
 #
 #   planka apply-label <card> --label ID|NAME
 require "planka"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 

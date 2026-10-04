@@ -7,14 +7,14 @@ module Planka
   module CanonicalCLI
     module_function
 
-    def run(args, legacy_commands:, env: ENV, stdout: $stdout, stderr: $stderr)
+    def run(args, legacy_commands:, env: ENV, stdout: $stdout, stderr: $stderr, extensions: [])
       output = CLI::Output.new(stdout: stdout, stderr: stderr)
-      invocation = CLI::Invocation.parse(args, legacy_commands: legacy_commands)
+      invocation = CLI::Invocation.parse(args, legacy_commands: legacy_commands, extensions: extensions)
       return output.help(invocation) if invocation.help?
 
       configuration = CLI::Configuration.from_env(env)
       target = configuration.resolve_reference(invocation)
-      reader_options = invocation.reader_options(configuration)
+      reader_options = invocation.reader_options(configuration, env: env)
       cleanup = ->(_error) { output.cleanup_failure(invocation) }
       data = Client.session(**configuration.connection_options, validate_responses: true, on_cleanup_error: cleanup) do |client|
         invocation.execute(client, target, **reader_options)

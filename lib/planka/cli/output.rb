@@ -19,7 +19,7 @@ module Planka
 
       def success(invocation, data)
         @stdout.puts(invocation.output == "json" ? JSON.generate({ "data" => data, "meta" => {}, "error" => nil }) :
-          Planka::CLI.public_send(invocation.formatter, data))
+          invocation.formatter.call(data))
         0
       end
 

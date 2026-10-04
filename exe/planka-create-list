@@ -6,6 +6,7 @@
 # The board defaults to PLANKA_BOARD_ID. A new board has no columns; create the
 # conventional ones (ready-for-agent, in-progress, done) before adding cards.
 require "planka"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 

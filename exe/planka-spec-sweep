@@ -6,8 +6,8 @@
 #
 #   planka spec-sweep
 #
-# The logic lives in lib/planka/spec_sweep.rb.
-require "planka"
+# The logic lives in lib/planka/workflow/spec_sweep.rb.
+require "planka/legacy"
 require "planka/client"
 
 options = {}
@@ -17,18 +17,9 @@ abort parser.banner unless ARGV.empty?
 
 begin
   Planka::Client.session do |client|
-    moved = []
-    client.board_ids.each do |board_id|
-      board = Planka::Board.new(client.board(board_id))
-      Planka::SpecSweep.finished(board).each do |spec|
-        client.comment(spec.id, "Every ticket for this spec is closed, so planka-cli moves it to done.")
-        client.move_card(spec.id, board.list_id("done"))
-        moved << spec
-      end
-    end
-    human = moved.empty? ? "No finished specs" : moved.map { |spec| "done: #{spec}" }.join("\n")
-    result = { "count" => moved.size, "moved" => moved.map { |spec| Planka::CLI.card_ref(spec) } }
-    Planka::CLI.emit(result, output: options[:output], human:)
+    result = Planka::Workflow::SpecSweep.complete(client, base_url: ENV.fetch("PLANKA_BASE_URL"))
+    human = Planka::Workflow::Format.spec_sweep(result)
+    Planka::CLI.emit(result, output: options[:output], human: human)
   end
 rescue Planka::Error, KeyError => e
   abort "planka spec-sweep: #{e.message}"

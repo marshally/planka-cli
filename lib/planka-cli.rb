@@ -1,2 +1,1 @@
-require_relative "planka"
-require_relative "planka/client"
+require_relative "planka/legacy"

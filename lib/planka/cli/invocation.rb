@@ -1,6 +1,7 @@
 require "optparse"
 require "planka"
 require "planka/cli/failure"
+require "planka/cli"
 
 module Planka
   module CLI
@@ -11,38 +12,11 @@ module Planka
         Administration:
           describe card CARD  Read card details and related data (read-only)
           describe board BOARD  Read board snapshot and related data (read-only)
-        Workflows:
-          workflow pending-criteria CARD  Read unfinished acceptance criteria (read-only)
-          workflow branch-name CARD  Read the card's branch name (read-only)
-        Legacy commands (deprecated, retained indefinitely):
       HELP
       GROUP_HELP = <<~HELP
         usage: planka describe <resource> REF [flags]
           card CARD  Read card details and related data (read-only)
           board BOARD  Read board snapshot and related data (read-only)
-      HELP
-      WORKFLOW_HELP = <<~HELP
-        usage: planka workflow <operation> [arguments] [flags]
-          pending-criteria CARD  Read unfinished acceptance criteria (read-only)
-          branch-name CARD  Read the card's branch name (read-only)
-      HELP
-      BRANCH_NAME_HELP = <<~HELP
-        usage: planka workflow branch-name CARD [--output human|json]
-        Read-only: card ID or same-instance card URL; no board setting required.
-        Uses the existing feature-label, title-slug, and length rules of branch-name.
-        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
-        PLANKA_BRANCH_PREFIX optionally reserves room within the 63-character limit.
-        Human output is the branch name; JSON data has cardId and branch.
-        Failures exit 1 or 2. Example: planka workflow branch-name 123 -o json
-      HELP
-      PENDING_CRITERIA_HELP = <<~HELP
-        usage: planka workflow pending-criteria CARD [--output human|json]
-        Read-only: card ID or same-instance card URL; no board setting required.
-        Prints unfinished tasks from lists named exactly "Acceptance criteria", in board-response order.
-        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
-        JSON data has cardId and criteria; empty criteria are a successful empty array.
-        Human output is one criterion per line. Failures exit 1 or 2.
-        Example: planka workflow pending-criteria 123 -o json
       HELP
       LEAF_HELP = <<~HELP
         usage: planka describe card CARD [--output human|json]
@@ -61,20 +35,21 @@ module Planka
       HELP
 
       COMMANDS = {
-        ["describe", "card"] => { resource: "card", collection: "cards", help: LEAF_HELP, reader: Planka::CardDetail, formatter: :card_detail }.freeze,
-        ["describe", "board"] => { resource: "board", collection: "boards", help: BOARD_HELP, reader: Planka::Snapshot, formatter: :board_snapshot }.freeze,
-        ["workflow", "pending-criteria"] => { resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: Planka::PendingCriteria, formatter: :pending_criteria }.freeze,
-        ["workflow", "branch-name"] => { resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: Planka::BranchName, formatter: :branch_name, branch_prefix: true }.freeze,
+        ["describe", "card"] => { resource: "card", collection: "cards", help: LEAF_HELP, reader: Planka::CardDetail, formatter: Planka::CLI.method(:card_detail) }.freeze,
+        ["describe", "board"] => { resource: "board", collection: "boards", help: BOARD_HELP, reader: Planka::Snapshot, formatter: Planka::CLI.method(:board_snapshot) }.freeze,
       }.freeze
-      GROUPS = { "describe" => GROUP_HELP, "workflow" => WORKFLOW_HELP }.freeze
+      GROUPS = { "describe" => GROUP_HELP }.freeze
 
       attr_reader :program, :output, :resource, :reference
 
-      def self.parse(argv, legacy_commands:)
-        new(argv, legacy_commands: legacy_commands).parse
+      def self.parse(argv, legacy_commands:, extensions: [])
+        new(argv, legacy_commands: legacy_commands, extensions: extensions).parse
       end
 
-      def initialize(argv, legacy_commands:)
+      def initialize(argv, legacy_commands:, extensions:)
+        @commands = COMMANDS.merge(extensions.flat_map { |extension| extension.commands.to_a }.to_h)
+        @groups = GROUPS.merge(extensions.flat_map { |extension| extension.groups.to_a }.to_h)
+        @root_help = [ROOT_HELP, *extensions.map(&:root_help), "Legacy commands (deprecated, retained indefinitely):\n"]
         @args = argv.dup
         @legacy_commands = legacy_commands
         @show_help = argv.empty?
@@ -82,7 +57,7 @@ module Planka
         requested = "json" if argv.include?("--output=json") || argv.include?("-ojson")
         @output = requested == "json" ? "json" : "human"
         @program = "planka"
-        group = argv.find { |arg| GROUPS.key?(arg) }
+        group = argv.find { |arg| @groups.key?(arg) }
         @program = "planka #{group}" if group
       end
 
@@ -97,9 +72,9 @@ module Planka
         @parser.parse!(@args)
         operation = @args[1].to_s
         operation = operation.delete_suffix("s") if @args.first == "describe"
-        @command = COMMANDS[[@args.first, operation]]
+        @command = @commands[[@args.first, operation]]
         @resource = @command&.fetch(:resource)
-        unless @args.empty? || (GROUPS.key?(@args.first) && (@args.size == 1 || @command))
+        unless @args.empty? || (@groups.key?(@args.first) && (@args.size == 1 || @command))
           invalid!("unknown command; see planka --help")
         end
         @program = "planka #{@args.first} #{operation}" if @command
@@ -124,19 +99,19 @@ module Planka
 
       def help_text
         text = if @args.empty?
-          [ROOT_HELP, "commands: #{@legacy_commands.join(', ')}",
+          [@root_help.join, "commands: #{@legacy_commands.join(', ')}",
             "\nRun planka <command> --help for command usage and options."].join("\n")
         elsif @args.size == 1
-          GROUPS.fetch(@args.first)
+          @groups.fetch(@args.first)
         else
           @command.fetch(:help)
         end
         "#{text}\n#{@parser.help}"
       end
 
-      def reader_options(configuration)
+      def reader_options(configuration, env:)
         options = { base_url: configuration.base_url }
-        options[:prefix] = configuration.branch_prefix if @command[:branch_prefix]
+        options.merge!(@command[:options].call(env)) if @command[:options]
         options
       end
 

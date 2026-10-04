@@ -4,6 +4,7 @@
 #
 #   planka rename-task-list --id TASK_LIST_ID --name NAME
 require "planka"
+require "planka/cli"
 require "planka/client"
 require "optparse"
 

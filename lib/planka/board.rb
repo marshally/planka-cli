@@ -5,7 +5,7 @@ module Planka
   class Board
     attr_reader :base_url
 
-    # Canonical workflows share the same validated card-to-board read boundary.
+    # Validated card-to-board lookup shared by card-based readers.
     def self.included_for_card(client, id)
       response = client.card(id)
       board_id = response.is_a?(Hash) && response["item"].is_a?(Hash) && response["item"]["boardId"]

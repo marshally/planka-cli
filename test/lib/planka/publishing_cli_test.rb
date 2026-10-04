@@ -5,6 +5,7 @@ require "tmpdir"
 require "rbconfig"
 require_relative "fake_planka"
 require_relative "../../../lib/planka"
+require_relative "../../../lib/planka/workflow"
 require_relative "../../../lib/planka/client"
 
 # Drives the publishing commands end to end over HTTP against an in-memory
@@ -469,7 +470,7 @@ class Planka::PublishingCLITest < Minitest::Test
 
     # The picker's invariants still hold for the created cards.
     with_client do |client|
-      board = Planka::Board.new(client.board(@server.board_id), base_url: @server.base_url)
+      board = Planka::Workflow::Board.new(Planka::Board.new(client.board(@server.board_id), base_url: @server.base_url))
       refute board.card(spec_id).ticket?, "spec is not a ticket"
       assert board.card(t1_id).ticket?, "ticket has acceptance criteria"
       assert board.card(t1_id).takeable?, "ticket one is takeable"

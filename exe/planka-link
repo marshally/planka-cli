@@ -6,8 +6,8 @@
 #
 # Cards are ids or card URLs. Each blocker becomes a task linked to that card
 # in a "Blocked by" task list on the blocked card. Re-running is safe: blockers
-# already linked are skipped. The logic lives in lib/planka/blocking.rb.
-require "planka"
+# already linked are skipped. The logic lives in lib/planka/workflow/blocking.rb.
+require "planka/legacy"
 require "planka/client"
 
 options = {}

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 # Prints built-in agent instructions without connecting to Planka.
-require "planka"
+require "planka/legacy"
 require "planka/prime"
 
 options = {}

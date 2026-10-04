@@ -172,7 +172,7 @@ Human output is one criterion per line, or a blank line for an empty result,
 matching legacy `unticked`. This is workflow inspection, without collection
 pagination, filtering, limits, or `meta.complete`.
 
-The [PendingCriteria reader](../lib/planka/pending_criteria.rb) reads
+The [PendingCriteria reader](../lib/planka/workflow/pending_criteria.rb) reads
 `GET /api/cards/:id` for its board reference, then `GET /api/boards/:id` for the
 existing included records. It shares `Board`/`Card` inspection logic with legacy
 `unticked`. No comment read or resource writes are needed. API evidence is the
@@ -218,7 +218,7 @@ space; a prefix longer than 55 characters yields `configuration_error`, null
 data, and exit 1 before authentication. This optional setting is validated only
 for branch-name; unrelated canonical reads do not use it.
 
-The [BranchName reader](../lib/planka/branch_name.rb) reads the card for its
+The [BranchName reader](../lib/planka/workflow/branch_name.rb) reads the card for its
 numeric board reference and then reads the board's included records, reusing
 `Board`/`Card` and the legacy naming algorithm. Required card/index fields and
 label associations used for naming must be present and well shaped. Malformed
@@ -250,15 +250,19 @@ Legacy executables retain their existing argument/output adapters.
 | Owner | Interface and responsibility |
 | --- | --- |
 | [CLI::Invocation](../lib/planka/cli/invocation.rb) | `parse` resolves command aliases, validates local syntax, and supplies help or an executable request. Command definitions select the reader and human formatter. |
-| [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` validates and captures one invocation's settings; `resolve_reference` enforces the selected instance. Inspection redacts connection settings. |
+| [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` validates and captures one invocation's connection settings; `resolve_reference` enforces the selected instance. Inspection redacts connection settings. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, human output, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
-| [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb), [PendingCriteria](../lib/planka/pending_criteria.rb), [BranchName](../lib/planka/branch_name.rb) | `read(client, id, base_url:, ...)` returns canonical data and validates the response shapes each reader needs. BranchName additionally takes an explicit `prefix:`. |
+| [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb), [PendingCriteria](../lib/planka/workflow/pending_criteria.rb), [BranchName](../lib/planka/workflow/branch_name.rb) | `read(client, id, base_url:, ...)` returns canonical data and validates the response shapes each reader needs. Workflow::BranchName additionally takes an explicit `prefix:`. |
 
 Help runs before configuration or authentication. Canonical readers receive the
 validated base URL explicitly; they do not fetch settings from the environment.
-Invocation selects command-specific reader options from configuration before
-the session opens, including the validated branch prefix when needed.
+Invocation selects command-specific reader options before the session opens.
+The explicitly attached workflow CLI module owns workflow help, formatters, and
+branch-prefix settings through `Workflow::Configuration`. Core card models
+expose general resource data; workflow card/board adapters own agent conventions.
+See the [workflow module and future gem extraction](WORKFLOW_MODULE.md) for
+loading, dependency direction, compatibility, and the later packaging boundary.
 Malformed response documents, tokens, and required reader records raise
 `Planka::InvalidResponse` near their consumption and become sanitized `api_error`
 failures. Output does not disguise unexpected `TypeError`, `NoMethodError`, or
