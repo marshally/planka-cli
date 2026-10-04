@@ -5,6 +5,18 @@ module Planka
   class Board
     attr_reader :base_url
 
+    # Canonical workflows share the same validated card-to-board read boundary.
+    def self.included_for_card(client, id)
+      response = client.card(id)
+      board_id = response.is_a?(Hash) && response["item"].is_a?(Hash) && response["item"]["boardId"]
+      unless board_id.is_a?(String) && board_id.match?(/\A\d+\z/)
+        raise InvalidResponse, "Invalid card board reference"
+      end
+      included = client.board(board_id)
+      Snapshot.validate!(included)
+      included
+    end
+
     def initialize(included, base_url: ENV.fetch("PLANKA_BASE_URL"))
       @base_url = base_url.sub(%r{/+\z}, "")
       @included = included
