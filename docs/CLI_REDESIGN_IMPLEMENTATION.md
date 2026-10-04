@@ -11,7 +11,8 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow pending-criteria CARD`; the fourth adds
 `planka workflow branch-name CARD`; the fifth adds
 `planka workflow claim-status`; the sixth adds
-`planka workflow guide`. All legacy entry
+`planka workflow guide`; the seventh adds
+`planka workflow next`. All legacy entry
 points are preserved. Other administration operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -325,6 +326,89 @@ connection to a local listening server, input failures, help, all legacy entry
 points, and unchanged legacy guide text/JSON. Existing HTTP/session tests cover
 regression of API-backed commands. These checks do not claim live API compatibility.
 
+## Implemented seventh slice: next work
+
+`planka workflow next [--board BOARD] [--label LABEL]` migrates `next-card` without
+claiming a card, changing Planka resources, or changing Git/GitHub resources.
+The three connection settings are validated before authentication. `--board`
+accepts a numeric board ID or same-instance `/boards/ID` URL; otherwise
+`PLANKA_BOARD_ID` is required. Explicit scope overrides the environment.
+Missing/invalid default board settings are `configuration_error` (exit 1);
+invalid explicit scope is `invalid_input` (exit 2), before requests.
+`PLANKA_BRANCH_PREFIX` does not configure selection. No positional target,
+operation alias, `--limit`, `--member`, or `--name` is introduced.
+
+Repeated `--label` values match exactly with AND before selection. At most one
+distinct `feature:` or `effort:` label selects a mode; unrelated labels narrow
+that mode. Repeating the same label has no additional effect. Multiple distinct
+mode labels, empty labels, or conflicting board flags fail as `invalid_input`
+before configuration or network access. These are the approved label-mode rules.
+Unknown labels and empty matching queues succeed without a card.
+
+The existing `NextCard.for` selector remains the operation owner. Without a mode
+label, ready-for-agent tickets are selected by position, excluding claimed and
+unfinished-blocked cards. A feature mode uses ticket creation order and numbers
+the matching feature tickets starting at one. Specs/maps must also match all
+supplied labels; blocker lookup retains the original board even when the blocker
+does not match filters. An effort mode returns wayfinder:map cards and takeable
+frontier cards by position. It performs no handoff or GitHub lookup.
+
+Human output is the existing pick, waiting, or frontier report. JSON contains
+that report's existing projection in `data`, with `meta: {}` and `error: null`:
+
+- Pick: `card`, `specs`, `number` (null for priority), `blockers`, and `parent`.
+  Card references have `id`, `name`, `url`. Each blocker has `card`, `branch`,
+  `pullRequest`, and `pullRequestState` (nullable).
+- Waiting: `card: null` and `waiting`, whose card references add `claimed` and
+  `blockedBy` card references. Empty waiting succeeds with an empty array.
+- Effort: `card` (first frontier card or null), `maps`, and `frontier` references.
+  Empty frontier succeeds, retaining any matching maps.
+
+This is workflow selection over the endpoint's included board records, not a
+complete paginated resource collection. It introduces no `meta.complete`.
+[NextSelection](../lib/planka/workflow/next_selection.rb) reads the scoped board,
+then uses a filtered selection view over its validated workflow interpretation.
+[QueueSnapshot](../lib/planka/workflow/queue_snapshot.rb) rejects malformed/missing
+required collections, duplicate IDs, invalid names/positions/timestamps, unresolved
+list/label/task-list/membership/linked-card references, and invalid completion
+flags. It does not guess eligibility from malformed data. Linked blockers must
+be resolvable in the scoped board; no cross-board hydration is added.
+
+Selected priority/feature blockers read comments for latest parsed `Branch:`
+handoffs. [HandoffComments](../lib/planka/workflow/handoff_comments.rb) validates
+comment text/timestamps before interpretation. A newer branch-only handoff
+supersedes an older PR handoff. No handoff or multiple unmerged blockers yield
+an `AMBIGUOUS` parent under the existing rules. Recorded PR URLs invoke
+`gh pr view URL --json state,headRefName`, requiring the executable and appropriate
+GitHub authentication (including private repositories).
+[PullRequestLookup](../lib/planka/workflow/pull_request_lookup.rb) suppresses raw
+tool diagnostics. Failed lookups preserve unknown PR state and the recorded
+branch, never assume a merge; missing `gh` yields `configuration_error` (exit 1).
+Successful results require an OPEN/CLOSED/MERGED state and nonempty branch string;
+malformed JSON or fields yield sanitized `api_error` (exit 1). GitHub MERGED
+blockers contribute to parent main; other states retain their stacking branch.
+
+Planka HTTP/network/input errors follow the shared canonical contract, with null
+data on failure. Sign-out failure preserves successful reports and primary
+failures. Credentials and raw upstream/tool bodies stay out of output. Root,
+workflow, and leaf help work offline. All legacy `next-card` and direct executable
+arguments, human text, bare JSON, exits, and lookup behavior remain unchanged
+indefinitely; help names the replacement without runtime warnings.
+
+Shared invocation parsing accepts descriptor-owned flags only on applicable
+commands. Pre-session options resolve board scope and labels. The workflow CLI
+owns mode validation, help, human formatting, and JSON projection; the shared
+output module continues to own the canonical envelope and status. No workflow
+names enter shared parsing. Existing commands keep their default result rendering.
+
+Acceptance uses approved CLI subprocess, local HTTP fake, and installed-gem seams
+for scope/configuration, priority/creation/frontier order, AND filtering, empty and
+waiting reports, legacy equivalence, blocker handoffs, deterministic fake-gh
+results/failures, malformed records, offline help, request boundaries, errors,
+and cleanup. Endpoint evidence remains the existing board/comment read paths and
+captured/local fixtures. No live Planka or GitHub compatibility or mutation is
+claimed; no new Planka endpoint is introduced.
+
 ## Canonical CLI architecture
 
 The coordinator in [canonical_cli.rb](../lib/planka/canonical_cli.rb) follows
@@ -336,7 +420,7 @@ Legacy executables retain their existing argument/output adapters.
 
 | Owner | Interface and responsibility |
 | --- | --- |
-| [CLI::Invocation](../lib/planka/cli/invocation.rb) | `parse` resolves command aliases, validates local syntax, and supplies help or an executable request. Command definitions select the reader and human formatter, including whether execution requires a session. |
+| [CLI::Invocation](../lib/planka/cli/invocation.rb) | `parse` resolves command aliases, validates local syntax, and supplies help or an executable request. Command definitions select the reader, applicable flags, pre-session settings, human formatter, and optional JSON projection, including whether execution requires a session. |
 | [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` validates and captures one invocation's connection settings; `resolve_reference` enforces the selected instance. Inspection redacts connection settings. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, human output, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
@@ -512,7 +596,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, and the offline workflow guide are complete.
+3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, and the offline workflow guide, and workflow next selection are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

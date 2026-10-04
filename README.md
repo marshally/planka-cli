@@ -40,7 +40,7 @@ planka workflow <operation> [arguments] [flags]
 **The invocations below describe the target interface. Only `planka describe
 card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`,
 `planka workflow branch-name CARD`, `planka workflow claim-status`,
-`planka workflow guide`, and their
+`planka workflow guide`, `planka workflow next`, and their
 root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -319,6 +319,33 @@ with canonical errors. Guidance uses implemented canonical commands and marks
 remaining legacy operations explicitly. Legacy `prime` keeps its original text
 and bare JSON. See the [guide contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-sixth-slice-workflow-guide).
 
+### Canonical next work
+
+```sh
+planka workflow next --board BOARD
+planka workflow next --label feature:search -o json
+planka workflow next --board BOARD --label effort:search --label enhancement
+```
+
+Selects work without claiming it or changing resources. `--board` accepts a
+numeric board ID or same-instance board URL; otherwise `PLANKA_BOARD_ID` supplies
+scope. The three connection/credential variables remain required. No mode label
+uses ready-for-agent priority by position; `feature:` uses ticket creation order;
+`effort:` returns the wayfinder map and takeable frontier by position. Repeated
+`--label` values AND-match before selection. At most one distinct `feature:` or
+`effort:` label selects a mode; other labels narrow that queue, including specs
+and maps. Unknown labels and empty queues succeed with no card.
+
+Human output matches `next-card`. Canonical JSON wraps its pick, waiting, or
+frontier data in `data`, with empty `meta` and null `error`. Completed linked tasks
+retain blocker handoff/parent metadata; unfinished linked tasks prevent selection.
+Only selected priority/feature blockers need comment and PR reads. `gh` must be
+installed for recorded PR lookups and authenticated for private repositories.
+Failed lookups retain an unknown PR state and recorded branch; malformed records
+fail safely. No handoff or multiple unmerged blockers report `AMBIGUOUS`.
+There is no `--limit`, collection pagination, or `meta.complete` claim. See the
+[next-work contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-seventh-slice-next-work).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -333,7 +360,7 @@ release notes, with no automatic runtime warnings. `describe card` replaces
 `show`, `describe board` replaces the board view of `snapshot`, and
 `workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
 replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
-`workflow guide` replaces `prime`; remaining
+`workflow guide` replaces `prime`, and `workflow next` replaces `next-card`; remaining
 canonical replacements are not yet implemented.
 
 ### Configuration

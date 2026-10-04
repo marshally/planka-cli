@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+Added read-only `planka workflow next` with explicit/default board scope,
+AND-matching labels, canonical JSON/errors, and existing priority/feature/frontier
+selection and stacking rules. Canonical reads validate eligibility records and
+sanitize GitHub lookup results. Empty queues succeed; legacy next-card contracts
+remain intact. Help and the built-in canonical guide name the replacement.
+
 Added `planka workflow guide` with human text and canonical JSON, without
 credentials or an API session. It uses implemented canonical commands and labels
 remaining legacy operations. Legacy `prime` retains its text and output contracts;

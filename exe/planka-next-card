@@ -22,6 +22,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka next-card [feature-label|effort-label] [--output human|json]")
+parser.separator "Canonical replacement: planka workflow next [--board BOARD] [--label LABEL]"
 Planka::CLI.parse!(parser, "planka next-card")
 abort parser.banner if ARGV.size > 1
 

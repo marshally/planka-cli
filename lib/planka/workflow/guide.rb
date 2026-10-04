@@ -23,10 +23,11 @@ module Planka
 
         ## Find and work a ticket
         1. `planka describe board BOARD -o json`: inspect lists, cards, and tasks.
-        2. `planka next-card --output json` (legacy): select an unclaimed,
-           unblocked ticket in ready-for-agent using PLANKA_BOARD_ID. Add
-           `feature:SLUG` for ticket order or `effort:SLUG` for map/frontier.
-           No available card is a normal result. Canonical workflow next is planned.
+        2. `planka workflow next --board BOARD -o json`: select an unclaimed,
+           unblocked ticket in ready-for-agent. Add `--label feature:SLUG` for
+           ticket order or `--label effort:SLUG` for map/frontier; repeated labels
+           AND-match. Without --board, PLANKA_BOARD_ID supplies scope. No available
+           card is a normal result.
         3. `planka describe card CARD -o json`: inspect description, criteria,
            blockers, comments, and memberships before acting.
         4. `planka workflow claim-status -o json`: inspect your first open claim
@@ -37,7 +38,7 @@ module Planka
         5. `planka workflow branch-name CARD` supplies a branch slug;
            PLANKA_BRANCH_PREFIX optionally reserves room, without being prepended.
            `planka workflow pending-criteria CARD -o json` lists unfinished tasks
-           in Acceptance criteria. Legacy next-card's parent field identifies
+           in Acceptance criteria. Workflow next's parent field identifies
            the stacking branch; resolve AMBIGUOUS before branching. GitHub PR
            checks require authenticated gh.
         6. `planka comment CARD "TEXT" --output json` (legacy): record handoff

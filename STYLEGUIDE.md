@@ -3,7 +3,7 @@
 This document defines the target interface for a general Planka administration
 CLI. It is a design contract for staged changes; the current executable supports
 `describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
-`workflow claim-status`, `workflow guide`, and nested help alongside all flat commands in
+`workflow claim-status`, `workflow guide`, `workflow next`, and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -380,6 +380,19 @@ reports existing claims; it does not acquire a lock. `complete-specs` comments
 and moves eligible specs to done, and its help must state those writes.
 `guide`, `next`, `claim-status`, `branch-name`, and `pending-criteria` are read-only.
 The guide is built in and works without credentials, a checkout, or network.
+
+Implemented `workflow next` accepts `--board BOARD`, falling back to
+`PLANKA_BOARD_ID` only when omitted. Repeated `--label` filters AND-match before
+selection. At most one distinct `feature:` or `effort:` label selects the mode;
+other labels narrow priority/feature/frontier candidates, including specs/maps.
+Multiple mode labels fail before network access. With no mode label, select by
+ready-for-agent priority. Empty or unknown-label matches succeed without a card.
+This workflow returns a pick/waiting/frontier report rather than a paginated
+resource collection; it has no `--limit` or `meta.complete`.
+Selected priority/feature blockers use recorded handoffs and `gh` PR lookup for
+stacking metadata. Failed lookups stay unknown; missing `gh` is configuration
+failure, and malformed successful responses are API errors. See the
+[next-work contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-seventh-slice-next-work).
 
 General administrators can perform the primitive actions directly with
 `add member`, `move card`, and `create comment` without adopting these conventions.

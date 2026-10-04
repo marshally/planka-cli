@@ -18,7 +18,7 @@ module Planka
       end
 
       def success(invocation, data)
-        @stdout.puts(invocation.output == "json" ? JSON.generate({ "data" => data, "meta" => {}, "error" => nil }) :
+        @stdout.puts(invocation.output == "json" ? JSON.generate({ "data" => invocation.json_data(data), "meta" => {}, "error" => nil }) :
           invocation.formatter.call(data))
         0
       end
@@ -44,6 +44,8 @@ module Planka
       def expected_failure(error)
         case error
         when Failure then error
+        when Planka::DependencyUnavailable
+          Failure.new(code: "configuration_error", message: error.message)
         when Planka::Client::HTTPError
           code = { 401 => "authentication_error", 403 => "authorization_error", 404 => "not_found" }.fetch(error.status, "api_error")
           Failure.new(code: code, message: "API request failed (HTTP #{error.status}); verify the resource and access permissions")
