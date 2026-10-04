@@ -154,6 +154,7 @@ class FakePlanka
   def dispatch(socket, method, path, body)
     @requests << [ method, path, body ]
     case (fault = take_fault(method, path))
+    when Hash then return write(socket, 200, fault)
     when Integer then return write(socket, fault, { "message" => "private upstream body" })
     when :malformed_projects then return write(socket, 200, { "included" => { "boards" => nil } })
     when :unsafe_board_id then return write(socket, 200, { "included" => { "boards" => [{ "id" => "../users/me" }] } })

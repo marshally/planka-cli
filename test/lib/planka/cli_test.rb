@@ -177,6 +177,37 @@ class Planka::CLITest < Minitest::Test
     assert_equal out, short_out
   end
 
+
+
+  def test_leaf_help_lists_scope_flags_only_for_commands_that_accept_them
+    [["describe", "board"], ["describe", "card"], ["workflow", "guide"], ["workflow", "pending-criteria"]].each do |args|
+      out, err, status = run_cli(*args, "--help")
+      assert status.success?, err
+      refute_match(/^\s+--board BOARD/, out)
+      refute_match(/^\s+--label LABEL/, out)
+    end
+  end
+
+  def test_workflow_next_help_is_offline_and_explains_modes_scope_and_github
+    [["--help"], ["workflow", "--help"], ["workflow", "next", "--help"]].each do |args|
+      out, err, status = run_cli(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_includes out, "next"
+    end
+    out, err, status = run_cli("workflow", "next", "--help")
+    %w[PLANKA_BOARD_ID --board --label feature: effort: gh read-only].each { |text| assert_includes out, text }
+    assert_includes out, "AND"
+    assert_includes out, "does not claim"
+    assert_includes out, "Unknown"
+    out, err, status = run_cli("next-card", "--help")
+    assert status.success?, err
+    assert_includes out, "planka workflow next"
+    direct, err, status = run_cli("--help", executable: "planka-next-card")
+    assert status.success?, err
+    assert_equal out, direct
+  end
+
   def test_workflow_guide_returns_canonical_json_without_credentials_or_checkout
     out, err, status = run_cli("workflow", "guide", "-o", "json")
     assert status.success?, err
@@ -192,7 +223,7 @@ class Planka::CLITest < Minitest::Test
     assert_includes instructions, "planka workflow claim-status"
     assert_includes instructions, "planka workflow branch-name CARD"
     assert_includes instructions, "planka workflow pending-criteria CARD"
-    assert_includes instructions, "planka next-card"
+    assert_includes instructions, "planka workflow next --board BOARD"
     assert_includes instructions, "read the board back before retrying"
     assert_operator instructions.split.size, :<=, 500
   end

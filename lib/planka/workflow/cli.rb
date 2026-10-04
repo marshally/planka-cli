@@ -9,6 +9,7 @@ module Planka
       ROOT_HELP = <<~HELP
         Workflows:
           workflow guide  Read built-in agent guidance (offline)
+          workflow next  Select queued work without claiming (read-only)
           workflow pending-criteria CARD  Read unfinished acceptance criteria (read-only)
           workflow branch-name CARD  Read the card's branch name (read-only)
           workflow claim-status  Inspect claims across all accessible boards (read-only)
@@ -16,6 +17,7 @@ module Planka
       GROUP_HELP = <<~HELP
         usage: planka workflow <operation> [arguments] [flags]
           guide  Read built-in agent guidance (offline)
+          next  Select queued work without claiming (read-only)
           pending-criteria CARD  Read unfinished acceptance criteria (read-only)
           branch-name CARD  Read the card's branch name (read-only)
           claim-status  Inspect claims across all accessible boards (read-only)
@@ -26,6 +28,23 @@ module Planka
         Takes no target or scope flags. Human output is the built-in agent guide.
         JSON uses data/meta/error; data has instructions. Invalid input exits 2.
         Example: planka workflow guide -o json
+      HELP
+      NEXT_HELP = <<~HELP
+        usage: planka workflow next [--board BOARD] [--label LABEL] [--output human|json]
+        read-only: selects work from ready-for-agent; does not claim or change resources.
+        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+        --board accepts a numeric ID or same-instance board URL; otherwise PLANKA_BOARD_ID is required.
+        No mode label: priority by position. feature:SLUG: tickets by creation order.
+        effort:SLUG: wayfinder:map and takeable frontier by position.
+        Repeated --label values AND-match exactly before selection, including specs/maps.
+        At most one distinct feature: or effort: mode label; other labels narrow the queue.
+        Completed linked tasks retain blocker handoff/stacking metadata; unfinished ones prevent selection.
+        gh must be installed for blocker PR lookup, with authentication for private repositories.
+        Unknown/failed PR lookups preserve the recorded branch and an unknown state; malformed results fail.
+        No handoff or multiple unmerged blockers yield AMBIGUOUS; an empty queue succeeds.
+        Human output matches next-card. JSON uses data/meta/error and the pick, waiting, or frontier schema.
+        No --limit, mutation, or collection completeness claim. Failures exit 1 or 2.
+        Example: planka workflow next --board 123 --label feature:search -o json
       HELP
       CLAIM_STATUS_HELP = <<~HELP
         usage: planka workflow claim-status [--output human|json]
@@ -56,13 +75,36 @@ module Planka
         Example: planka workflow pending-criteria 123 -o json
       HELP
 
-      def self.branch_options(env)
+      def self.branch_options(env, **)
         { prefix: Configuration.from_env(env).branch_prefix }
       rescue ConfigurationError => error
         raise Planka::CLI::Failure.new(code: "configuration_error", message: error.message)
       end
 
+      def self.next_options(env, configuration:, flags:)
+        board = flags.fetch(:board, []).first || env["PLANKA_BOARD_ID"]
+        if board.to_s.strip.empty?
+          raise Planka::CLI::Failure.new(code: "configuration_error", message: "Missing required environment: PLANKA_BOARD_ID (or supply --board BOARD)")
+        end
+        { board_id: configuration.resolve_resource(board, resource: "board", collection: "boards"), labels: flags.fetch(:labels, []).uniq }
+      rescue Planka::CLI::Failure => error
+        if flags.fetch(:board, []).empty? && error.code == "invalid_input"
+          raise Planka::CLI::Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a numeric board ID or same-instance board URL")
+        end
+        raise
+      end
+
+      def self.validate_next_flags(flags)
+        boards = flags.fetch(:board, [])
+        labels = flags.fetch(:labels, []).uniq
+        if boards.uniq.size > 1 || boards.any? { |value| value.strip.empty? } || labels.any? { |value| value.strip.empty? } ||
+            labels.count { |label| label.start_with?("feature:", "effort:") } > 1
+          "Use one board and at most one feature: or effort: mode label; labels must be nonempty"
+        end
+      end
+
       COMMANDS = {
+        ["workflow", "next"] => { reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), options: method(:next_options), help: NEXT_HELP, reader: NextSelection, projector: Format.method(:next_card), formatter: Format.method(:next_selection) }.freeze,
         ["workflow", "guide"] => { reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide) }.freeze,
         ["workflow", "claim-status"] => { resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock) }.freeze,
         ["workflow", "pending-criteria"] => { resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: PendingCriteria, formatter: Format.method(:pending_criteria) }.freeze,

@@ -32,18 +32,22 @@ module Planka
 
       def resolve_reference(invocation)
         return nil unless invocation.reference
-        return invocation.reference if invocation.reference.match?(/\A\d+\z/)
+        resolve_resource(invocation.reference, resource: invocation.resource, collection: invocation.collection)
+      end
 
-        reference = URI(invocation.reference)
+      def resolve_resource(value, resource:, collection:)
+        return value if value.match?(/\A\d+\z/)
+
+        reference = URI(value)
         prefix = Regexp.escape(@base.path.sub(%r{/+\z}, ""))
-        target = reference.path.match(%r{\A#{prefix}/#{invocation.collection}/(\d+)/?\z})
+        target = reference.path.match(%r{\A#{prefix}/#{collection}/(\d+)/?\z})
         unless [reference.scheme, reference.host, reference.port] == [@base.scheme, @base.host, @base.port] &&
             target && !reference.userinfo && !reference.query && !reference.fragment
-          raise Failure.new(code: "invalid_input", status: 2, message: "#{invocation.resource.capitalize} URL must belong to PLANKA_BASE_URL")
+          raise Failure.new(code: "invalid_input", status: 2, message: "#{resource.capitalize} URL must belong to PLANKA_BASE_URL")
         end
         target[1]
       rescue URI::InvalidURIError
-        raise Failure.new(code: "invalid_input", status: 2, message: "Invalid #{invocation.resource} URL; use a numeric #{invocation.resource} ID or same-instance #{invocation.resource} URL")
+        raise Failure.new(code: "invalid_input", status: 2, message: "Invalid #{resource} URL; use a numeric #{resource} ID or same-instance #{resource} URL")
       end
     end
   end

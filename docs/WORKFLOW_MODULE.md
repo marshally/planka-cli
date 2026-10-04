@@ -37,11 +37,16 @@ API-backed workflow readers accept an authenticated client and explicit inputs:
 Planka::Workflow::PendingCriteria.read(client, card_id, base_url: base_url)
 Planka::Workflow::BranchName.read(client, card_id, base_url: base_url, prefix: prefix)
 Planka::Workflow::ClaimStatus.read(client, base_url: base_url)
+Planka::Workflow::NextSelection.read(client, base_url: base_url, board_id: board_id, labels: labels)
 ```
 
 `Planka::Workflow::Guide.read` returns built-in instructions without a client or
 settings. Its canonical command executes before connection validation or session
 creation. Legacy `Prime` retains its original instructions separately.
+
+NextSelection returns the existing queue report; the workflow CLI projects it to
+JSON or formats it for people. QueueSnapshot and HandoffComments validate records
+used by canonical selection; PullRequestLookup owns sanitized GitHub tool reads.
 
 Pure selection algorithms accept workflow board/card interpretations and their
 existing external dependencies. Construct a workflow board from a general board
@@ -61,7 +66,8 @@ retain the existing recovery state through the shared `Planka::PartialFailure`.
 `require "planka/workflow/cli"` loads the workflow CLI adapter. The bundled
 executable passes it to `CanonicalCLI.run` through `extensions:`. An extension
 provides `commands`, `groups`, and `root_help`; command definitions select a
-reader, callable formatter, and optional pre-session settings function. Commands
+reader, callable formatter, optional JSON projector, applicable flag definitions,
+local flag validator, and optional pre-session settings function. Commands
 without references select `reference: false`; offline commands additionally select
 `session: false` and their readers take no client or settings. Shared
 parsing and output contain no workflow command names or branch-prefix rules.
