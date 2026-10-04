@@ -8,15 +8,24 @@ module Planka
     module CLI
       ROOT_HELP = <<~HELP
         Workflows:
+          workflow guide  Read built-in agent guidance (offline)
           workflow pending-criteria CARD  Read unfinished acceptance criteria (read-only)
           workflow branch-name CARD  Read the card's branch name (read-only)
           workflow claim-status  Inspect claims across all accessible boards (read-only)
       HELP
       GROUP_HELP = <<~HELP
         usage: planka workflow <operation> [arguments] [flags]
+          guide  Read built-in agent guidance (offline)
           pending-criteria CARD  Read unfinished acceptance criteria (read-only)
           branch-name CARD  Read the card's branch name (read-only)
           claim-status  Inspect claims across all accessible boards (read-only)
+      HELP
+      GUIDE_HELP = <<~HELP
+        usage: planka workflow guide [--output human|json]
+        Offline: no credentials or network access, even when connection settings are supplied.
+        Takes no target or scope flags. Human output is the built-in agent guide.
+        JSON uses data/meta/error; data has instructions. Invalid input exits 2.
+        Example: planka workflow guide -o json
       HELP
       CLAIM_STATUS_HELP = <<~HELP
         usage: planka workflow claim-status [--output human|json]
@@ -54,6 +63,7 @@ module Planka
       end
 
       COMMANDS = {
+        ["workflow", "guide"] => { reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide) }.freeze,
         ["workflow", "claim-status"] => { resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock) }.freeze,
         ["workflow", "pending-criteria"] => { resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: PendingCriteria, formatter: Format.method(:pending_criteria) }.freeze,
         ["workflow", "branch-name"] => { resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: BranchName, formatter: Format.method(:branch_name), options: method(:branch_options) }.freeze,

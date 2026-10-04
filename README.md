@@ -39,7 +39,8 @@ planka workflow <operation> [arguments] [flags]
 
 **The invocations below describe the target interface. Only `planka describe
 card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`,
-`planka workflow branch-name CARD`, `planka workflow claim-status`, and their
+`planka workflow branch-name CARD`, `planka workflow claim-status`,
+`planka workflow guide`, and their
 root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -302,6 +303,22 @@ and integer `ageSeconds` when held, plus `meta: {}` and `error: null`. Malformed
 required records produce a sanitized error rather than a guessed `free` result.
 See the [claim-status contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-fifth-slice-claim-status).
 
+### Canonical workflow guide
+
+```sh
+planka workflow guide
+planka workflow guide -o json
+planka workflow guide --help
+```
+
+Prints concise built-in agent guidance without credentials, network access, or
+an API session. Connection and workflow settings are ignored. There is no target
+or scope flag. Human output is the guide text; JSON is
+`{"data":{"instructions":"..."},"meta":{},"error":null}`. Invalid input exits 2
+with canonical errors. Guidance uses implemented canonical commands and marks
+remaining legacy operations explicitly. Legacy `prime` keeps its original text
+and bare JSON. See the [guide contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-sixth-slice-workflow-guide).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -315,7 +332,8 @@ separate track of work. Deprecation notices appear in documentation, help, and
 release notes, with no automatic runtime warnings. `describe card` replaces
 `show`, `describe board` replaces the board view of `snapshot`, and
 `workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
-replaces `branch-name`, and `workflow claim-status` replaces `loop-lock`; remaining
+replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
+`workflow guide` replaces `prime`; remaining
 canonical replacements are not yet implemented.
 
 ### Configuration

@@ -73,7 +73,7 @@ module Planka
         operation = @args[1].to_s
         operation = operation.delete_suffix("s") if @args.first == "describe"
         @command = @commands[[@args.first, operation]]
-        @resource = @command&.fetch(:resource)
+        @resource = @command && @command[:resource]
         unless @args.empty? || (@groups.key?(@args.first) && (@args.size == 1 || @command))
           invalid!("unknown command; see planka --help")
         end
@@ -99,6 +99,7 @@ module Planka
       def help? = @show_help
       def collection = @command.fetch(:collection)
       def formatter = @command.fetch(:formatter)
+      def requires_session? = @command.fetch(:session, true)
 
       def help_text
         text = if @args.empty?
@@ -118,8 +119,12 @@ module Planka
         options
       end
 
-      def execute(client, target, **options)
-        arguments = @command.fetch(:reference, true) ? [client, target] : [client]
+      def execute(client = nil, target = nil, **options)
+        arguments = if requires_session?
+          @command.fetch(:reference, true) ? [client, target] : [client]
+        else
+          []
+        end
         @command.fetch(:reader).read(*arguments, **options)
       end
 

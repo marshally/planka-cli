@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+Added `planka workflow guide` with human text and canonical JSON, without
+credentials or an API session. It uses implemented canonical commands and labels
+remaining legacy operations. Legacy `prime` retains its text and output contracts;
+help names the replacement. API-backed commands keep their existing session path.
+
 Added read-only `planka workflow claim-status` using the existing cross-board
 claim and latest-handoff rules, with canonical JSON/errors and offline help.
 Malformed required discovery, board, membership, identity, and comment records

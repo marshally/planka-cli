@@ -177,6 +177,95 @@ class Planka::CLITest < Minitest::Test
     assert_equal out, short_out
   end
 
+  def test_workflow_guide_returns_canonical_json_without_credentials_or_checkout
+    out, err, status = run_cli("workflow", "guide", "-o", "json")
+    assert status.success?, err
+    assert_empty err
+    document = JSON.parse(out)
+    assert_equal %w[data error meta], document.keys.sort
+    assert_equal({}, document.fetch("meta"))
+    assert_nil document.fetch("error")
+    instructions = document.fetch("data").fetch("instructions")
+    assert_match(/\A# planka-cli agent guide\n/, instructions)
+    assert_includes instructions, "planka workflow guide"
+    assert_includes instructions, "planka describe card CARD"
+    assert_includes instructions, "planka workflow claim-status"
+    assert_includes instructions, "planka workflow branch-name CARD"
+    assert_includes instructions, "planka workflow pending-criteria CARD"
+    assert_includes instructions, "planka next-card"
+    assert_includes instructions, "read the board back before retrying"
+    assert_operator instructions.split.size, :<=, 500
+  end
+
+  def test_workflow_guide_help_and_legacy_prime_help_name_the_offline_replacement
+    [["--help"], ["workflow", "--help"], ["workflow", "guide", "--help"]].each do |args|
+      out, err, status = run_cli(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_includes out, "guide"
+    end
+    out, err, status = run_cli("workflow", "guide", "--help")
+    assert_includes out, "no credentials or network"
+    assert_includes out, "instructions"
+    assert_includes out, "-o, --output"
+    out, err, status = run_cli("prime", "--help")
+    assert status.success?, err
+    assert_includes out, "planka workflow guide"
+    direct, err, status = run_cli("--help", executable: "planka-prime")
+    assert status.success?, err
+    assert_equal out, direct
+  end
+
+  def test_workflow_guide_ignores_connection_settings_and_makes_no_network_requests
+    server = TCPServer.new("127.0.0.1", 0)
+    expected, err, status = run_cli("workflow", "guide")
+    assert status.success?, err
+    assert_empty err
+    ["http://127.0.0.1:#{server.addr[1]}", "invalid-private-url"].each do |base|
+      out, err, status = run_cli("workflow", "guide", env: {
+        "PLANKA_BASE_URL" => base, "PLANKA_AGENT_EMAIL" => "private-guide@example.invalid",
+        "PLANKA_AGENT_PASSWORD" => "private-guide-password", "PLANKA_BOARD_ID" => "private-board",
+        "PLANKA_BRANCH_PREFIX" => "x" * 60 })
+      assert status.success?, err
+      assert_empty err
+      assert_equal expected, out
+      refute_includes out, "private-guide"
+      refute IO.select([server], nil, nil, 0), "guide must not open an authentication session"
+    end
+  ensure
+    server&.close
+  end
+
+  def test_workflow_guide_human_and_json_formats_agree_with_flags_in_any_position
+    human, err, status = run_cli("workflow", "guide")
+    assert status.success?, err
+    [["-o", "json", "workflow", "guide"], ["workflow", "-o", "json", "guide"],
+      ["workflow", "guide", "--output=json"], ["workflow", "guide", "-ojson"]].each do |args|
+      out, err, status = run_cli(*args)
+      assert status.success?, err
+      assert_empty err
+      assert_equal human, JSON.parse(out).fetch("data").fetch("instructions")
+    end
+    out, err, status = run_cli("workflow", "guide", "-o", "human")
+    assert status.success?, err
+    assert_equal human, out
+  end
+
+  def test_workflow_guide_rejects_targets_and_unsupported_flags_with_canonical_errors
+    [["extra"], ["extra", "--help"], ["--board", "123"], ["--limit", "1"],
+      ["--unknown"], ["--output", "yaml"], ["--output", "human"]].each do |suffix|
+      out, err, status = run_cli("-o", "json", "workflow", "guide", *suffix)
+      assert_equal 2, status.exitstatus, err
+      document = JSON.parse(out)
+      assert_nil document.fetch("data")
+      assert_equal({}, document.fetch("meta"))
+      assert_equal "invalid_input", document.fetch("error").fetch("code")
+      assert_match(/\Aplanka workflow(?: guide)?: /, err)
+      refute_includes err, "PLANKA_AGENT_PASSWORD"
+      refute_includes err, "configuration_error"
+    end
+  end
+
   def test_prime_teaches_the_agent_workflow_without_credentials_or_checkout
     out, err, status = run_cli("prime")
     assert status.success?, err

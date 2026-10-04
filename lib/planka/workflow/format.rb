@@ -48,6 +48,7 @@ module Planka
       end
 
       def pending_criteria(data) = data.fetch("criteria").join("\n")
+      def guide(data) = data.fetch("instructions")
       def branch_name(data) = data.fetch("branch")
 
       def loop_lock(result)
