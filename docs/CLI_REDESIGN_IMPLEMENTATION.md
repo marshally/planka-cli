@@ -10,7 +10,8 @@ The first slice is implemented: nested dispatch/help and `planka describe card
 CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow pending-criteria CARD`; the fourth adds
 `planka workflow branch-name CARD`; the fifth adds
-`planka workflow claim-status`. All legacy entry
+`planka workflow claim-status`; the sixth adds
+`planka workflow guide`. All legacy entry
 points are preserved. Other administration operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -289,22 +290,59 @@ failures, read boundaries, and cleanup. Endpoint evidence is existing client
 operations and captured/local fixtures; no new live-version compatibility or
 live-resource mutation claim is made.
 
+## Implemented sixth slice: workflow guide
+
+`planka workflow guide` prints built-in onboarding guidance without credentials,
+a repository checkout, or network access. It accepts no positional target, scope
+flag, or alias. It ignores connection and workflow environment settings, including
+malformed values. Root, workflow-group, and leaf help advertise the offline guide.
+Common output flags work before, within, or after the command path.
+
+Success JSON is `{"data":{"instructions":"..."},"meta":{},"error":null}`.
+Human output is the identical instructions string, with a trailing newline.
+Guidance uses implemented canonical board/card descriptions, claim inspection,
+branch naming, and pending criteria; it explicitly marks remaining legacy queue,
+claim, comment, publishing, and recovery commands. It does not advertise planned
+replacements as available. The guide stays concise (at most 500 words).
+
+[Workflow::Guide](../lib/planka/workflow/guide.rb) owns the current instructions
+and returns their data without IO, environment reads, or a client. Legacy
+`Workflow::Prime` retains its original text. `prime` and `planka-prime` retain
+arguments, human output, bare JSON, and exits indefinitely; their help names the
+implemented replacement without runtime warnings.
+
+The command descriptor selects `session: false` and `reference: false`.
+Shared invocation parsing validates syntax first; the coordinator executes this
+operation and renders through canonical output before configuration or session
+creation. It does not sign in or sign out. API readers retain the default session
+path. Invalid targets, unsupported flags/formats, or conflicting output flags
+return `invalid_input`, null data, empty meta, and exit 2 in JSON mode, with a
+safe diagnostic on stderr. No API capability or new endpoint is introduced.
+
+Acceptance uses approved public subprocess and installed-gem seams: offline
+human/JSON equivalence, flag placement, absent/valid/malformed settings, no
+connection to a local listening server, input failures, help, all legacy entry
+points, and unchanged legacy guide text/JSON. Existing HTTP/session tests cover
+regression of API-backed commands. These checks do not claim live API compatibility.
+
 ## Canonical CLI architecture
 
 The coordinator in [canonical_cli.rb](../lib/planka/canonical_cli.rb) follows
-parse → validate → open session → execute → render. The executable alone exits
+parse → validate → open session → execute → render for API commands.
+Offline operations execute and render after parsing, without configuration or a
+session. The executable alone exits
 for canonical commands; the coordinator and output module return a status.
 Legacy executables retain their existing argument/output adapters.
 
 | Owner | Interface and responsibility |
 | --- | --- |
-| [CLI::Invocation](../lib/planka/cli/invocation.rb) | `parse` resolves command aliases, validates local syntax, and supplies help or an executable request. Command definitions select the reader and human formatter. |
+| [CLI::Invocation](../lib/planka/cli/invocation.rb) | `parse` resolves command aliases, validates local syntax, and supplies help or an executable request. Command definitions select the reader and human formatter, including whether execution requires a session. |
 | [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` validates and captures one invocation's connection settings; `resolve_reference` enforces the selected instance. Inspection redacts connection settings. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, human output, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
 | [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb), [PendingCriteria](../lib/planka/workflow/pending_criteria.rb), [BranchName](../lib/planka/workflow/branch_name.rb) | `read(client, id, base_url:, ...)` returns canonical data and validates the response shapes each reader needs. Workflow::BranchName additionally takes an explicit `prefix:`. |
 
-Help runs before configuration or authentication. Canonical readers receive the
+Help and offline guide execution run before configuration or authentication. Canonical readers receive the
 validated base URL explicitly; they do not fetch settings from the environment.
 Invocation selects command-specific reader options before the session opens.
 The explicitly attached workflow CLI module owns workflow help, formatters, and
@@ -474,7 +512,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, and workflow claim status are complete.
+3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, and the offline workflow guide are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

@@ -11,6 +11,7 @@ module Planka
       output = CLI::Output.new(stdout: stdout, stderr: stderr)
       invocation = CLI::Invocation.parse(args, legacy_commands: legacy_commands, extensions: extensions)
       return output.help(invocation) if invocation.help?
+      return output.success(invocation, invocation.execute) unless invocation.requires_session?
 
       configuration = CLI::Configuration.from_env(env)
       target = configuration.resolve_reference(invocation)
