@@ -587,8 +587,9 @@ are implemented.
 Card-member vocabulary is settled in the style guide's
 [card members contract](../STYLEGUIDE.md#card-members). Track the four approved
 card-scoped operations in [issue #21](https://github.com/marshally/planka-cli/issues/21);
-implementation and precise output fields remain outstanding, with broader
-board/project membership operations deferred.
+implementation and precise output fields remain outstanding. Board members have
+a separate settled slice; project managers remain separately deferred to the end
+of the plan.
 
 Pinned Community v2.2.1 evidence distinguishes the
 [CardMembership relationship](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/CardMembership.js)
@@ -602,7 +603,8 @@ this source evidence is not live API acceptance.
 Board-member grammar is settled in the style guide's
 [board members section](../STYLEGUIDE.md#board-members); keep its implementation
 separate from card-member and project-manager work. Its implementation ticket is
-[issue #36](https://github.com/marshally/planka-cli/issues/36). Project-manager grammar is recorded in the
+[issue #36](https://github.com/marshally/planka-cli/issues/36). Project-manager grammar
+is recorded in the
 [project managers section](../STYLEGUIDE.md#project-managers), but its separate
 ticket, [issue #37](https://github.com/marshally/planka-cli/issues/37), is deferred
 to the end of the plan, including remaining specification.
@@ -636,8 +638,12 @@ client-side manager writes.
 The supported-version floor is settled: target Planka 2.0.0 and higher, with no
 Planka 1.x API adapters. This minimum does not establish compatibility with every
 later release or edition. Record verified versions and verb/resource capabilities
-as implementation proceeds, and establish reliable version/capability detection
-from API evidence. Future major releases require verification.
+as implementation proceeds. Future major releases require verification. The
+settled [diagnostic contract](../STYLEGUIDE.md#supported-planka-versions) performs
+best-effort bootstrap version lookup only after canonical API failures, preserving
+the original error/outcome and adding nullable `meta.serverVersion`. It is not an
+execution gate or automated edition/capability detector. Track implementation in
+[issue #32](https://github.com/marshally/planka-cli/issues/32); no lookup is implemented.
 
 Deletion confirmation is settled: an explicit `delete RESOURCE REF` executes
 without prompts or `--yes`, identically in terminals and scripts. Missing targets
@@ -662,6 +668,21 @@ Do not choose a generic resource model or credential persistence scheme simply
 because kubectl has one. Use Planka's actual model and this project's deployment
 and unattended-call requirements.
 
+## Resolved planning scope
+
+The active additional-management decisions are recorded in
+[issue #31](https://github.com/marshally/planka-cli/issues/31). Tasks (#34), read-only
+users (#35), board members (#36), basic board management (#22), and basic project
+management (#23) now have implementation tickets. Version diagnostics (#32) are
+failure-only and preserve the original result. These are planned interfaces; the
+implemented command list at the top remains authoritative for current behavior.
+
+Project-manager work (#37), including its remaining specification, stays in its
+own ticket at the end of the plan. Account mutations, extra board settings/imports,
+and extra project settings/ownership transfers remain explicitly deferred. The
+card-member consumer need in #33 is covered by the resource-sized #21; coordinate
+it within that resource PR rather than independently implementing the same command.
+
 ## API evidence and acceptance limits
 
 Existing tests cover captured board data and a local HTTP fake. The README notes
@@ -669,6 +690,16 @@ that API shapes were inherited from Lucenta and that compatibility with other
 Planka releases has not been established. Passing these tests proves regression
 behavior against those inputs; it does not prove every example works on a live
 instance.
+
+Pinned Community bootstrap evidence:
+[v2.0.0 presenter](https://github.com/plankanban/planka/blob/v2.0.0/server/api/helpers/bootstrap/present-one.js)
+and [v2.2.1 presenter](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/bootstrap/present-one.js)
+return `item.version`; the
+[v2.2.1 policy](https://github.com/plankanban/planka/blob/v2.2.1/server/config/policies.js)
+permits public bootstrap access. This evidence establishes a reported-version
+source, not edition or per-operation capability detection, and is not live API
+acceptance. Verify endpoint access, shape and version semantics for targeted editions
+and releases during diagnostic implementation.
 
 For each new capability, record the target edition/version, endpoint and payload
 contract, evidence source, and observed read/write behavior. Use official API
