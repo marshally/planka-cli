@@ -175,6 +175,13 @@ Apply the shared collection completeness contract. Within a task list, order by
 ascending task position. Card-wide reads order by ascending task-list position,
 then task position; use IDs as deterministic tie-breakers at each level. Apply
 filters before taking the first `--limit N` matching tasks in that order.
+Task read data uses flat objects containing `id`, `cardId`, `taskListId`, `name`,
+`position`, `isCompleted`, `assigneeUserId`, `linkedCardId`, `createdAt`, and
+`updatedAt`. Assignee and linked-card IDs are null when absent; timestamps are
+nullable. Resolve `cardId` through the containing task list. Do not embed related
+user, task-list, or linked-card objects solely to expand names. Collection data is
+an array of this shape and individual data is one object, under the canonical
+envelope.
 Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
 for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
 neither before network requests; no explicit task-type flag is introduced.
