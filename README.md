@@ -136,6 +136,8 @@ for resource-specific effects.
 ```sh
 planka add label LABEL --card CARD
 planka remove label LABEL --card CARD
+planka get members --card CARD
+planka get member USER --card CARD
 planka add member USER --card CARD
 planka remove member USER --card CARD
 ```

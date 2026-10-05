@@ -21,6 +21,19 @@ A native Planka resource organized in a board list; tickets, specs, and effort
 maps are workflow interpretations of cards. [Source](README.md#workflow-examples)
 _Avoid_: Ticket when referring to cards generally.
 
+**User**:
+A Planka account that exists independently of assignment to any card.
+[Source](STYLEGUIDE.md#card-members)
+
+**Card member**:
+A user assigned to a particular card. Adding membership alone does not move the
+card or perform the workflow claim operation. [Source](STYLEGUIDE.md#card-members)
+
+**Card membership**:
+The relationship connecting a user to a card; distinct from the user account.
+[Source](STYLEGUIDE.md#card-members)
+_Avoid_: Membership ID when identifying the user in a card-member command.
+
 **Ticket**:
 A workflow card with a task list named exactly `Acceptance criteria`, representing
 work with explicit criteria for acceptance. [Source](README.md#workflow-examples)

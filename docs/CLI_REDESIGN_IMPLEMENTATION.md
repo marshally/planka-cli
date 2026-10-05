@@ -571,6 +571,21 @@ produce equivalent results; `meta.complete` refers to matching results. No gener
 selector language or filter-based bulk mutations. Each capability must verify
 endpoint paging, ordering, and filtering support during implementation.
 
+Card-member vocabulary is settled in the style guide's
+[card members contract](../STYLEGUIDE.md#card-members). Track the four approved
+card-scoped operations in [issue #21](https://github.com/marshally/planka-cli/issues/21);
+implementation and precise output fields remain outstanding, with broader
+board/project membership operations deferred.
+
+Pinned Community v2.2.1 evidence distinguishes the
+[CardMembership relationship](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/CardMembership.js)
+from the user. The [routes](https://github.com/plankanban/planka/blob/v2.2.1/server/config/routes.js)
+create via `POST /api/cards/:cardId/card-memberships` with `userId`, and delete
+via `DELETE /api/cards/:cardId/card-memberships/userId::userId`, addressing the
+card/user pair rather than a membership ID. Read hydration, permissions, and
+compatibility across the target versions require verification during implementation;
+this source evidence is not live API acceptance.
+
 The supported-version floor is settled: target Planka 2.0.0 and higher, with no
 Planka 1.x API adapters. This minimum does not establish compatibility with every
 later release or edition. Record verified versions and verb/resource capabilities
