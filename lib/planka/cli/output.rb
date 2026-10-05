@@ -6,8 +6,6 @@ module Planka
   module CLI
     # Owns canonical presentation and status; it never terminates the process.
     class Output
-      NETWORK_ERRORS = [SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError].freeze
-
       def initialize(stdout:, stderr:)
         @stdout, @stderr = stdout, stderr
       end
@@ -84,7 +82,7 @@ module Planka
           Failure.new(code: code, message: "API request failed (HTTP #{error.status}); verify the resource and access permissions")
         when Planka::Error
           Failure.new(code: "api_error", message: "Could not read complete resource details; verify server availability and API compatibility")
-        when *NETWORK_ERRORS
+        when *Planka::Client::NETWORK_ERRORS
           Failure.new(code: "network_error", message: "Could not reach Planka; check the instance URL and network")
         else
           # Programming mistakes must not masquerade as malformed server data.

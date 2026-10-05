@@ -2,7 +2,7 @@ module Planka
   module Cards
     # Observes card assignments, then reads or changes one verified relationship.
     class Members
-      OPERATION_ERRORS = [Planka::Error, SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError].freeze
+      OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
 
       class << self
         def read(client, reference = nil, card_id:, base_url:, board_id: nil, name: nil, limit: nil, operation: nil)
@@ -128,7 +128,7 @@ module Planka
             result = assigned ? member_data(user, card_id, record) : known
             MutationResult.new(data: result.merge("assigned" => assigned), changed: true)
           rescue *OPERATION_ERRORS => error
-            uncertain = !error.is_a?(Client::HTTPError) && !Client::UNSENT.any? { |klass| error.is_a?(klass) }
+            uncertain = !Client.unapplied?(error)
             raise MutationFailure.new(data: known.merge("assigned" => uncertain ? nil : !member.nil?),
               changed: uncertain ? nil : false, uncertain: uncertain,
               recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => card_id },

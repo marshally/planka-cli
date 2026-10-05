@@ -13,7 +13,7 @@ module Planka
     ensure
       begin
         client&.sign_out(suppress_errors: on_cleanup_error.nil?)
-      rescue Error, SystemCallError, SocketError, Timeout::Error, EOFError, IOError, JSON::ParserError, OpenSSL::SSL::SSLError => e
+      rescue Error, JSON::ParserError, *NETWORK_ERRORS => e
         raise unless on_cleanup_error
 
         on_cleanup_error.call(e)
@@ -138,6 +138,12 @@ module Planka
     # have applied the change. Retrying is safe only when the call is idempotent.
     UNKNOWN = [ ServerError, Errno::ECONNRESET, Net::ReadTimeout, EOFError ].freeze
     TRANSIENT = (UNSENT + UNKNOWN).freeze
+    # Every failure to reach Planka or keep a connection to it.
+    NETWORK_ERRORS = [ SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError ].freeze
+
+    # Whether a failed request certainly left Planka unchanged: Planka rejected
+    # it with an HTTP status, or it never reached Planka.
+    def self.unapplied?(error) = error.is_a?(HTTPError) || UNSENT.any? { |type| error.is_a?(type) }
 
     def request(method, path, body = nil, idempotent: true)
       attempt = 0
