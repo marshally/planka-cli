@@ -172,6 +172,13 @@ on add; reject that flag for editors. Updates accept role and viewer comment
 permission, changing only supplied values and rejecting empty updates. Preserve
 native role-transition effects and verify them during implementation.
 
+Board-member read objects contain `id` (user ID), `name`, nullable `username`,
+`boardId`, `membershipId`, `role`, `canComment`, `createdAt`, and `updatedAt`.
+Timestamps describe the membership and are nullable; `canComment` is the native
+viewer comment permission and is null for editors. Join native membership records
+with user identities. Individual data is one object; collection data is an array
+of the same shape under the canonical envelope.
+
 Adding an existing board member with matching requested permissions succeeds as
 an idempotent no-op. If permissions differ, report an actionable conflict and
 preserve the membership; require `update member` rather than implicitly changing
