@@ -176,6 +176,11 @@ with optional `--position N`. Restrict the destination to another task list on t
 same card; reject cross-card destinations. Append when changing lists without an
 explicit position. Field updates do not accept `--task-list`; a move to the current
 task list without a position is an idempotent no-op rather than an implicit reorder.
+Ordinary task updates accept `--assignee USER` or mutually exclusive
+`--clear-assignee`. Resolve the user within the task's board and require board
+membership; clearing sends the native null value. Linked tasks reject assignee
+changes. Task creation does not accept assignment flags; creating an assigned
+ordinary task requires a separate update, avoiding an implicit multi-write create.
 Ordinary tasks change completion through `update task TASK --completed true|false`;
 reject other values. Linked tasks reject direct completion changes and follow the
 linked card's native completion state.
