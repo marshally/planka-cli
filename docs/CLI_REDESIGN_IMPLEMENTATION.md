@@ -614,6 +614,15 @@ task assignments in the board. These are native effects of the single target
 removal, not permission for client-side cleanup writes. Verify target-version
 behavior during implementation; no live API acceptance is claimed.
 
+Basic board creation/update is settled in the style guide's
+[board contract](../STYLEGUIDE.md#basic-board-creation-and-updates): project/name
+creation with optional position and append default, and name/position updates
+within the existing project. Track it in
+[issue #22](https://github.com/marshally/planka-cli/issues/22), alongside reads and
+native deletion. Extra settings/import/subscription surfaces remain deferred;
+create/update are not implemented. Verify native append, permissions, creation
+side effects and per-version/edition support during implementation.
+
 The supported-version floor is settled: target Planka 2.0.0 and higher, with no
 Planka 1.x API adapters. This minimum does not establish compatibility with every
 later release or edition. Record verified versions and verb/resource capabilities

@@ -323,7 +323,9 @@ specified project. Planned `update board BOARD` accepts `--name NAME` and
 are nonempty and obey the verified native length limit; positions are finite,
 nonnegative native ordering values. Keep the board in its current project.
 Defer imports, display settings, card-type defaults, and subscription management.
-Creation-position defaults are being resolved in
+Creation accepts optional `--position N` and appends to the project when omitted;
+updates preserve position when omitted. Verify native ordering and append
+calculation during implementation. Track the resource slice in
 [boards issue #22](https://github.com/marshally/planka-cli/issues/22); basic
 create/update commands are not implemented.
 
