@@ -3,7 +3,7 @@
 This document defines the target interface for a general Planka resource
 CLI. It is a design contract for staged changes; the current executable supports
 `describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
-`workflow claim-status`, `workflow guide`, `workflow next`, and nested help alongside all flat commands in
+`workflow claim-status`, `workflow guide`, `workflow next`, `workflow claim`, and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -638,6 +638,15 @@ planka workflow complete-specs
 reports existing claims; it does not acquire a lock. `complete-specs` comments
 and moves eligible specs to done, and its help must state those writes.
 `guide`, `next`, `claim-status`, `branch-name`, and `pending-criteria` are read-only.
+
+Implemented `workflow claim CARD` uses an explicit ID or same-instance card URL
+and the unique `in-progress` list on that card's board. Existing membership is
+retained; a card already in that list is not moved or repositioned. It retains
+other members and acquires no exclusive lock. Membership is added before the
+move; an already-satisfied claim performs no resource writes. Moves request
+native position 65535 and report the returned position. See
+[the claim schema and recovery contract](README.md#canonical-claim) for data,
+changed/uncertain outcomes, error codes, and readback recovery.
 The guide is built in and works without credentials, a checkout, or network.
 
 Implemented `workflow next` accepts `--board BOARD`, falling back to

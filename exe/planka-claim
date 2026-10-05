@@ -11,6 +11,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka claim <card> [--output human|json]")
+parser.separator "Canonical replacement: planka workflow claim CARD"
 Planka::CLI.parse!(parser, "planka claim")
 abort parser.banner unless ARGV.size == 1
 

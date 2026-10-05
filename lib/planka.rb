@@ -25,6 +25,7 @@ module Planka
 end
 
 require_relative "planka/client"
+require_relative "planka/mutation"
 require_relative "planka/board"
 require_relative "planka/card"
 require_relative "planka/snapshot"

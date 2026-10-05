@@ -51,6 +51,11 @@ module Planka
       def guide(data) = data.fetch("instructions")
       def next_selection(data) = data.to_s
       def branch_name(data) = data.fetch("branch")
+      def claim(data)
+        card = data.fetch("card")
+        ["claimed: #{card.fetch('name')} (#{card.fetch('url')})",
+          "member added: #{data.fetch('memberAdded')}", "moved: #{data.fetch('moved')}"] .join("\n")
+      end
 
       def loop_lock(result)
         return "free" unless result.fetch("held")
