@@ -479,8 +479,13 @@ owns usage, precise human/JSON fields, ordering, filters, scopes, and recovery.
 Board-member operations remain separate and planned. This also covers the
 consumer request [#33](https://github.com/marshally/planka-cli/issues/33).
 
-Core `CardMembers` owns membership operations and validated observations;
-`CLI::CardMembers` owns command definitions, pre-session inputs, and human text.
+Core `Cards::Members` owns membership operations and validated observations;
+`CLI::Resources::Cards::Members` owns command definitions, pre-session inputs, and human text.
+Files mirror those namespaces: `planka/cards/members.rb` and
+`planka/cli/resources/cards/members.rb`. Shared parsing and presentation remain
+under `CLI`; resource-specific command modules live under `CLI::Resources`,
+then their explicit parent resource. Earlier internal CardMembers constants and
+loader paths are removed without aliases. Public CLI names remain `member`/`members`.
 The parser supports catalog-declared optional references and scoped names while
 preserving numeric/URL-only contracts for existing commands. Shared collection
 results carry data and completeness; collection failures preserve known results

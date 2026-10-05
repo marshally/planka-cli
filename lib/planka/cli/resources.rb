@@ -1,6 +1,6 @@
 require "planka"
 require "planka/cli"
-require "planka/cli/card_members"
+require "planka/cli/resources/cards/members"
 
 module Planka
   module CLI
@@ -36,12 +36,12 @@ module Planka
       COMMANDS = {
         ["describe", "card"] => { aliases: [["describe", "cards"]], resource: "card", collection: "cards", help: LEAF_HELP, reader: Planka::CardDetail, formatter: Planka::CLI.method(:card_detail) }.freeze,
         ["describe", "board"] => { aliases: [["describe", "boards"]], resource: "board", collection: "boards", help: BOARD_HELP, reader: Planka::Snapshot, formatter: Planka::CLI.method(:board_snapshot) }.freeze,
-      }.merge(CardMembers::COMMANDS).freeze
-      GROUPS = { "describe" => GROUP_HELP, "get" => CardMembers::GET_HELP, "add" => CardMembers::ADD_HELP, "remove" => CardMembers::REMOVE_HELP }.freeze
+      }.merge(Cards::Members::COMMANDS).freeze
+      GROUPS = { "describe" => GROUP_HELP, "get" => Cards::Members::GET_HELP, "add" => Cards::Members::ADD_HELP, "remove" => Cards::Members::REMOVE_HELP }.freeze
 
       def self.commands = COMMANDS
       def self.groups = GROUPS
-      def self.root_help = ROOT_HELP + CardMembers::ROOT_HELP
+      def self.root_help = ROOT_HELP + Cards::Members::ROOT_HELP
     end
   end
 end
