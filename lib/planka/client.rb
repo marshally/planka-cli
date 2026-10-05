@@ -77,6 +77,8 @@ module Planka
 
     def add_card_label(card_id, label_id) = request(:post, "/api/cards/#{card_id}/card-labels", { labelId: label_id }, idempotent: false)
 
+    def remove_card_label(card_id, label_id) = request(:delete, "/api/cards/#{card_id}/card-labels/labelId:#{label_id}", idempotent: false)
+
     def create_task_list(card_id, **attrs) = request(:post, "/api/cards/#{card_id}/task-lists", attrs, idempotent: false).fetch("item")
 
     def update_task_list(task_list_id, **attrs) = request(:patch, "/api/task-lists/#{task_list_id}", attrs).fetch("item")

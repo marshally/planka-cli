@@ -138,3 +138,7 @@ commands now expose structured JSON results as well.
 ## 0.1.0
 
 Extracted Planka Ruby workflows from Lucenta; added configurable instance, board and branch prefix, gem packaging, and the `planka` command.
+
+- Generic `add label LABEL --card CARD` and `remove label LABEL --card CARD`
+  set one association idempotently; uncertain writes require card readback.
+- Workflow queue selection skips the `quarantine` label.

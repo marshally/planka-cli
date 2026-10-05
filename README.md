@@ -607,3 +607,14 @@ Lucenta continues using its original library and 1Password integrations.
 Switching it to this gem is a separate consumer change once a repository or
 release is available to CI. No release license has been selected; choose one
 before publishing the gem.
+
+### Card labels
+
+`planka add label LABEL --card CARD` and `planka remove label LABEL --card CARD`
+accept a board label ID or exact name and a numeric card ID/same-instance URL.
+Both preserve other labels and succeed when already satisfied. JSON returns
+`data: {cardId, labelId, present}`, `meta.changed`, and `error`. A lost response
+returns `unknown_outcome` with `readback-card-labels`; inspect `describe card`
+before retrying. No workflow convention is needed for these resource operations.
+Endpoint contract: Community v2.2.1 routes use POST card-labels and DELETE
+card-labels/labelId:ID. Live acceptance is recorded in the dependency PR.
