@@ -4,7 +4,9 @@
 
 Named direct Planka operations “resource commands” in help and documentation.
 Workflow commands apply project conventions; these categories describe behavior
-and do not imply administrator privileges.
+and do not imply administrator privileges. The internal catalog is now
+`CLI::Resources` in `planka/cli/resources`; the previous internal name and path
+are removed.
 
 Separated canonical CLI catalogs, parsing, immutable invocations, captured
 connection settings, instance reference resolution, and command preparation.

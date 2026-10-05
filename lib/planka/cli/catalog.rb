@@ -1,13 +1,13 @@
-require "planka/cli/administration"
+require "planka/cli/resources"
 
 module Planka
   module CLI
-    # Combines administration and explicitly attached command catalogs.
+    # Combines resource commands and explicitly attached command catalogs.
     class Catalog
       attr_reader :commands, :groups
 
       def initialize(legacy_commands:, extensions:)
-        catalogs = [Administration, *extensions]
+        catalogs = [Resources, *extensions]
         @commands = catalogs.flat_map { |catalog| catalog.commands.to_a }.to_h
         @groups = catalogs.flat_map { |catalog| catalog.groups.to_a }.to_h
         @aliases = @commands.flat_map { |path, command|

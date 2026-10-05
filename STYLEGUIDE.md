@@ -33,8 +33,7 @@ Resource commands read or change Planka resources and relationships directly.
 Workflow commands apply project conventions to those resources, such as queue
 selection, acceptance criteria, branch naming, and blocker handoffs. This
 distinction describes behavior, not access permissions; each operation uses the
-authenticated user's permissions in Planka. `Administration` is an internal
-command-catalog name, not a public command category.
+authenticated user's permissions in Planka.
 
 ## Verbs
 

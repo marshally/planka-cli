@@ -3,8 +3,8 @@ require "planka/cli"
 
 module Planka
   module CLI
-    # Administration command definitions, independent of workflow conventions.
-    module Administration
+    # Resource command definitions, independent of workflow conventions.
+    module Resources
       ROOT_HELP = <<~HELP
         usage: planka <verb> <resource> [reference] [flags]
         Resource commands:
