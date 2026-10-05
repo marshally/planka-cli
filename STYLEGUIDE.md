@@ -164,6 +164,11 @@ board/project membership operations are deferred. See
 
 Planned task resource operations cover both ordinary checklist tasks and tasks
 linked to another card: create, collection/individual read, update, and delete.
+Collection reads support `get tasks --task-list TASK_LIST` and
+`get tasks --card CARD`, requiring exactly one collection scope. Card-wide results
+identify each task's containing task list. Individual reads use `get task TASK`.
+Apply the shared collection filtering, limit, and completeness rules to supported
+fields; detailed filters and ordering remain to be specified.
 Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
 for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
 neither before network requests; no explicit task-type flag is introduced.
