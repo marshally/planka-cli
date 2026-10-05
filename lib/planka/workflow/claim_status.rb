@@ -3,7 +3,7 @@ module Planka
     # Canonical inspection of the existing Planka-side claim convention.
     module ClaimStatus
       def self.read(client, base_url:)
-        LoopLock.report(Reads.new(client), base_url: base_url)
+        LoopLock.report(Reads.new(client), base_url: base_url, exclude_quarantine: true)
       rescue KeyError
         raise InvalidResponse, "Invalid claim-status records"
       end

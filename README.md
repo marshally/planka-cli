@@ -633,3 +633,13 @@ Lucenta continues using its original library and 1Password integrations.
 Switching it to this gem is a separate consumer change once a repository or
 release is available to CI. No release license has been selected; choose one
 before publishing the gem.
+
+### Task completion
+
+`planka update task TASK --card CARD --completed` (or `--no-completed`) sets
+only an ordinary task's completion. TASK is its ID or exact name on CARD;
+ambiguous names fail with candidate IDs. Every linked-card task is refused,
+including linked Blocked by tasks. JSON data contains id, name, taskListId,
+cardId and isCompleted; meta.changed distinguishes a no-op from a write.
+Unknown write outcomes retain card/task references for readback-task recovery.
+This completion-only consumer slice does not ship the other planned task verbs.

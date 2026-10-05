@@ -83,6 +83,8 @@ module Planka
 
     def update_task_list(task_list_id, **attrs) = request(:patch, "/api/task-lists/#{task_list_id}", attrs).fetch("item")
 
+    def update_task(id, **attrs) = request(:patch, "/api/tasks/#{id}", attrs, idempotent: false)["item"]
+
     def create_task(task_list_id, **attrs) = request(:post, "/api/task-lists/#{task_list_id}/tasks", attrs, idempotent: false).fetch("item")
 
     def me

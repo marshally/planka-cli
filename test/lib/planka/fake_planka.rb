@@ -222,6 +222,10 @@ class FakePlanka
     data = body.to_s.empty? ? {} : JSON.parse(body)
     seg = path.split("/").reject(&:empty?)
     case [ method, seg ]
+    in [ "PATCH", [ "api", "tasks", id ] ]
+      task = @state[:tasks].find { |entry| entry['id'] == id }
+      task.merge!(data)
+      [200, { 'item' => task }]
     in [ "POST", [ "api", "access-tokens" ] ] then [ 200, { "item" => "fake-token" } ]
     in [ "DELETE", [ "api", "access-tokens", "me" ] ] then [ 200, {} ]
     in [ "GET", [ "api", "boards", id ] ] then [ 200, board_payload(id) ]
