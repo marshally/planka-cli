@@ -45,7 +45,8 @@ planka workflow <operation> [arguments] [flags]
 **The invocations below describe the target interface. Only `planka describe
 card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`,
 `planka workflow branch-name CARD`, `planka workflow claim-status`,
-`planka workflow guide`, `planka workflow next`, `planka workflow claim CARD`, and their
+`planka workflow guide`, `planka workflow next`, `planka workflow claim CARD`,
+card-scoped `get members`, `get member`, `add member`, `remove member`, and their
 root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -226,6 +227,54 @@ require no credentials or network. Unknown write outcomes must be reconciled
 before retrying; incomplete workflows retain recovery state in JSON output.
 
 ## Current interface
+
+### Canonical card members
+
+```sh
+planka get members --card CARD [--name NAME] [--limit N] -o json
+planka get member USER --card CARD -o json
+planka add member USER --card CARD -o json
+planka remove member USER --card CARD -o json
+```
+
+`member` and `members` are aliases. USER is an account ID, same-instance
+`/users/ID` URL, or exact display name among the card's board members. CARD is
+an ID, same-instance URL, or exact name with `--board BOARD` or
+`PLANKA_BOARD_ID`. BOARD accepts an ID or same-instance URL. Explicit card
+IDs/URLs ignore the default board; an explicit `--board` must match the actual
+parent. Ambiguous names report candidate IDs. Card-name lookup uses the native
+board snapshot's finite lists; use an ID/URL for cards outside that snapshot.
+Board-scoped member commands remain planned.
+
+Read JSON contains `id` (user ID), `name`, nullable `username`, `cardId`,
+`membershipId`, and nullable assignment `createdAt`/`updatedAt`; account email,
+credentials, and unrelated account fields are excluded. Individual `data` is
+an object with empty `meta`; collections are arrays ordered by numeric native
+membership ID with `meta.complete`. Exact `--name` filtering precedes a positive
+`--limit`; these flags are rejected on individual reads and writes. Completeness
+describes matching results. Failed collections retain known hydrated results,
+report `complete: false`, and exit 1. Reads use the card's complete native
+membership collection and board identities, with no resource writes.
+
+Mutations use the same object plus `assigned`. Existing-add and absent-remove
+are no-ops (`meta.changed: false`); an absent-remove has null assignment metadata.
+A confirmed write returns `changed: true`. An unknown write returns
+`assigned: null`, `changed: null`, and `error.code: unknown_outcome`, preserving
+known identities and prior membership metadata. Follow `error.recovery`'s
+`readback-membership` action: inspect `get members --card CARD` before retrying.
+There are no blind retries after an uncertain write. An unassigned individual
+read is `not_found`; ambiguous names and explicit parent mismatches are
+`invalid_input`. Native permission/authentication errors remain operational
+failures. Other codes follow the shared canonical contract.
+
+Human reads print `NAME (USER_ID) on card CARD_ID` per member, or
+`No card members.`; limited output adds a truncation notice. Human mutations
+also print `assigned: true|false`. Success exits 0, local input 2, other failures
+1. Cleanup does not change the primary outcome. Add/remove require native board
+editor permissions and preserve the user, card, list placement, and unrelated
+assignments. Native subscription/activity effects apply; no workflow claim or
+client cleanup writes are performed. See the [source evidence and verification
+limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-ninth-slice-card-members).
 
 ### Canonical card detail
 

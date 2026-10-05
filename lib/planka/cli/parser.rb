@@ -55,6 +55,10 @@ module Planka
       def validate_flags!
         allowed = @command ? @command.fetch(:flags, {}).values : []
         invalid!("Unsupported flags; see #{@program} --help") unless (@flag_values.keys - allowed).empty?
+        if @command&.dig(:optional_reference) && @args.size > 2 &&
+            !(@flag_values.keys & @command.fetch(:collection_flags, [])).empty?
+          invalid!("Collection filters and limits require an omitted reference")
+        end
         if @command && (message = @command[:validate_flags]&.call(@flag_values))
           invalid!(message)
         end
@@ -69,15 +73,20 @@ module Planka
       end
 
       def validate_required_arguments!
-        unless @command && @args.size == argument_count
+        minimum = @command&.dig(:optional_reference) ? argument_count - 1 : argument_count
+        unless @command && @args.size >= minimum
           invalid!("Expected a command and reference; see #{@program} --help")
         end
       end
 
       def parse_reference!
         return unless @command.fetch(:reference, true)
+        return if @command[:optional_reference] && @args.size == 2
 
         @reference = @args.last
+        if @command[:names] && !@reference.strip.empty? && !@reference.match?(%r{\A(?:https?://|/|\.\./)})
+          return
+        end
         unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.fetch(:collection)}/\d+/?\z})
           resource = @command[:resource]
           invalid!("Expected a numeric #{resource} ID or supported #{resource} URL")

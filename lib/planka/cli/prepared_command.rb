@@ -11,7 +11,8 @@ module Planka
         configuration = Configuration.from_env(env)
         instance = configuration.instance
         arguments = if command.fetch(:reference, true)
-          [instance.resolve(invocation.reference, resource: command.fetch(:resource), collection: command.fetch(:collection))]
+          [invocation.reference && instance.resolve(invocation.reference, resource: command.fetch(:resource),
+            collection: command.fetch(:collection), names: command.fetch(:names, false))]
         else
           []
         end

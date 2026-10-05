@@ -20,6 +20,10 @@ module Planka
       def success(invocation, data)
         command = invocation.command
         meta = {}
+        if data.is_a?(CollectionResult)
+          meta["complete"] = data.complete
+          data = data.data
+        end
         if command[:mutation]
           meta["changed"] = data.changed
           data = data.data
@@ -29,6 +33,7 @@ module Planka
           @stdout.puts JSON.generate({ "data" => data, "meta" => meta, "error" => nil })
         else
           @stdout.puts command.fetch(:formatter).call(data)
+          @stdout.puts "Results truncated; use a larger --limit or omit it." if meta["complete"] == false
         end
         0
       end
@@ -57,6 +62,12 @@ module Planka
       def expected_failure(error)
         case error
         when Failure then error
+        when ReferenceError
+          Failure.new(code: error.code, status: error.status, message: error.message)
+        when CollectionFailure
+          primary = expected_failure(error.cause)
+          Failure.new(code: primary.code, message: primary.message,
+            data: error.data, meta: { "complete" => false })
         when MutationFailure
           primary = expected_failure(error.cause)
           code = error.uncertain ? "unknown_outcome" : (error.changed ? "partial_failure" : primary.code)

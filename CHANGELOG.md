@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+Added card-scoped `get members`, `get member USER`, `add member USER`, and
+`remove member USER`, with singular/plural aliases, offline help, scoped exact
+names, minimal identity/assignment results, name filtering, and complete/limited
+collections. Add/remove are idempotent on satisfied relationships and preserve
+list placement. Unknown writes retain identity and require readback; non-idempotent
+requests disable net-http's internal retry as well as blind client retries.
+Community 2.0.0, 2.1.1, and 2.2.1 source evidence is recorded; live acceptance
+and other editions/releases remain unverified. Legacy CLI contracts are retained.
+
 Added `planka workflow claim CARD` with canonical results, effect metadata,
 offline help, membership-then-move behavior, and no-op reclaims. Partial failures
 retain confirmed effects and membership IDs; unknown writes require readback

@@ -103,6 +103,7 @@ module Planka
     end
 
     def add_card_member(card_id, user_id) = request(:post, "/api/cards/#{card_id}/card-memberships", { userId: user_id }, idempotent: false)
+    def remove_card_member(card_id, user_id) = request(:delete, "/api/cards/#{card_id}/card-memberships/userId:#{user_id}", idempotent: false)
 
     def move_card(card_id, list_id, position: 65_535, idempotent: true)
       response = request(:patch, "/api/cards/#{card_id}", { listId: list_id, position: }, idempotent: idempotent)
@@ -141,7 +142,7 @@ module Planka
       attempt = 0
       begin
         attempt += 1
-        send_request(method, path, body)
+        send_request(method, path, body, idempotent: idempotent)
       rescue *TRANSIENT => e
         raise UnknownOutcome, "#{method.upcase} #{path}: #{e.class} (outcome unknown, reconcile by reading back)" if !idempotent && UNKNOWN.any? { |klass| e.is_a?(klass) }
         raise if attempt == ATTEMPTS
@@ -154,8 +155,9 @@ module Planka
 
     private
 
-    def send_request(method, path, body)
+    def send_request(method, path, body, idempotent:)
       http = Net::HTTP.new(@base.host, @base.port)
+      http.max_retries = 0 unless idempotent
       http.use_ssl = @base.scheme == "https"
       req = Net::HTTP.const_get(method.capitalize).new(path)
       req["Authorization"] = "Bearer #{@token}" if @token

@@ -470,6 +470,83 @@ no-ops, malformed data, partial/unknown outcomes and caller readback, input/conf
 checks, cleanup, and legacy behavior. This is source and fixture evidence, not
 live acceptance or a blanket claim for all editions/releases above the floor.
 
+## Implemented ninth slice: card members
+
+Issue [#21](https://github.com/marshally/planka-cli/issues/21) implements card-scoped
+`get members`, `get member USER`, `add member USER`, and `remove member USER`.
+Singular/plural aliases share behavior. The [README contract](../README.md#canonical-card-members)
+owns usage, precise human/JSON fields, ordering, filters, scopes, and recovery.
+Board-member operations remain separate and planned. This also covers the
+consumer request [#33](https://github.com/marshally/planka-cli/issues/33).
+
+Core `CardMembers` owns membership operations and validated observations;
+`CLI::CardMembers` owns command definitions, pre-session inputs, and human text.
+The parser supports catalog-declared optional references and scoped names while
+preserving numeric/URL-only contracts for existing commands. Shared collection
+results carry data and completeness; collection failures preserve known results
+and their original failure category. Shared output renders these and existing
+mutation outcomes without depending on membership conventions.
+
+### Card-member API evidence
+
+Inspected official Community source at these exact refs:
+
+| Release | Commit |
+| --- | --- |
+| v2.0.0 | `bda32e02471fcd698e05e76176bf5dadc7b9d742` |
+| 2.1.1 | `a8dcd7cef3ee8d19ad05b8c734ac43f3103489e8` |
+| v2.2.1 | `266246e242430d921c32badecdd447514107c568` |
+
+All three inspected versions have the same membership endpoints and board/card
+hydration strategy:
+
+- [`GET /api/cards/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/show.js)
+  reads all memberships with `getByCardId`. Its included users are card creators,
+  so that collection alone cannot hydrate assigned users. Read access requires
+  permitted administrator/project-manager or board access; forbidden resources
+  can be reported as not found.
+- [`GET /api/boards/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js)
+  supplies board memberships and their user identities. Board cards are drawn
+  from native finite lists; exact card names use that scope. Explicit card reads
+  supply the membership collection even when the card is absent from the board
+  snapshot. No page inputs or pagination are used for these collections.
+- [`CardMembership query methods`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/CardMembership.js)
+  select all memberships for the card, ordered by ID, without a limit. This is
+  the completeness evidence; client-side name filters precede result limits.
+- [`POST /api/cards/:cardId/card-memberships`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/card-memberships/create.js)
+  takes `userId`, requires a board editor and a target board member, returns
+  `item` as a membership, and reports an existing assignment as conflict.
+- [`DELETE /api/cards/:cardId/card-memberships/userId:USER_ID`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/card-memberships/delete.js)
+  requires board editor permission and returns the deleted membership under
+  `item`. It addresses the account/card pair, not the relationship ID.
+- Native [create](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/card-memberships/create-one.js)
+  and [delete](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/card-memberships/delete-one.js)
+  helpers maintain non-permanent card subscriptions and activity/webhooks; they
+  do not move the card, delete the user, or remove unrelated memberships. The CLI
+  issues no extra writes to emulate these effects.
+
+For the earlier releases, the same files were inspected at
+[v2.0.0](https://github.com/plankanban/planka/tree/v2.0.0/server/api/controllers/card-memberships)
+and [2.1.1](https://github.com/plankanban/planka/tree/2.1.1/server/api/controllers/card-memberships),
+including card/board readers and query methods. This is pinned source evidence,
+not live acceptance, every later version, or another edition's compatibility.
+Collections are separate observations, not a consistent snapshot under concurrent
+membership or board changes. Concurrent add/remove conflicts preserve native errors;
+read back before retrying.
+
+Context7 was unavailable. Inspected the installed locked `net-http` 0.9.1 source
+(`lib/net/http.rb`, `max_retries=` and `transport_request`) instead: its default
+one retry includes DELETE. Membership removal disables both that retry and blind
+client retries using `idempotent: false`. Existing idempotent requests retain their
+policy. Development checks use Bundler 4.0.14 with the unchanged lockfile;
+supported dependency/Ruby ranges still come from the gemspec and CI.
+
+Public subprocess/local HTTP tests cover reads, exact target writes, no-ops,
+names/URLs/scopes, filters/limits/completeness, malformed inputs and responses,
+uncertain writes/readback, failure categories, cleanup, and offline help. Package
+checks exercise installed commands outside the checkout. No live writes were
+authorized or performed; subscription/activity effects are source evidence only.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -643,7 +720,7 @@ are implemented.
 Card-member vocabulary is settled in the style guide's
 [card members contract](../STYLEGUIDE.md#card-members). Track the four approved
 card-scoped operations in [issue #21](https://github.com/marshally/planka-cli/issues/21);
-implementation and precise output fields remain outstanding. Board members have
+implementation and precise output fields are recorded in the ninth slice above. Board members have
 a separate settled slice; project managers remain separately deferred to the end
 of the plan.
 
@@ -798,7 +875,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, and workflow claim are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, and card-member operations are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,
