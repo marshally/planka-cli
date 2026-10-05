@@ -241,7 +241,11 @@ user included in a board response. Preserve native permission failures without
 silently falling back between scopes. User read objects contain only `id`, `name`,
 and nullable `username`; collection and individual reads use the same shape under
 the canonical envelope. Do not project account details or authentication secrets.
-Reference and filtering behavior is being resolved in
+Positional user names match display names exactly within the selected directory
+or board scope, rejecting ambiguity with candidate IDs. Username is not an
+alternate positional-name match. Collections accept exact `--name NAME` and
+`--username USERNAME`, combined with AND before `--limit`; reject unsupported
+filters and conflicting scalar values. Remaining reference details are being resolved in
 [issue #31](https://github.com/marshally/planka-cli/issues/31); no user commands
 are implemented.
 
