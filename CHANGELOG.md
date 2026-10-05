@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+Separated canonical CLI catalogs, parsing, immutable invocations, captured
+connection settings, instance reference resolution, and command preparation.
+Reader inputs and scope validation finish before sessions open. Workflow
+preparation owns default-scope error classification. Command behavior, output,
+errors, legacy contracts, and library loading remain unchanged.
+
 Added read-only `planka workflow next` with explicit/default board scope,
 AND-matching labels, canonical JSON/errors, and existing priority/feature/frontier
 selection and stacking rules. Canonical reads validate eligibility records and

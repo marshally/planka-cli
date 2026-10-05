@@ -420,24 +420,56 @@ Legacy executables retain their existing argument/output adapters.
 
 | Owner | Interface and responsibility |
 | --- | --- |
-| [CLI::Invocation](../lib/planka/cli/invocation.rb) | `parse` resolves command aliases, validates local syntax, and supplies help or an executable request. Command definitions select the reader, applicable flags, pre-session settings, human formatter, and optional JSON projection, including whether execution requires a session. |
-| [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` validates and captures one invocation's connection settings; `resolve_reference` enforces the selected instance. Inspection redacts connection settings. |
-| [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, human output, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
+| [CLI::Administration](../lib/planka/cli/administration.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Separate command catalogs own paths, aliases, help, applicable flags, local validation, readers, presentation, and command-specific preparation. |
+| [CLI::Catalog](../lib/planka/cli/catalog.rb) | Combine administration with explicitly attached catalogs and resolve declared aliases. Own root/group/leaf help selection. |
+| [CLI::Parser](../lib/planka/cli/parser.rb) | `parse` owns mutable option parsing and local syntax validation, returning an immutable invocation. No configuration or execution. |
+| [CLI::Invocation](../lib/planka/cli/invocation.rb) | Immutable snapshot of the selected definition, program, output format, reference, flags, and optional help text. No parsing, environment access, preparation, or execution. |
+| [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` captures required connection settings and provides session arguments. Credentials are frozen and inspection is redacted. Owns a validated instance, not resource-reference resolution. |
+| [CLI::Instance](../lib/planka/cli/instance.rb) | Own the validated server URL, including instance path, and `resolve` numeric IDs or same-instance resource URLs. No credentials, environment defaults, or command policy. |
+| [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable reader arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
+| [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, catalog-selected human/JSON presentation, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
-| [CardDetail](../lib/planka/card_detail.rb), [Snapshot](../lib/planka/snapshot.rb), [PendingCriteria](../lib/planka/workflow/pending_criteria.rb), [BranchName](../lib/planka/workflow/branch_name.rb) | `read(client, id, base_url:, ...)` returns canonical data and validates the response shapes each reader needs. Workflow::BranchName additionally takes an explicit `prefix:`. |
+| Canonical readers | Read and validate only the records their operation needs. Return resource data or existing workflow reports; catalogs select result projections. |
 
-Help and offline guide execution run before configuration or authentication. Canonical readers receive the
-validated base URL explicitly; they do not fetch settings from the environment.
-Invocation selects command-specific reader options before the session opens.
-The explicitly attached workflow CLI module owns workflow help, formatters, and
-branch-prefix settings through `Workflow::Configuration`. Core card models
-expose general resource data; workflow card/board adapters own agent conventions.
-See the [workflow module and future gem extraction](WORKFLOW_MODULE.md) for
-loading, dependency direction, compatibility, and the later packaging boundary.
+The coordinator now follows parse → prepare → open session when required →
+execute → render. Help returns after parsing. Offline guide preparation captures
+its reader without inspecting connection settings or opening a session.
+API command preparation finishes all required settings and scope validation
+before authentication. Connection settings remain frozen and private.
+
+Command-specific preparation remains with its catalog instead of introducing a
+class for each command. `Workflow::CLI.next_preparation` selects an explicit board
+or the environment default, asks `Instance` to resolve it, and classifies a bad
+explicit value as input failure or a bad default as configuration failure.
+`Instance::InvalidReference` describes resolution failure without assigning an
+exit category; preparation assigns that category at the source. There is no
+catch-and-relabel of an already classified CLI failure. Branch-prefix settings
+remain in `Workflow::Configuration` and are captured during branch preparation.
+
+Catalog `prepare` callbacks receive the supplied environment, validated instance,
+and immutable parsed flags, and return reader keyword arguments. Reader/client
+inputs are captured before the session starts. General positional references are
+resolved by shared preparation; workflow scope/default policy stays in its catalog.
+Declared administration aliases preserve card/cards and board/boards grammar.
+Shared parsing contains no administration or workflow names.
+
+This refactor changes ownership, not command behavior. Keep exact help, command
+syntax, result schemas, error messages/categories, exit codes, session cleanup,
+all 21 legacy entry points, and library-loading direction unchanged. Preserve
+output flags before/within/after command paths, offline help/guide, pre-request
+validation, configured instance paths, explicit scope precedence, and default
+scope error classification. Verify at the approved public subprocess/local HTTP
+and installed-gem seams, including comparison with the merged pre-refactor source.
+No new tests of private parser/configuration implementation are required.
+
+Core card models expose general resource data; workflow adapters own agent
+conventions. See the [workflow module and future gem extraction](WORKFLOW_MODULE.md)
+for loading, dependency direction, compatibility, and the later packaging boundary.
 Malformed response documents, tokens, and required reader records raise
-`Planka::InvalidResponse` near their consumption and become sanitized `api_error`
-failures. Output does not disguise unexpected `TypeError`, `NoMethodError`, or
-`KeyError` programming exceptions as server failures.
+`Planka::InvalidResponse` near consumption and become sanitized `api_error`
+failures. Output does not disguise unexpected programming exceptions as server
+failures. No commands, endpoint capabilities, credential persistence, or future
+workflow gem packaging are added by this refactor.
 
 Legacy session/reader interfaces keep their default validation and coercion
 behavior. Canonical reads opt into stricter shape checks. Missing optional board

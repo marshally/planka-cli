@@ -29,7 +29,7 @@ Workflow implementations live under `lib/planka/workflow/`.
 | `Workflow::Configuration` | Explicitly captures workflow settings from a supplied environment. Branch-prefix validation belongs here, independently of connection settings. |
 | `Workflow::Format` | Workflow human text and legacy result projections, without IO or session ownership. |
 | `Workflow::CLI` | Workflow command definitions, help, formatters, and conversion of workflow configuration failures into canonical CLI failures. |
-| Shared CLI modules | Parsing, connection/reference validation, session coordination, canonical envelopes, diagnostics, and exit handling. |
+| Shared CLI modules | Catalog composition, parsing to immutable invocations, captured connection settings, instance reference resolution, pre-session command preparation, session coordination, canonical presentation and exit handling. |
 
 API-backed workflow readers accept an authenticated client and explicit inputs:
 
@@ -67,9 +67,20 @@ retain the existing recovery state through the shared `Planka::PartialFailure`.
 executable passes it to `CanonicalCLI.run` through `extensions:`. An extension
 provides `commands`, `groups`, and `root_help`; command definitions select a
 reader, callable formatter, optional JSON projector, applicable flag definitions,
-local flag validator, and optional pre-session settings function. Commands
+local flag validator, and optional `prepare` callback. Declared aliases belong to
+the catalog rather than shared grammar. Commands
 without references select `reference: false`; offline commands additionally select
-`session: false` and their readers take no client or settings. Shared
+`session: false` and their readers take no client or settings.
+
+Shared `Parser` returns an immutable `Invocation`. `PreparedCommand.build`
+captures the connection settings and reader inputs before authentication; workflow
+`prepare` callbacks receive `env`, `instance:`, and `flags:` and return reader
+keyword arguments. The supplied `Instance` owns same-instance URL resolution
+without credentials or environment defaults. Workflow next preparation owns scope
+precedence and input-versus-configuration failure classification. Branch naming
+owns its prefix settings. Prepared readers receive explicit inputs; shared CLI
+code contains no workflow names. See the
+[canonical architecture](CLI_REDESIGN_IMPLEMENTATION.md#canonical-cli-architecture). Shared
 parsing and output contain no workflow command names or branch-prefix rules.
 
 Historical workflow Ruby paths and constant aliases are removed. There is no
