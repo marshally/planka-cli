@@ -49,7 +49,9 @@ creation. Legacy `Prime` retains its original instructions separately.
 
 NextSelection returns the existing queue report; the workflow CLI projects it to
 JSON or formats it for people. QueueSnapshot and HandoffComments validate records
-used by canonical selection; PullRequestLookup owns sanitized GitHub tool reads.
+used by canonical selection; PullRequestLookup owns GitHub tool reads, sanitized
+for canonical selection and unchanged for legacy `next-card` through
+`PullRequestLookup::Legacy`. `PullRequest` is a plain value.
 
 Pure selection algorithms accept workflow board/card interpretations and their
 existing external dependencies. Construct a workflow board from a general board
