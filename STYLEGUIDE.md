@@ -167,8 +167,11 @@ linked to another card: create, collection/individual read, update, and delete.
 Collection reads support `get tasks --task-list TASK_LIST` and
 `get tasks --card CARD`, requiring exactly one collection scope. Card-wide results
 identify each task's containing task list. Individual reads use `get task TASK`.
-Apply the shared collection filtering, limit, and completeness rules to supported
-fields; detailed filters and ordering remain to be specified.
+Task collection filters are exact `--name NAME`, `--completed true|false`,
+`--assignee USER`, and `--linked-card CARD`. Assignee means task assignment,
+not card membership. Combine supplied filters with AND before `--limit`, resolving
+references under the shared scope rules and rejecting conflicting scalar values.
+Apply the shared collection completeness contract; ordering remains to be specified.
 Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
 for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
 neither before network requests; no explicit task-type flag is introduced.
