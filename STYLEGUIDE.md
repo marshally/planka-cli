@@ -1,6 +1,6 @@
 # CLI style guide
 
-This document defines the target interface for a general Planka administration
+This document defines the target interface for a general Planka resource
 CLI. It is a design contract for staged changes; the current executable supports
 `describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
 `workflow claim-status`, `workflow guide`, `workflow next`, and nested help alongside all flat commands in
@@ -24,10 +24,17 @@ levels. Do not introduce colon-separated task names or fuse verbs and resources
 into names such as `create-card`. Keep nesting shallow and make the same verb
 mean the same thing across resources.
 
-The administration vocabulary follows Planka's native resources: projects,
+The resource vocabulary follows Planka's native resources: projects,
 boards, lists, cards, labels, task lists, tasks, comments, users, and memberships.
 Only expose resource/verb combinations supported by the API. Specs and tickets
 are convention-based card workflows and belong under `workflow`.
+
+Resource commands read or change Planka resources and relationships directly.
+Workflow commands apply project conventions to those resources, such as queue
+selection, acceptance criteria, branch naming, and blocker handoffs. This
+distinction describes behavior, not access permissions; each operation uses the
+authenticated user's permissions in Planka. `Administration` is an internal
+command-catalog name, not a public command category.
 
 ## Verbs
 
@@ -155,7 +162,7 @@ Retain API-specific terms only when they help users understand the operation.
 
 ## Supported Planka versions
 
-The administration CLI targets Planka 2.0.0 and higher. Planka 1.x is outside
+The resource CLI targets Planka 2.0.0 and higher. Planka 1.x is outside
 scope because the redesign targets the version-2 API contract; do not add legacy
 API adapters or silently fall back to version-1 behavior.
 
@@ -394,7 +401,7 @@ stacking metadata. Failed lookups stay unknown; missing `gh` is configuration
 failure, and malformed successful responses are API errors. See the
 [next-work contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-seventh-slice-next-work).
 
-General administrators can perform the primitive actions directly with
+Users can perform the primitive actions directly with
 `add member`, `move card`, and `create comment` without adopting these conventions.
 
 ## Help and discoverability
@@ -408,7 +415,9 @@ planka create card --help
 planka workflow --help
 ```
 
-Root help groups administration and workflows.
+Root help groups commands under `Resource commands` and `Workflows`. These are
+behavioral categories, not permission levels; neither heading implies a
+requirement for administrator privileges.
 Group help lists supported resources or operations with short descriptions.
 Leaf help includes usage, required scope, arguments, defaults, flags, examples,
 output behavior, and mutation/recovery behavior. Render the canonical command

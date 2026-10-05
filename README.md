@@ -1,7 +1,7 @@
 # planka-cli
 
 Ruby CLI and library for Planka board workflows, extracted from Lucenta.
-Requires Ruby 3.2 or newer. The redesigned administration interface targets
+Requires Ruby 3.2 or newer. The redesigned resource interface targets
 Planka 2.0.0 and higher; Planka 1.x is outside its scope. Version-specific
 capabilities require API verification as implementation proceeds.
 Board workflows use the conventions
@@ -30,7 +30,12 @@ Help works without credentials. Use `planka --version` for the gem version.
 
 ## Usage — planned interface
 
-The target administration interface uses kubectl-style verb/resource commands:
+Resource commands work directly with Planka resources and relationships.
+Workflow commands apply project conventions, such as queue selection, acceptance
+criteria, and branch naming. These categories do not imply administrator
+privileges; operations use the authenticated user's Planka permissions.
+
+The target resource interface uses kubectl-style verb/resource commands:
 
 ```text
 planka <verb> <resource> [reference] [flags]

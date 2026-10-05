@@ -15,7 +15,7 @@ Core loading does not load workflows or CLI code. Workflow loading does not load
 CLI code, fetch environment settings, authenticate, or issue requests.
 
 The dependency direction is workflows to core. The bundled CLI selects both;
-core models and administration readers do not depend on workflow conventions.
+core models and resource readers do not depend on workflow conventions.
 Workflow implementations live under `lib/planka/workflow/`.
 
 ## Ownership and interfaces
