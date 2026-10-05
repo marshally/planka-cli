@@ -172,6 +172,12 @@ on add; reject that flag for editors. Updates accept role and viewer comment
 permission, changing only supplied values and rejecting empty updates. Preserve
 native role-transition effects and verify them during implementation.
 
+Adding an existing board member with matching requested permissions succeeds as
+an idempotent no-op. If permissions differ, report an actionable conflict and
+preserve the membership; require `update member` rather than implicitly changing
+access. For a viewer add without `--can-comment`, compare against the approved
+false default, not the existing permission.
+
 Board-member removal preserves the account and board but follows native cleanup
 of that user's board/card subscriptions, card memberships, and task assignments;
 issue only the native target removal, without client-side cleanup writes. Remaining
