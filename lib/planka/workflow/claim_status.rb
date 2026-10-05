@@ -27,7 +27,7 @@ module Planka
 
         def board(id)
           included = @client.board(id)
-          Snapshot.validate!(included)
+          Boards::Snapshot.validate!(included)
           lists = included.fetch("lists")
           unless lists.all? { |list| id?(list["id"]) && %w[active closed].include?(list["type"]) }
             raise InvalidResponse, "Invalid claim-status lists"

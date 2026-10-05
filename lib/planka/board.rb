@@ -13,7 +13,7 @@ module Planka
         raise InvalidResponse, "Invalid card board reference"
       end
       included = client.board(board_id)
-      Snapshot.validate!(included)
+      Boards::Snapshot.validate!(included)
       included
     end
 

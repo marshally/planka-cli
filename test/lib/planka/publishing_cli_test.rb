@@ -381,7 +381,7 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_equal "api_error", JSON.parse(out).dig("error", "code")
     assert_nil JSON.parse(out)["data"]
     refute_includes err, "KeyError"
-    refute_includes err, "card_detail.rb"
+    refute_includes err, "cards/detail.rb"
     assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
   end
 
