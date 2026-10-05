@@ -234,7 +234,11 @@ no task resource commands are implemented.
 
 The initial planned user-resource slice is read-only: `get users` and
 `get user USER`. Account creation, updates, deletion, and credential changes are
-deferred. Collection scope and result fields are being resolved in
+deferred. Reads support the instance directory (`get users`, `get user USER`)
+and explicit board scope (`get users --board BOARD`, `get user USER --board BOARD`).
+Board-scoped reads select users with native board membership, not every related
+user included in a board response. Preserve native permission failures without
+silently falling back between scopes. Result fields and references are being resolved in
 [issue #31](https://github.com/marshally/planka-cli/issues/31); no user commands
 are implemented.
 
