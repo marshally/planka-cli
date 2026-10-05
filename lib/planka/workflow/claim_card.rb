@@ -62,7 +62,7 @@ module Planka
             list["boardId"] == card["boardId"] && list["name"].is_a?(String) } &&
             lists.map { |list| list["id"] }.uniq.size == lists.size && lists.any? { |list| list["id"] == card["listId"] } &&
             memberships.is_a?(Array) && memberships.all? { |member| member.is_a?(Hash) && id?(member["cardId"]) &&
-              member["userId"].is_a?(String) && !member["userId"].empty? }
+              (member["id"].nil? || id?(member["id"])) && member["userId"].is_a?(String) && !member["userId"].empty? }
           raise InvalidResponse, "Invalid claim scope records"
         end
         progress = lists.select { |list| list["name"] == Card::IN_PROGRESS_LIST }

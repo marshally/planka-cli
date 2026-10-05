@@ -269,6 +269,16 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
     assert_nil JSON.parse(out).dig("data", "moved")
     assert_equal 1, resource_writes.size
     refute_includes out + err, "injected failure"
-    refute_includes err, "retrying"
+    refute_match(/planka: PATCH .*failed .*retrying/, err)
+  end
+
+  def test_invalid_existing_membership_id_is_rejected_before_writes
+    @server.memberships << { "id" => { "private" => "malformed" }, "cardId" => CARD, "userId" => "user-bot" }
+    out, err, status = planka("workflow", "claim", CARD, "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "api_error", JSON.parse(out).dig("error", "code")
+    assert_equal false, JSON.parse(out).dig("meta", "changed")
+    assert_empty resource_writes
+    refute_includes out + err, "malformed"
   end
 end
