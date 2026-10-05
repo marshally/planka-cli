@@ -25,7 +25,9 @@ into names such as `create-card`. Keep nesting shallow and make the same verb
 mean the same thing across resources.
 
 The resource vocabulary follows Planka's native resources: projects,
-boards, lists, cards, labels, task lists, tasks, comments, users, and memberships.
+boards, lists, cards, labels, task lists, tasks, comments, and users. Card membership
+operations use `member`/`members` in the public CLI, describing a user assigned
+to a card; the native membership is the relationship behind that vocabulary.
 Only expose resource/verb combinations supported by the API. Specs and tickets
 are convention-based card workflows and belong under `workflow`.
 
@@ -128,6 +130,8 @@ planka delete card CARD
 planka create label --board BOARD --name enhancement --color berry-red
 planka add label LABEL --card CARD
 planka remove label LABEL --card CARD
+planka get members --card CARD
+planka get member USER --card CARD
 planka add member USER --card CARD
 planka remove member USER --card CARD
 planka create task-list --card CARD --name "Acceptance criteria"
@@ -136,6 +140,25 @@ planka create comment --card CARD --text "Ready for review"
 planka get comments --card CARD
 planka delete comment COMMENT
 ```
+
+### Card members
+
+Planned card-member commands use the same vocabulary for reads and writes:
+`get members --card CARD`, `get member USER --card CARD`,
+`add member USER --card CARD`, and `remove member USER --card CARD`.
+A member is an existing user assigned to the specified card. A singular read
+identifies the user, not a membership ID, and reports that user's assignment to
+that card; collection reads report its assigned users. Results include user
+identity and assignment metadata; a native membership ID may appear in JSON but
+is not the positional reference. Document the precise per-command fields during
+implementation under the shared result contract.
+
+These operations manage the user-card relationship without invoking the workflow
+claim operation or moving the card. Membership still affects claimed/takeable
+status under the existing workflow conventions. Adding an existing relationship and removing an absent one are
+idempotent no-ops. Removing a member preserves both the user and card. Broader
+board/project membership operations are deferred. See
+[card members issue #21](https://github.com/marshally/planka-cli/issues/21).
 
 ### List updates
 
