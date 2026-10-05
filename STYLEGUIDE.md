@@ -185,10 +185,13 @@ envelope.
 Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
 for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
 neither before network requests; no explicit task-type flag is introduced.
-Linked tasks may reference any accessible card on the same Planka instance,
-including another board or project. Require native edit permission on the task's
-board and native access to the linked card; preserve server restrictions without
-extra writes to that card. Verify per-version support during implementation.
+Linked-task creation is restricted to a linked card on the task's own board.
+Resolve linked-card names by exact match on that board, and reject cross-board
+IDs/URLs before the resource write. No separate linked-board scope flag is exposed.
+Require native edit permission on the task's board and native access to the linked
+card; preserve server restrictions without extra writes to that card. Reads still
+report existing cross-board links as flat IDs rather than hiding native data.
+Verify per-version support during implementation.
 Ordinary task creation accepts optional `--completed true|false`, defaulting to
 incomplete when omitted. Linked-task creation rejects this flag because completion
 follows the linked card's native state.
