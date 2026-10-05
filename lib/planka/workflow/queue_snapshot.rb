@@ -1,5 +1,3 @@
-require "time"
-
 module Planka
   module Workflow
     # Validate the identities and associations that determine queue eligibility.
@@ -30,7 +28,7 @@ module Planka
       end
 
       def self.index(records)
-        valid!(records.all? { |record| record["id"].is_a?(String) && record["id"].match?(/\A\d+\z/) })
+        valid!(records.all? { |record| Records.id?(record["id"]) })
         result = records.to_h { |record| [record["id"], record] }
         valid!(result.size == records.size)
         result
@@ -38,9 +36,7 @@ module Planka
 
       def self.timestamp!(value)
         valid!(value.is_a?(String))
-        Time.iso8601(value)
-      rescue ArgumentError
-        raise InvalidResponse, "Invalid workflow-next timestamp"
+        raise InvalidResponse, "Invalid workflow-next timestamp" unless Records.timestamp?(value)
       end
 
       def self.valid!(condition)

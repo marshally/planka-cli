@@ -46,7 +46,7 @@ module Planka
             raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --card is required") unless flags[:card]
             card = instance.resolve(flags.fetch(:card).first, resource: "card", collection: "cards", names: true)
             board = flags[:board]&.first
-            if !card.match?(/\A\d+\z/) && !board
+            if !Records.id?(card) && !board
               board = env["PLANKA_BOARD_ID"]
               if board.nil? || board.empty?
                 raise Failure.new(code: "invalid_input", status: 2, message: "Card names require --board or PLANKA_BOARD_ID")

@@ -7,7 +7,7 @@ module Planka
     def self.included_for_card(client, id)
       response = client.card(id)
       board_id = response.is_a?(Hash) && response["item"].is_a?(Hash) && response["item"]["boardId"]
-      unless board_id.is_a?(String) && board_id.match?(/\A\d+\z/)
+      unless Records.id?(board_id)
         raise InvalidResponse, "Invalid card board reference"
       end
       included = client.board(board_id)

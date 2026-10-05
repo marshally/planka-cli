@@ -2,6 +2,7 @@ require "json"
 require "net/http"
 require "uri"
 require_relative "position"
+require_relative "records"
 
 module Planka
   # A signed-in session against Planka's REST API as the board's bot user.
@@ -95,7 +96,7 @@ module Planka
       if @validate_responses
         boards = document["included"].is_a?(Hash) && document["included"]["boards"]
         unless boards.is_a?(Array) && boards.all? { |board|
-          board.is_a?(Hash) && board["id"].is_a?(String) && board["id"].match?(/\A\d+\z/)
+          board.is_a?(Hash) && Records.id?(board["id"])
         }
           raise InvalidResponse, "Invalid accessible board records"
         end
