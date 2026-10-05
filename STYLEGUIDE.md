@@ -329,6 +329,16 @@ calculation during implementation. Track the resource slice in
 [boards issue #22](https://github.com/marshally/planka-cli/issues/22); basic
 create/update commands are not implemented.
 
+### Basic project creation and updates
+
+Planned project management includes creation, renaming, and description editing,
+in the same resource slice as reads and native deletion. Updates change only
+supplied fields and reject empty updates. Defer ownership transfers, backgrounds,
+visibility, and favorites. Project type and description input/clearing remain
+under specification in
+[projects issue #23](https://github.com/marshally/planka-cli/issues/23); no basic
+project create/update commands are implemented.
+
 ### List updates
 
 Planned `update list LIST` accepts optional `--name`, `--color` or mutually
