@@ -189,6 +189,9 @@ of the same shape under the canonical envelope.
 Board-member collections accept exact `--name NAME`, `--username USERNAME`, and
 `--role editor|viewer` filters, combined with AND before `--limit`. Reject unsupported
 filters, including `--can-comment` on reads, and conflicting scalar values.
+Order by username, then display name, then user ID, using locale-independent
+ordering with null usernames last. Filter before applying `--limit` and preserve
+the shared completeness and partial-result contract.
 
 Adding an existing board member with matching requested permissions succeeds as
 an idempotent no-op. If permissions differ, report an actionable conflict and
@@ -198,9 +201,9 @@ false default, not the existing permission.
 
 Board-member removal preserves the account and board but follows native cleanup
 of that user's board/card subscriptions, card memberships, and task assignments;
-issue only the native target removal, without client-side cleanup writes. Remaining
-existing-membership behavior, result details, and acceptance evidence are being
-resolved in [board members issue #36](https://github.com/marshally/planka-cli/issues/36);
+issue only the native target removal, without client-side cleanup writes. Track
+implementation and version-specific acceptance evidence in
+[board members issue #36](https://github.com/marshally/planka-cli/issues/36);
 these commands are not implemented.
 
 ### Project managers
