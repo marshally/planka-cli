@@ -315,6 +315,18 @@ planned read-only slice in
 [issue #35](https://github.com/marshally/planka-cli/issues/35); no user commands
 are implemented.
 
+### Basic board creation and updates
+
+Planned `create board --project PROJECT --name NAME` creates a board in the
+specified project. Planned `update board BOARD` accepts `--name NAME` and
+`--position N`, changes only supplied fields, and rejects empty updates. Names
+are nonempty and obey the verified native length limit; positions are finite,
+nonnegative native ordering values. Keep the board in its current project.
+Defer imports, display settings, card-type defaults, and subscription management.
+Creation-position defaults are being resolved in
+[boards issue #22](https://github.com/marshally/planka-cli/issues/22); basic
+create/update commands are not implemented.
+
 ### List updates
 
 Planned `update list LIST` accepts optional `--name`, `--color` or mutually
