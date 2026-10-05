@@ -237,7 +237,7 @@ class FakePlanka
     in [ "DELETE", [ "api", "cards", id, "card-labels", label_ref ] ]
       label_id = label_ref.delete_prefix("labelId:")
       @state[:cardLabels].reject! { |entry| entry["cardId"] == id && entry["labelId"] == label_id }
-      [200, {}]
+      [200, { "item" => { "cardId" => id, "labelId" => label_id } }]
     in [ "POST", [ "api", "cards", id, "card-labels" ] ] then [ 200, { "item" => make_card_label(id, data) } ]
     in [ "POST", [ "api", "cards", id, "card-memberships" ] ] then [ 200, { "item" => make_membership(id, data) } ]
     in [ "DELETE", [ "api", "cards", id, "card-memberships", user ] ]

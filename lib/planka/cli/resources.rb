@@ -1,5 +1,5 @@
 require "planka/cli/resources/cards"
-require "planka/cli/label_relationship"
+require "planka/cli/resources/card_labels"
 require "planka/cli/resources/boards"
 require "planka/cli/resources/cards/members"
 
