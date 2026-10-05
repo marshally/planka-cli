@@ -25,40 +25,66 @@ module Planka
       end
 
       def parse
-        @parser = parser_for(@catalog.commands.values)
-        @parser.parse!(@args)
-        path, @command = @catalog.resolve(@args.first(2))
-        @resource = @command && @command[:resource]
-        unless @args.empty? || (@catalog.groups.key?(@args.first) && (@args.size == 1 || @command))
-          invalid!("unknown command; see planka --help")
+        parse_options!
+        resolve_command!
+        validate_flags!
+        validate_extra_arguments!
+        unless @show_help
+          validate_required_arguments!
+          parse_reference!
         end
-        @program = "planka #{path.join(' ')}" if @command
-        allowed = @command ? @command.fetch(:flags, {}).values : []
-        invalid!("Unsupported flags; see #{@program} --help") unless (@flag_values.keys - allowed).empty?
-        if @command && (message = @command[:validate_flags]&.call(@flag_values))
-          invalid!(message)
-        end
-        argument_count = @command && !@command.fetch(:reference, true) ? 2 : 3
-        invalid!("Unexpected arguments; see #{@program} --help") if @args.size > argument_count
-        return invocation if @show_help
-
-        unless @command && @args.size == argument_count
-          invalid!("Expected a command and reference; see #{@program} --help")
-        end
-        return invocation unless @command.fetch(:reference, true)
-
-        @reference = @args.last
-        unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.fetch(:collection)}/\d+/?\z})
-          invalid!("Expected a numeric #{@resource} ID or supported #{@resource} URL")
-        end
-        invocation
+        build_invocation
       rescue OptionParser::ParseError
         invalid!("Invalid option or output format; see #{@program} --help")
       end
 
       private
 
-      def invocation
+      def parse_options!
+        parser_for(@catalog.commands.values).parse!(@args)
+      end
+
+      def resolve_command!
+        path, @command = @catalog.resolve(@args.first(2))
+        unless @args.empty? || (@catalog.groups.key?(@args.first) && (@args.size == 1 || @command))
+          invalid!("unknown command; see planka --help")
+        end
+        @program = "planka #{path.join(' ')}" if @command
+      end
+
+      def validate_flags!
+        allowed = @command ? @command.fetch(:flags, {}).values : []
+        invalid!("Unsupported flags; see #{@program} --help") unless (@flag_values.keys - allowed).empty?
+        if @command && (message = @command[:validate_flags]&.call(@flag_values))
+          invalid!(message)
+        end
+      end
+
+      def argument_count
+        @command && !@command.fetch(:reference, true) ? 2 : 3
+      end
+
+      def validate_extra_arguments!
+        invalid!("Unexpected arguments; see #{@program} --help") if @args.size > argument_count
+      end
+
+      def validate_required_arguments!
+        unless @command && @args.size == argument_count
+          invalid!("Expected a command and reference; see #{@program} --help")
+        end
+      end
+
+      def parse_reference!
+        return unless @command.fetch(:reference, true)
+
+        @reference = @args.last
+        unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.fetch(:collection)}/\d+/?\z})
+          resource = @command[:resource]
+          invalid!("Expected a numeric #{resource} ID or supported #{resource} URL")
+        end
+      end
+
+      def build_invocation
         help_text = "#{@catalog.help_text(@args, @command)}\n#{parser_for([@command].compact).help}" if @show_help
         Invocation.new(program: @program, output: @output, command: @command,
           reference: @reference, flags: @flag_values, help_text: help_text)

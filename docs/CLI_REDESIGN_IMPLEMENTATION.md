@@ -458,6 +458,12 @@ resolved by shared preparation; workflow scope/default policy stays in its catal
 Declared resource aliases preserve card/cards and board/boards grammar.
 Shared parsing contains no resource or workflow command names.
 
+Parser stages are private methods for options, command resolution, flag checks,
+extra arguments, required arguments, reference syntax, and invocation building.
+Help skips required arguments and reference syntax, while still rejecting
+unsupported flags and extra arguments. Option-parser and resource-name values
+are local rather than retained as redundant parser state.
+
 This refactor changes ownership, not command behavior. Apart from changing the
 root help heading from `Administration` to `Resource commands`, keep help, command
 syntax, result schemas, error messages/categories, exit codes, session cleanup,
