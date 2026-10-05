@@ -236,11 +236,13 @@ The initial planned user-resource slice is read-only: `get users` and
 `get user USER`. Account creation, updates, deletion, and credential changes are
 deferred. Reads support the instance directory (`get users`, `get user USER`)
 and explicit board scope (`get users --board BOARD`, `get user USER --board BOARD`).
+
 Board-scoped reads select users with native board membership, not every related
 user included in a board response. Preserve native permission failures without
 silently falling back between scopes. User read objects contain only `id`, `name`,
 and nullable `username`; collection and individual reads use the same shape under
 the canonical envelope. Do not project account details or authentication secrets.
+
 Positional user names match display names exactly within the selected directory
 or board scope, rejecting ambiguity with candidate IDs. Username is not an
 alternate positional-name match. Collections accept exact `--name NAME` and
@@ -248,8 +250,11 @@ alternate positional-name match. Collections accept exact `--name NAME` and
 filters and conflicting scalar values. Reserve `me` in `get user me` for the
 authenticated account; without board scope read it directly without directory
 access, and with `--board` validate its board membership. A literal display name
-`me` remains available through `get users --name me`. Collection ordering is being resolved in
-[issue #31](https://github.com/marshally/planka-cli/issues/31); no user commands
+`me` remains available through `get users --name me`. Order user collections by username, then display name, then ID, using
+locale-independent ordering with null usernames last. Filter before applying
+`--limit`; use the shared completeness and partial-result contract. Track this
+planned read-only slice in
+[issue #35](https://github.com/marshally/planka-cli/issues/35); no user commands
 are implemented.
 
 ### List updates
