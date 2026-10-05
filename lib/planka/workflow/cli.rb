@@ -8,6 +8,7 @@ module Planka
     module CLI
       ROOT_HELP = <<~HELP
         Workflows:
+          workflow claim CARD  Add your membership and move the card to in-progress
           workflow guide  Read built-in agent guidance (offline)
           workflow next  Select queued work without claiming (read-only)
           workflow pending-criteria CARD  Read unfinished acceptance criteria (read-only)
@@ -16,6 +17,7 @@ module Planka
       HELP
       GROUP_HELP = <<~HELP
         usage: planka workflow <operation> [arguments] [flags]
+          claim CARD  Add your membership and move the card to in-progress
           guide  Read built-in agent guidance (offline)
           next  Select queued work without claiming (read-only)
           pending-criteria CARD  Read unfinished acceptance criteria (read-only)
@@ -75,6 +77,19 @@ module Planka
         Example: planka workflow pending-criteria 123 -o json
       HELP
 
+      CLAIM_HELP = <<~HELP
+        usage: planka workflow claim CARD [--output human|json]
+        Adds the signed-in user's membership, then moves the card to its board's unique in-progress list.
+        CARD is a numeric ID or same-instance card URL; no board setting required.
+        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+        Existing membership is retained. Already in-progress cards keep their position; satisfied claims are no-ops.
+        JSON uses data/meta/error: card, userId, inProgressListId, claimed, memberAdded, moved; meta.changed reports effects.
+        Failures preserve known effects and provide readback-claim recovery; uncertain steps are null.
+        Inspect with planka describe card CARD -o json before retrying. This is not an atomic or exclusive lock.
+        Exit 0: success; 2: local input; 1: configuration, API, partial or unknown outcome.
+        Example: planka workflow claim 123 -o json
+      HELP
+
       def self.branch_preparation(env, **)
         { prefix: Configuration.from_env(env).branch_prefix }
       rescue ConfigurationError => error
@@ -104,6 +119,7 @@ module Planka
       end
 
       COMMANDS = {
+        ["workflow", "claim"] => { resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, reader: ClaimCard, formatter: Format.method(:claim) }.freeze,
         ["workflow", "next"] => { reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, reader: NextSelection, projector: Format.method(:next_card), formatter: Format.method(:next_selection) }.freeze,
         ["workflow", "guide"] => { reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide) }.freeze,
         ["workflow", "claim-status"] => { resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock) }.freeze,

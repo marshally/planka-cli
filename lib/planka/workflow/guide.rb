@@ -33,8 +33,10 @@ module Planka
         4. `planka workflow claim-status -o json`: inspect your first open claim
            without a latest PR handoff across all accessible boards. This neither
            acquires a lock nor checks GitHub. When authorized to start,
-           `planka claim CARD --output json` (legacy) adds membership and moves
-           the card to in-progress.
+           `planka workflow claim CARD -o json` adds membership and moves
+           the card to in-progress. Reclaiming an already-satisfied card is a no-op.
+           On partial/unknown outcomes, inspect the card before retrying;
+           membership and move are separate writes, not an exclusive lock.
         5. `planka workflow branch-name CARD` supplies a branch slug;
            PLANKA_BRANCH_PREFIX optionally reserves room, without being prepended.
            `planka workflow pending-criteria CARD -o json` lists unfinished tasks

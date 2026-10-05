@@ -19,9 +19,14 @@ module Planka
 
       def success(invocation, data)
         command = invocation.command
+        meta = {}
+        if command[:mutation]
+          meta["changed"] = data.changed
+          data = data.data
+        end
         if invocation.output == "json"
           data = command[:projector].call(data) if command[:projector]
-          @stdout.puts JSON.generate({ "data" => data, "meta" => {}, "error" => nil })
+          @stdout.puts JSON.generate({ "data" => data, "meta" => meta, "error" => nil })
         else
           @stdout.puts command.fetch(:formatter).call(data)
         end
@@ -34,14 +39,17 @@ module Planka
         format = invocation&.output || failure.output || "human"
         @stderr.puts "#{program}: #{failure.message}"
         if format == "json"
-          @stdout.puts JSON.generate({ "data" => failure.data, "meta" => failure.meta,
-            "error" => { "code" => failure.code, "message" => failure.message } })
+          meta = invocation&.command&.dig(:mutation) ? { "changed" => false }.merge(failure.meta) : failure.meta
+          details = { "code" => failure.code, "message" => failure.message }
+          details["recovery"] = failure.recovery if failure.recovery
+          @stdout.puts JSON.generate({ "data" => failure.data, "meta" => meta, "error" => details })
         end
         failure.status
       end
 
       def cleanup_failure(invocation)
-        @stderr.puts "#{invocation.program}: session cleanup failed; the read result is unchanged"
+        result = invocation.command[:mutation] ? "operation result" : "read result"
+        @stderr.puts "#{invocation.program}: session cleanup failed; the #{result} is unchanged"
       end
 
       private
@@ -49,6 +57,13 @@ module Planka
       def expected_failure(error)
         case error
         when Failure then error
+        when MutationFailure
+          primary = expected_failure(error.cause)
+          code = error.uncertain ? "unknown_outcome" : (error.changed ? "partial_failure" : primary.code)
+          message = error.uncertain ? "Mutation outcome is unknown" : primary.message
+          message += "; earlier changes are preserved" if error.changed
+          Failure.new(code: code, message: "#{message}; read back the affected resources before retrying",
+            data: error.data, meta: { "changed" => error.changed }, recovery: error.recovery)
         when Planka::DependencyUnavailable
           Failure.new(code: "configuration_error", message: error.message)
         when Planka::Client::HTTPError

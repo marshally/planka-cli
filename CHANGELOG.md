@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+Added `planka workflow claim CARD` with canonical results, effect metadata,
+offline help, membership-then-move behavior, and no-op reclaims. Partial failures
+retain confirmed effects and membership IDs; unknown writes require readback
+before retrying. Legacy flat/direct claim output and behavior remain intact.
+
 Named direct Planka operations “resource commands” in help and documentation.
 Workflow commands apply project conventions; these categories describe behavior
 and do not imply administrator privileges. The internal catalog is now

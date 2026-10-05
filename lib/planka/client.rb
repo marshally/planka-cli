@@ -81,7 +81,12 @@ module Planka
 
     def create_task(task_list_id, **attrs) = request(:post, "/api/task-lists/#{task_list_id}/tasks", attrs, idempotent: false).fetch("item")
 
-    def me = request(:get, "/api/users/me").fetch("item")
+    def me
+      response = request(:get, "/api/users/me")
+      raise InvalidResponse, "Invalid signed-in user response" if @validate_responses && !response["item"].is_a?(Hash)
+
+      response.fetch("item")
+    end
 
     # Every board the signed-in user can see, across projects.
     def board_ids
@@ -99,7 +104,12 @@ module Planka
 
     def add_card_member(card_id, user_id) = request(:post, "/api/cards/#{card_id}/card-memberships", { userId: user_id }, idempotent: false)
 
-    def move_card(card_id, list_id, position: 65_535) = request(:patch, "/api/cards/#{card_id}", { listId: list_id, position: }).fetch("item")
+    def move_card(card_id, list_id, position: 65_535, idempotent: true)
+      response = request(:patch, "/api/cards/#{card_id}", { listId: list_id, position: }, idempotent: idempotent)
+      raise InvalidResponse, "Invalid moved card response" if @validate_responses && !response["item"].is_a?(Hash)
+
+      response.fetch("item")
+    end
 
     def comment(card_id, text) = request(:post, "/api/cards/#{card_id}/comments", { text: }, idempotent: false)
 

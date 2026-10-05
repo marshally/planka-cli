@@ -45,7 +45,7 @@ planka workflow <operation> [arguments] [flags]
 **The invocations below describe the target interface. Only `planka describe
 card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`,
 `planka workflow branch-name CARD`, `planka workflow claim-status`,
-`planka workflow guide`, `planka workflow next`, and their
+`planka workflow guide`, `planka workflow next`, `planka workflow claim CARD`, and their
 root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -373,6 +373,41 @@ fail safely. No handoff or multiple unmerged blockers report `AMBIGUOUS`.
 There is no `--limit`, collection pagination, or `meta.complete` claim. See the
 [next-work contract](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-seventh-slice-next-work).
 
+### Canonical claim
+
+```sh
+planka workflow claim CARD
+planka workflow claim CARD -o json
+planka workflow claim --help
+```
+
+Claims an explicit card for the signed-in user, adding membership before moving
+it to its board's unique `in-progress` list. Requires the three connection
+environment variables, without a board setting. Existing membership is retained;
+cards already in progress keep their position. An already-satisfied claim succeeds
+without resource writes. A move requests native position 65535 and reports the
+server's resulting position. Other users' memberships are retained; this is not
+an exclusive lock or atomic transaction.
+
+Human output reports `claimed`, `member added`, and `moved`. JSON `data` contains
+`card: {id, name, listId, position, url}`, `userId`, `inProgressListId`, nullable
+`membershipId`, and `claimed`, `memberAdded`, `moved` booleans. `meta.changed` is
+true for confirmed effects and false for a no-op. Membership IDs are retained
+when available, including when a later move fails.
+
+Failures preserve known results, with null for uncertain step outcomes.
+`error.code` is `partial_failure` when a later step is rejected after a confirmed
+change, or `unknown_outcome` when a write cannot be confirmed. `meta.changed`
+remains true if an earlier effect is confirmed; otherwise it is null for an
+uncertain write and false for a known unchanged failure. Recovery is
+`{action: "readback-claim", resources: [{type: "card", id: CARD}]}`. Run
+`planka describe card CARD -o json` to inspect membership and list placement
+before deciding to retry. No automatic uncertain-write retry or rollback occurs.
+Other failures retain the canonical input/configuration/authentication/
+authorization/not-found/API/network codes. Success exits 0, local input 2, other
+failures 1. Cleanup failure warns on stderr and preserves the primary outcome.
+See the [claim contract and API evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-eighth-slice-claim-a-card).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -387,7 +422,8 @@ release notes, with no automatic runtime warnings. `describe card` replaces
 `show`, `describe board` replaces the board view of `snapshot`, and
 `workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
 replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
-`workflow guide` replaces `prime`, and `workflow next` replaces `next-card`; remaining
+`workflow guide` replaces `prime`, `workflow next` replaces `next-card`, and
+`workflow claim` replaces `claim`; remaining
 canonical replacements are not yet implemented.
 
 ### Configuration

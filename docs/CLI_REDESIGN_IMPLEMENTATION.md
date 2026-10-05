@@ -17,7 +17,7 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow branch-name CARD`; the fifth adds
 `planka workflow claim-status`; the sixth adds
 `planka workflow guide`; the seventh adds
-`planka workflow next`. All legacy entry
+`planka workflow next`; the eighth adds `planka workflow claim CARD`. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -414,6 +414,59 @@ and cleanup. Endpoint evidence remains the existing board/comment read paths and
 captured/local fixtures. No live Planka or GitHub compatibility or mutation is
 claimed; no new Planka endpoint is introduced.
 
+## Implemented eighth slice: claim a card
+
+`planka workflow claim CARD` implements [issue #24](https://github.com/marshally/planka-cli/issues/24).
+The [README claim section](../README.md#canonical-claim) owns its human output,
+data/meta/error schema, stable categories, and recovery instructions. It resolves
+explicit card scope and the board's unique conventional in-progress list before
+resource writes. It preserves membership-then-move intent, avoids duplicate
+membership, and skips moves/repositioning when already in progress. Other users'
+memberships remain; no exclusivity or transaction is asserted.
+
+[Workflow::ClaimCard](../lib/planka/workflow/claim_card.rb) owns validated reads,
+step effects, and recovery state. The legacy [Claim](../lib/planka/workflow/claim.rb)
+adapter remains unchanged. Core [mutation outcomes](../lib/planka/mutation.rb)
+carry result data/effects without depending on workflow or CLI code. Shared CLI
+Output renders them and classifies failures. Required configuration/reference
+checks remain before sessions; cleanup preserves success and primary failure.
+
+Each resource write is sent without retry after a potentially applied failure.
+A confirmed membership followed by failed/unknown move retains its membership ID
+and known card snapshot. An uncertain step is null; the snapshot is the last
+validated observation, not a claim about current server state. Caller readback
+can confirm membership and placement before a new invocation completes the claim.
+Pre-write/auth/configuration failures do not report a resource effect.
+
+### Claim API evidence and verification limits
+
+Official Community source inspected at v2.0.0 and v2.2.1:
+
+- Membership creation: `POST /api/cards/:cardId/card-memberships`, `{userId}`,
+  returning `item` with membership ID/card/user. Requires board-editor access and
+  a target board member; an existing membership is rejected natively.
+  [v2.0.0](https://github.com/plankanban/planka/blob/v2.0.0/server/api/controllers/card-memberships/create.js),
+  [v2.2.1](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/card-memberships/create.js).
+- Move: `PATCH /api/cards/:id`, `{listId, position}`, returning the card in `item`.
+  Editor access is required for these fields; the target list is scoped to the
+  board. The native helper computes placement/repositions and applies native
+  list effects. The CLI sends no additional cleanup writes.
+  [v2.0.0 controller](https://github.com/plankanban/planka/blob/v2.0.0/server/api/controllers/cards/update.js),
+  [v2.2.1 controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/update.js),
+  [v2.0.0 helper](https://github.com/plankanban/planka/blob/v2.0.0/server/api/helpers/cards/update-one.js),
+  [v2.2.1 helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/cards/update-one.js).
+- Membership creation can natively subscribe the assigned user; preserve this
+  behavior rather than adding a client subscription write.
+  [v2.0.0 helper](https://github.com/plankanban/planka/blob/v2.0.0/server/api/helpers/card-memberships/create-one.js),
+  [v2.2.1 helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/card-memberships/create-one.js).
+
+These direct mutations are not collections. Read scope uses the existing card,
+signed-in-user, and included board endpoints; no directory pagination or filter
+endpoint is inferred. Local subprocess/HTTP fixtures verify exact effects,
+no-ops, malformed data, partial/unknown outcomes and caller readback, input/config
+checks, cleanup, and legacy behavior. This is source and fixture evidence, not
+live acceptance or a blanket claim for all editions/releases above the floor.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -742,7 +795,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, and the offline workflow guide, and workflow next selection are complete.
+3. Select the next unfinished slice; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, and workflow claim are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,
