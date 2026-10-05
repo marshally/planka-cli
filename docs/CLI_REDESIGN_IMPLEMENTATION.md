@@ -601,8 +601,7 @@ this source evidence is not live API acceptance.
 
 Board-member grammar is settled in the style guide's
 [board members section](../STYLEGUIDE.md#board-members); keep its implementation
-separate from card-member and project-manager work. Remaining board-member
-behavior is under specification in
+separate from card-member and project-manager work. Its implementation ticket is
 [issue #36](https://github.com/marshally/planka-cli/issues/36). Project-manager grammar is recorded in the
 [project managers section](../STYLEGUIDE.md#project-managers), but its separate
 ticket, [issue #37](https://github.com/marshally/planka-cli/issues/37), is deferred
