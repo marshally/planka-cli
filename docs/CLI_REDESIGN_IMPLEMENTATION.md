@@ -599,6 +599,22 @@ card/user pair rather than a membership ID. Read hydration, permissions, and
 compatibility across the target versions require verification during implementation;
 this source evidence is not live API acceptance.
 
+Board-member grammar is settled in the style guide's
+[board members section](../STYLEGUIDE.md#board-members); keep its implementation
+separate from card-member and project-manager work. Remaining board-member
+behavior is under specification in
+[issue #36](https://github.com/marshally/planka-cli/issues/36). Project-manager grammar is recorded in the
+[project managers section](../STYLEGUIDE.md#project-managers), but its separate
+ticket, [issue #37](https://github.com/marshally/planka-cli/issues/37), is deferred
+to the end of the plan, including remaining specification.
+Neither surface is implemented.
+
+Official Community v2.2.1 [board-member removal helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/board-memberships/delete-one.js)
+also removes that user's board/card subscriptions and card memberships and clears
+task assignments in the board. These are native effects of the single target
+removal, not permission for client-side cleanup writes. Verify target-version
+behavior during implementation; no live API acceptance is claimed.
+
 The supported-version floor is settled: target Planka 2.0.0 and higher, with no
 Planka 1.x API adapters. This minimum does not establish compatibility with every
 later release or edition. Record verified versions and verb/resource capabilities

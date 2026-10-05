@@ -115,6 +115,10 @@ planka update card CARD --name "Fix session expiry" --description-file revised.m
 planka move card CARD --list LIST --position 65536
 planka delete card CARD
 planka create label --board BOARD --name enhancement --color berry-red
+planka get members --board BOARD
+planka add member USER --board BOARD --role viewer --can-comment true
+planka update member USER --board BOARD --role editor
+planka remove member USER --board BOARD
 planka create task-list --card CARD --name "Acceptance criteria" --position 65536
 planka update task-list TASK_LIST --name "Verification"
 planka get tasks --card CARD --completed false
