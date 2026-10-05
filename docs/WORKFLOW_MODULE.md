@@ -30,7 +30,7 @@ interfaces; this document owns the workflow-specific architecture.
 | `Workflow::Board`, `Workflow::Card` | Interpret core snapshots using agent conventions: ticket/spec classification, ready/in-progress lists, acceptance criteria, feature labels, claims, and blockers. |
 | Workflow operations | Branch naming, pending criteria, queue selection, claiming, claim inspection, blocking links, spec/ticket publishing, handoff interpretation, and completed specs. |
 | `Workflow::Configuration` | Explicitly captures workflow settings from a supplied environment. Branch-prefix validation belongs here, independently of connection settings. |
-| `Workflow::Format` | Workflow human text and legacy result projections, without IO or session ownership. |
+| `Workflow::Format` | Workflow human text, without IO or session ownership. Next-card reports answer their own `as_json` projection. |
 | `Workflow::CLI` | Workflow command definitions, help, formatters, and conversion of workflow configuration failures into canonical CLI failures. |
 | Shared CLI modules | Catalog composition, parsing to immutable invocations, captured connection settings, instance reference resolution, pre-session command preparation, session coordination, canonical presentation and exit handling. |
 

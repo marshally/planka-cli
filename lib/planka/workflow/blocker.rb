@@ -25,6 +25,8 @@ module Planka
       def merged? = pr&.merged? || false
       def branch = pr&.head || handoff&.branch
 
+      def as_json = { "card" => card.ref, "branch" => branch, "pullRequest" => handoff&.pr_url, "pullRequestState" => pr&.state }
+
       def to_s
         return "- #{card}: no Branch: comment" unless recorded?
 

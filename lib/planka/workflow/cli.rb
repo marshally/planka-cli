@@ -121,7 +121,7 @@ module Planka
 
       COMMANDS = {
         ["workflow", "claim"] => Planka::CLI::Command.new(resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, reader: Claim::Card, formatter: Format.method(:claim)),
-        ["workflow", "next"] => Planka::CLI::Command.new(reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, reader: NextSelection, projector: Format.method(:next_card), formatter: Format.method(:next_selection)),
+        ["workflow", "next"] => Planka::CLI::Command.new(reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, reader: NextSelection, projector: :as_json.to_proc, formatter: Format.method(:next_selection)),
         ["workflow", "guide"] => Planka::CLI::Command.new(reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide)),
         ["workflow", "claim-status"] => Planka::CLI::Command.new(resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock)),
         ["workflow", "pending-criteria"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: PendingCriteria, formatter: Format.method(:pending_criteria)),

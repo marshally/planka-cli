@@ -23,6 +23,7 @@ module Planka
       def claimed? = @card.members.any?
       def claimed_by?(user_id) = @card.members.include?(user_id)
       def takeable? = ready? && !claimed? && open_blockers.empty?
+      def ref = { "id" => id, "name" => name, "url" => url }
 
       def claimed_at(user_id)
         membership = @card.memberships.find { |record| record["userId"] == user_id }
