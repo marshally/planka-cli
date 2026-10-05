@@ -34,6 +34,16 @@ The relationship connecting a user to a card; distinct from the user account.
 [Source](STYLEGUIDE.md#card-members)
 _Avoid_: Membership ID when identifying the user in a card-member command.
 
+**Board member**:
+A user with a native board membership granting an editor or viewer role, with
+optional comment permission for viewers. [Source](STYLEGUIDE.md#board-members)
+_Avoid_: Card member when referring to board access.
+
+**Project manager**:
+A user granted management access through the native project-manager relationship,
+separate from board membership. [Source](STYLEGUIDE.md#project-managers)
+_Avoid_: Project member as a synonym for project manager.
+
 **Ticket**:
 A workflow card with a task list named exactly `Acceptance criteria`, representing
 work with explicit criteria for acceptance. [Source](README.md#workflow-examples)

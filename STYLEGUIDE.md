@@ -156,9 +156,40 @@ implementation under the shared result contract.
 These operations manage the user-card relationship without invoking the workflow
 claim operation or moving the card. Membership still affects claimed/takeable
 status under the existing workflow conventions. Adding an existing relationship and removing an absent one are
-idempotent no-ops. Removing a member preserves both the user and card. Broader
-board/project membership operations are deferred. See
+idempotent no-ops. Removing a member preserves both the user and card. Board-member and deferred
+project-manager operations are separate slices below. See
 [card members issue #21](https://github.com/marshally/planka-cli/issues/21).
+
+### Board members
+
+Planned board-member commands use `get members --board BOARD`,
+`get member USER --board BOARD`, `add member USER --board BOARD --role editor|viewer`,
+`update member USER --board BOARD`, and `remove member USER --board BOARD`.
+`USER` identifies the account, not the membership ID. Require exactly one member
+scope (`--card` or `--board`), never both. Board-member add requires an explicit
+role. Viewer comment permission uses `--can-comment true|false`, default false
+on add; reject that flag for editors. Updates accept role and viewer comment
+permission, changing only supplied values and rejecting empty updates. Preserve
+native role-transition effects and verify them during implementation.
+
+Board-member removal preserves the account and board but follows native cleanup
+of that user's board/card subscriptions, card memberships, and task assignments;
+issue only the native target removal, without client-side cleanup writes. Remaining
+existing-membership behavior, result details, and acceptance evidence are being
+resolved in [board members issue #36](https://github.com/marshally/planka-cli/issues/36);
+these commands are not implemented.
+
+### Project managers
+
+Planned project-manager commands use `get project-managers --project PROJECT`,
+`get project-manager USER --project PROJECT`,
+`add project-manager USER --project PROJECT`, and
+`remove project-manager USER --project PROJECT`. `USER` identifies the account;
+this native relationship has no board editor/viewer role or permission-update
+command. Keep project-manager work in its own ticket, separate from card/board
+members, and defer it to the end of the project plan in
+[issue #37](https://github.com/marshally/planka-cli/issues/37). Its remaining specification
+and implementation are deferred; no project-manager commands are implemented.
 
 ### Tasks
 
