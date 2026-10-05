@@ -9,6 +9,7 @@
 # to PLANKA_BOARD_ID.
 require "planka"
 require "planka/cli"
+require "planka/cli/resources/boards"
 require "planka/client"
 require "optparse"
 
@@ -26,7 +27,7 @@ Planka::CLI.parse!(parser, "planka snapshot")
 Planka::CLI.run("planka snapshot", output: options[:output]) do |client|
   board_id = Planka::CLI.board_id(options[:board])
   included = client.board(board_id)
-  snapshot = Planka::Snapshot.new(included)
+  snapshot = Planka::Boards::Snapshot.new(included)
 
   if options[:list]
     list = options[:list]
@@ -35,5 +36,5 @@ Planka::CLI.run("planka snapshot", output: options[:output]) do |client|
   else
     result = { "boardId" => board_id }.merge(snapshot.to_h)
   end
-  Planka::CLI.emit(result, output: options[:output], human: Planka::CLI.board_snapshot(result))
+  Planka::CLI.emit(result, output: options[:output], human: Planka::CLI::Resources::Boards.format(result))
 end

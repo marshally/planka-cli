@@ -84,6 +84,8 @@ module Planka
             text
           end
 
+          GROUPS = { "get" => GET_HELP, "add" => ADD_HELP, "remove" => REMOVE_HELP }.freeze
+
           COMMANDS = {
             ["remove", "member"] => { aliases: [["remove", "members"]], names: true, mutation: true,
               resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
@@ -100,6 +102,10 @@ module Planka
               flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit }, validate_flags: method(:validate), prepare: method(:prepare),
               help: GET_HELP, reader: Planka::Cards::Members, formatter: method(:format) }.freeze,
           }.freeze
+
+          def self.commands = COMMANDS
+          def self.groups = GROUPS
+          def self.root_help = ROOT_HELP
         end
       end
     end

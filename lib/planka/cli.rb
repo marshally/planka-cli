@@ -52,52 +52,6 @@ module Planka
       end
     end
 
-    def card_detail(detail)
-      lines = [
-        "#{detail.fetch("name")} (#{detail.fetch("url")})",
-        "List: #{detail.fetch("listName")}",
-        "Labels: #{Array(detail["labels"]).map { |label| label["name"] }.join(", ").then { |names| names.empty? ? "none" : names }}",
-      ]
-      description = detail["description"]
-      lines.concat([ "", "Description:", description ]) if description && !description.empty?
-      members = Array(detail["members"])
-      lines.concat([ "", "Members:", *members.map { |member| "- #{member}" } ]) unless members.empty?
-      task_lists = Array(detail["taskLists"])
-      unless task_lists.empty?
-        lines.concat([ "", "Tasks:" ])
-        task_lists.each do |list|
-          lines << "#{list["name"]}:"
-          lines.concat(Array(list["tasks"]).map { |task| "  [#{task["isCompleted"] ? "x" : " "}] #{task["name"]}" })
-        end
-      end
-      blockers = Array(detail["blockers"])
-      unless blockers.empty?
-        lines.concat([ "", "Blockers:", *blockers.map { |blocker| "- #{blocker["cardId"]} (#{blocker["completed"] ? "closed" : "open"})" } ])
-      end
-      comments = Array(detail["comments"])
-      unless comments.empty?
-        lines.concat([ "", "Comments:", *comments.map { |comment| "- #{comment["text"]}" } ])
-      end
-      lines.join("\n")
-    end
-
-    def board_snapshot(snapshot)
-      lines = [ "Board #{snapshot.fetch("boardId")}" ]
-      lists = Array(snapshot["lists"])
-      cards = Array(snapshot["cards"])
-      if lists.empty? && snapshot["listId"]
-        lines << "List #{snapshot.fetch("listId")}:"
-        lines.concat(cards.map { |card| "  - #{card["name"]} (#{card["url"]})" })
-      else
-        lists.each do |list|
-          lines << "#{list["name"]} (#{list["type"]}):"
-          in_list = cards.select { |card| card["listId"] == list["id"] }
-          lines.concat(in_list.empty? ? [ "  none" ] : in_list.map { |card| "  - #{card["name"]} (#{card["url"]})" })
-        end
-      end
-      lines.join("\n")
-    end
-
     # A description or request body from a file, or from stdin when the path is
     # "-", or nil when no path was given.
     def source(path)

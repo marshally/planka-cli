@@ -17,6 +17,14 @@ modules sit beneath their parent resource, separate from shared parsing and
 presentation machinery. The earlier internal CardMembers constants and paths
 are removed; command behavior is unchanged.
 
+Card and board command definitions and formatters now live under
+`CLI::Resources::Cards` and `CLI::Resources::Boards`; `Resources` combines their
+definitions and help. Core CardDetail and Snapshot readers moved to
+`Cards::Detail` and `Boards::Snapshot`, with matching file paths and no obsolete
+Ruby aliases or formatter forwarding methods. Legacy show/snapshot adapters use
+the same resource-owned formatters. Root Card/Board models, workflow ownership,
+command/help text, outputs, and exits retain their existing contracts.
+
 Added `planka workflow claim CARD` with canonical results, effect metadata,
 offline help, membership-then-move behavior, and no-op reclaims. Partial failures
 retain confirmed effects and membership IDs; unknown writes require readback

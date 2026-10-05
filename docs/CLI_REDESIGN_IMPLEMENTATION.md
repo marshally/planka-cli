@@ -41,7 +41,7 @@ record. Use an isolated implementation branch and preserve unrelated work.
 | [lib/planka/cli.rb](../lib/planka/cli.rb) | Legacy option parsing, human formatters, scope helpers, and recovery/error plumbing. |
 | [lib/planka/canonical_cli.rb](../lib/planka/canonical_cli.rb), [lib/planka/cli/](../lib/planka/cli/) | Canonical coordinator, parsed invocations, validated configuration, output/status handling, and expected failures. |
 | [lib/planka/client.rb](../lib/planka/client.rb) | HTTP endpoints, session lifecycle, retries, and unknown-write-outcome detection. |
-| [lib/planka/card_detail.rb](../lib/planka/card_detail.rb), [lib/planka/snapshot.rb](../lib/planka/snapshot.rb) | Existing detailed card and board/list read models. |
+| [lib/planka/cards/detail.rb](../lib/planka/cards/detail.rb), [lib/planka/boards/snapshot.rb](../lib/planka/boards/snapshot.rb) | Existing detailed card and board/list read models. |
 | [lib/planka/workflow/publishing.rb](../lib/planka/workflow/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and resource operations. |
 | [lib/planka/workflow/prime.rb](../lib/planka/workflow/prime.rb) | Built-in, credential-free agent guide. |
 | [test/lib/planka/cli_test.rb](../test/lib/planka/cli_test.rb) | Subprocess help, argument, environment, and direct-executable checks. |
@@ -486,6 +486,17 @@ Files mirror those namespaces: `planka/cards/members.rb` and
 under `CLI`; resource-specific command modules live under `CLI::Resources`,
 then their explicit parent resource. Earlier internal CardMembers constants and
 loader paths are removed without aliases. Public CLI names remain `member`/`members`.
+
+The same resource hierarchy owns card/board descriptions and their formatters:
+`CLI::Resources::Cards` and `CLI::Resources::Boards`. Core detailed readers live
+at `Cards::Detail` and `Boards::Snapshot`; `Card` and `Board` models remain at
+the root. `Resources` combines these command modules and the members module,
+retaining help ordering. Legacy show/snapshot executables call the same
+resource-owned formatters; their arguments, output, and exits are unchanged.
+Old CardDetail/Snapshot constants, loader paths, and shared CLI formatter methods
+are removed without aliases. Labels, Lists, and TaskLists retain their existing
+resource-specific owners; further canonical command modules appear when their
+commands are implemented, without empty modules for planned resources.
 The parser supports catalog-declared optional references and scoped names while
 preserving numeric/URL-only contracts for existing commands. Shared collection
 results carry data and completeness; collection failures preserve known results
@@ -567,7 +578,8 @@ Legacy executables retain their existing argument/output adapters.
 
 | Owner | Interface and responsibility |
 | --- | --- |
-| [CLI::Resources](../lib/planka/cli/resources.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Separate command catalogs own paths, aliases, help, applicable flags, local validation, readers, presentation, and command-specific preparation. |
+| [CLI::Resources](../lib/planka/cli/resources.rb) | Combines resource-owned command definitions and help into the shared catalog role. |
+| [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb), [CLI::Resources::Boards](../lib/planka/cli/resources/boards.rb), [CLI::Resources::Cards::Members](../lib/planka/cli/resources/cards/members.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Own paths, aliases, help, applicable flags, local validation, readers, presentation, and command-specific preparation. |
 | [CLI::Catalog](../lib/planka/cli/catalog.rb) | Combine resource commands with explicitly attached catalogs and resolve declared aliases. Own root/group/leaf help selection. |
 | [CLI::Parser](../lib/planka/cli/parser.rb) | `parse` owns mutable option parsing and local syntax validation, returning an immutable invocation. No configuration or execution. |
 | [CLI::Invocation](../lib/planka/cli/invocation.rb) | Immutable snapshot of the selected definition, program, output format, reference, flags, and optional help text. No parsing, environment access, preparation, or execution. |

@@ -34,7 +34,7 @@ class Planka::CardDetailTest < Minitest::Test
     def comments(_id) = [ { "id" => "cm", "text" => "hello", "userId" => "u2", "createdAt" => "2026-01-01T00:00:00.000Z" } ]
   end
 
-  def detail = Planka::CardDetail.new(FakeClient.new, base_url: "https://planka.test///").for("c1")
+  def detail = Planka::Cards::Detail.new(FakeClient.new, base_url: "https://planka.test///").for("c1")
 
   def test_reports_identity_description_and_url
     doc = detail

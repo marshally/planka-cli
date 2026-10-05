@@ -5,7 +5,7 @@ module Planka
     # Validate the identities and associations that determine queue eligibility.
     module QueueSnapshot
       def self.board(included, base_url:)
-        Snapshot.validate!(included)
+        Boards::Snapshot.validate!(included)
         lists = index(included.fetch("lists"))
         cards = index(included.fetch("cards"))
         labels = index(included.fetch("labels"))

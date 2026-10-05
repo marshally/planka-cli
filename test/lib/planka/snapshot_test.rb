@@ -17,12 +17,12 @@ class Planka::SnapshotTest < Minitest::Test
     }
   end
 
-  def snapshot = Planka::Snapshot.new(included, base_url: "https://planka.test///")
+  def snapshot = Planka::Boards::Snapshot.new(included, base_url: "https://planka.test///")
 
   def test_to_h_passes_records_through_and_keeps_every_type
     doc = snapshot.to_h
 
-    assert_equal Planka::Snapshot::RECORD_TYPES.sort, doc.keys.sort
+    assert_equal Planka::Boards::Snapshot::RECORD_TYPES.sort, doc.keys.sort
     assert_equal "enhancement", doc["labels"].first["name"]
     assert_equal false, doc["tasks"].first["isCompleted"]
     assert_equal [ "cardId", "userId" ], doc["cardMemberships"].first.keys

@@ -5,6 +5,7 @@
 #   planka show <card>     an id or card URL
 require "planka"
 require "planka/cli"
+require "planka/cli/resources/cards"
 require "planka/client"
 require "optparse"
 
@@ -19,6 +20,6 @@ Planka::CLI.parse!(parser, "planka show")
 abort parser.banner unless ARGV.size == 1
 
 Planka::CLI.run("planka show", output: options[:output]) do |client|
-  detail = Planka::CardDetail.new(client).for(Planka.card_id(ARGV.first))
-  Planka::CLI.emit(detail, output: options[:output], human: Planka::CLI.card_detail(detail))
+  detail = Planka::Cards::Detail.new(client).for(Planka.card_id(ARGV.first))
+  Planka::CLI.emit(detail, output: options[:output], human: Planka::CLI::Resources::Cards.format(detail))
 end
