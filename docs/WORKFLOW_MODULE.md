@@ -64,8 +64,10 @@ Claim returns its data and the original card reference so the legacy human and
 JSON projections preserve their respective records. Partial publishing failures
 retain the existing recovery state through the shared `Planka::PartialFailure`.
 
-Canonical ClaimCard validates the scoped records and tracks membership/move
-effects. It returns core `MutationResult` or raises `MutationFailure` with known
+Canonical ClaimCard coordinates scope loading, membership, and placement.
+ClaimScope owns scoped reads and validation of read/write responses. ClaimProgress
+owns confirmed effects, pending writes, result projection, and recovery state;
+a write is confirmed only after its response validates. ClaimCard returns core `MutationResult` or raises `MutationFailure` with known
 results, uncertainty, and recovery references. Core outcome values are independent
 of workflow policy; shared CLI Output owns their canonical presentation. Legacy
 Claim retains its original behavior and result shape.
