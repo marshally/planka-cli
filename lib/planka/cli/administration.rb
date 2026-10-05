@@ -7,7 +7,7 @@ module Planka
     module Administration
       ROOT_HELP = <<~HELP
         usage: planka <verb> <resource> [reference] [flags]
-        Administration:
+        Resource commands:
           describe card CARD  Read card details and related data (read-only)
           describe board BOARD  Read board snapshot and related data (read-only)
       HELP

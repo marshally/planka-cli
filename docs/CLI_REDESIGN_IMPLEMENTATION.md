@@ -2,9 +2,14 @@
 
 ## State and intent
 
-The goal is a general Planka administration CLI with a kubectl-like
+The goal is a general Planka resource CLI with a kubectl-like
 `planka <verb> <resource> [reference] [flags]` interface. Convention-based agent
 operations live under `planka workflow`.
+
+Public documentation and root help call direct resource operations “resource
+commands,” distinct from convention-based workflows. These are behavioral
+categories, not permission levels. `CLI::Administration` remains an internal
+resource-command catalog name.
 
 The first slice is implemented: nested dispatch/help and `planka describe card
 CARD`. The second slice adds `planka describe board BOARD`; the third adds
@@ -13,7 +18,7 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow claim-status`; the sixth adds
 `planka workflow guide`; the seventh adds
 `planka workflow next`. All legacy entry
-points are preserved. Other administration operations
+points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
 
@@ -50,7 +55,7 @@ The existing client already has board/card/comment reads, list-card reads,
 creates for cards/lists/labels/task lists/tasks/comments, card/task-list updates,
 card moves, and membership/label attachment. Inspect actual methods before
 reusing them. Reading board IDs through the projects response does not establish
-a complete project or board administration interface.
+a complete project or board resource interface.
 
 ## Implemented first slice: nested dispatch and card detail
 
@@ -126,8 +131,8 @@ leave them out of the package. Report local versus CI verification separately.
 
 ### Boundary
 
-The first task adds no new deletion, relationship removal, user administration,
-saved credentials, pagination, declarative apply, or API-version support.
+The first task adds no new deletion, relationship removal, user-management
+operations, saved credentials, pagination, declarative apply, or API-version support.
 Those are separate capabilities with their own API contracts and acceptance
 criteria. Do not add command placeholders that claim these features work.
 
@@ -421,7 +426,7 @@ Legacy executables retain their existing argument/output adapters.
 | Owner | Interface and responsibility |
 | --- | --- |
 | [CLI::Administration](../lib/planka/cli/administration.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Separate command catalogs own paths, aliases, help, applicable flags, local validation, readers, presentation, and command-specific preparation. |
-| [CLI::Catalog](../lib/planka/cli/catalog.rb) | Combine administration with explicitly attached catalogs and resolve declared aliases. Own root/group/leaf help selection. |
+| [CLI::Catalog](../lib/planka/cli/catalog.rb) | Combine resource commands with explicitly attached catalogs and resolve declared aliases. Own root/group/leaf help selection. |
 | [CLI::Parser](../lib/planka/cli/parser.rb) | `parse` owns mutable option parsing and local syntax validation, returning an immutable invocation. No configuration or execution. |
 | [CLI::Invocation](../lib/planka/cli/invocation.rb) | Immutable snapshot of the selected definition, program, output format, reference, flags, and optional help text. No parsing, environment access, preparation, or execution. |
 | [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` captures required connection settings and provides session arguments. Credentials are frozen and inspection is redacted. Owns a validated instance, not resource-reference resolution. |
@@ -450,10 +455,11 @@ Catalog `prepare` callbacks receive the supplied environment, validated instance
 and immutable parsed flags, and return reader keyword arguments. Reader/client
 inputs are captured before the session starts. General positional references are
 resolved by shared preparation; workflow scope/default policy stays in its catalog.
-Declared administration aliases preserve card/cards and board/boards grammar.
-Shared parsing contains no administration or workflow names.
+Declared resource aliases preserve card/cards and board/boards grammar.
+Shared parsing contains no resource or workflow command names.
 
-This refactor changes ownership, not command behavior. Keep exact help, command
+This refactor changes ownership, not command behavior. Apart from changing the
+root help heading from `Administration` to `Resource commands`, keep help, command
 syntax, result schemas, error messages/categories, exit codes, session cleanup,
 all 21 legacy entry points, and library-loading direction unchanged. Preserve
 output flags before/within/after command paths, offline help/guide, pre-request
@@ -486,7 +492,7 @@ adds no new commands or endpoints.
 2. Verify scope resolution and migrate input flags consistently: canonical
    `--name`, positional targets, parent flags, and `workflow resume ticket`.
    Preserve exact-name ambiguity errors and partial-write recovery.
-3. Add new administration capabilities in independently reviewable slices:
+3. Add new resource capabilities in independently reviewable slices:
    collection reads, deletion, relationship removal, and project/board/user
    management only where the supported API contract is established.
 4. Verify environment validation and per-command session lifecycle across all
