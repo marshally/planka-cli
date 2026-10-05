@@ -3,7 +3,8 @@
 This document defines the target interface for a general Planka resource
 CLI. It is a design contract for staged changes; the current executable supports
 `describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
-`workflow claim-status`, `workflow guide`, `workflow next`, `workflow claim`, and nested help alongside all flat commands in
+`workflow claim-status`, `workflow guide`, `workflow next`, `workflow claim`,
+card-scoped `get members`, `get member`, `add member`, `remove member`, and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -143,15 +144,15 @@ planka delete comment COMMENT
 
 ### Card members
 
-Planned card-member commands use the same vocabulary for reads and writes:
+Implemented card-member commands use the same vocabulary for reads and writes:
 `get members --card CARD`, `get member USER --card CARD`,
 `add member USER --card CARD`, and `remove member USER --card CARD`.
 A member is an existing user assigned to the specified card. A singular read
 identifies the user, not a membership ID, and reports that user's assignment to
 that card; collection reads report its assigned users. Results include user
 identity and assignment metadata; a native membership ID may appear in JSON but
-is not the positional reference. Document the precise per-command fields during
-implementation under the shared result contract.
+is not the positional reference. The precise fields are recorded in the
+[current README](README.md#canonical-card-members) under the shared result contract.
 
 These operations manage the user-card relationship without invoking the workflow
 claim operation or moving the card. Membership still affects claimed/takeable

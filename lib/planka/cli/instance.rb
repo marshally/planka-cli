@@ -19,7 +19,8 @@ module Planka
         raise Failure.new(code: "configuration_error", message: "Invalid PLANKA_BASE_URL")
       end
 
-      def resolve(value, resource:, collection:)
+      def resolve(value, resource:, collection:, names: false)
+        return value.dup.freeze if names && !value.match?(%r{\A(?:https?://|/|\.\./)}) && !value.strip.empty?
         return value.dup.freeze if value.match?(/\A\d+\z/)
 
         reference = URI(value)

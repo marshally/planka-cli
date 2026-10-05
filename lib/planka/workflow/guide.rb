@@ -47,7 +47,15 @@ module Planka
            with `Branch: BRANCH` and `PR: URL` on separate lines in TEXT.
 
         ## Publish and recover
-        Publishing and other mutations still use legacy commands. Specs have no
+        Card assignments use `planka get members --card CARD`,
+        `planka get member USER --card CARD`, `planka add member USER --card CARD`,
+        and `planka remove member USER --card CARD`. USER is an ID, same-instance
+        user URL, or exact name among the card's board members. These operations
+        preserve list placement; use workflow claim to move work into progress.
+        Satisfied add/remove operations are no-ops. Unknown outcomes require
+        reading the members back before retrying. Board-member commands are planned.
+
+        Publishing still uses legacy commands. Specs have no
         Acceptance criteria list; tickets have one. Share feature:SLUG labels.
         `planka create-spec` and `planka create-ticket` take --list ID_OR_NAME and
         --title TITLE; tickets require --criteria-file FILE (a JSON string array).

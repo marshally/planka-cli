@@ -64,6 +64,8 @@ class FakePlanka
   def tasks = @state[:tasks]
   def card_labels = @state[:cardLabels]
   def memberships = @state[:cardMemberships]
+  def users = @state[:users]
+  def board_memberships = @state[:boardMemberships]
   def comments = @state[:comments]
   def lists = @state[:lists]
   def boards = @boards
@@ -107,6 +109,8 @@ class FakePlanka
       taskLists: [],
       tasks: [],
       cardMemberships: [],
+      users: [],
+      boardMemberships: [],
       comments: [ { "id" => "500000000000000001", "cardId" => PARENT_CARD, "text" => "Parent context note.", "userId" => "user-human", "createdAt" => "2026-09-01T00:00:00.000Z" } ],
     }
   end
@@ -232,6 +236,10 @@ class FakePlanka
     in [ "POST", [ "api", "boards", id, "labels" ] ] then [ 200, { "item" => make_label(id, data) } ]
     in [ "POST", [ "api", "cards", id, "card-labels" ] ] then [ 200, { "item" => make_card_label(id, data) } ]
     in [ "POST", [ "api", "cards", id, "card-memberships" ] ] then [ 200, { "item" => make_membership(id, data) } ]
+    in [ "DELETE", [ "api", "cards", id, "card-memberships", user ] ]
+      record = memberships.find { |member| member["cardId"] == id && "userId:#{member['userId']}" == user }
+      memberships.delete(record)
+      [200, { "item" => record }]
     in [ "POST", [ "api", "cards", id, "comments" ] ] then [ 200, { "item" => make_comment(id, data) } ]
     in [ "POST", [ "api", "cards", id, "task-lists" ] ] then [ 200, { "item" => make_task_list(id, data) } ]
     in [ "PATCH", [ "api", "task-lists", id ] ] then [ 200, { "item" => patch_task_list(id, data) } ]
@@ -253,6 +261,8 @@ class FakePlanka
       "cardLabels" => @state[:cardLabels].select { |relation| card_ids.include?(relation["cardId"]) },
       "taskLists" => task_lists, "tasks" => @state[:tasks].select { |task| task_list_ids.include?(task["taskListId"]) },
       "cardMemberships" => @state[:cardMemberships].select { |record| card_ids.include?(record["cardId"]) },
+      "users" => users,
+      "boardMemberships" => board_memberships.select { |record| record["boardId"] == id },
     }
     { "item" => { "id" => id, "name" => "Board" }, "included" => included }
   end
