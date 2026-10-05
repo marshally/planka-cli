@@ -172,6 +172,13 @@ on add; reject that flag for editors. Updates accept role and viewer comment
 permission, changing only supplied values and rejecting empty updates. Preserve
 native role-transition effects and verify them during implementation.
 
+Role updates follow native transition defaults: editor to viewer without
+`--can-comment` sets viewer comment permission to false; an existing viewer retains
+its permission when the flag is omitted. Changing to editor sets the native field
+to null. Reject `--can-comment` when the resulting role is editor, including when
+role is omitted and the existing member is an editor. Validate resolved role before
+the resource write; do not translate these transitions into extra cleanup writes.
+
 Board-member read objects contain `id` (user ID), `name`, nullable `username`,
 `boardId`, `membershipId`, `role`, `canComment`, `createdAt`, and `updatedAt`.
 Timestamps describe the membership and are nullable; `canComment` is the native
