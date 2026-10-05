@@ -572,9 +572,10 @@ selector language or filter-based bulk mutations. Each capability must verify
 endpoint paging, ordering, and filtering support during implementation.
 
 Task scope is settled in the style guide's [tasks section](../STYLEGUIDE.md#tasks):
-include ordinary and linked-card tasks. Remaining command/field decisions are
-tracked in [issue #31](https://github.com/marshally/planka-cli/issues/31) before
-creating a ready task-resource implementation ticket. No task commands are implemented.
+include ordinary and linked-card tasks, with same-board linked-task creation and
+same-card moves. The approved resource ticket is
+[issue #34](https://github.com/marshally/planka-cli/issues/34), expanded from the
+consumer's completion-only request. No task commands are implemented.
 
 Card-member vocabulary is settled in the style guide's
 [card members contract](../STYLEGUIDE.md#card-members). Track the four approved

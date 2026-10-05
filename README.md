@@ -115,6 +115,13 @@ planka delete card CARD
 planka create label --board BOARD --name enhancement --color berry-red
 planka create task-list --card CARD --name "Acceptance criteria" --position 65536
 planka update task-list TASK_LIST --name "Verification"
+planka get tasks --card CARD --completed false
+planka get task TASK -o json
+planka create task --task-list TASK_LIST --name "Verify login"
+planka create task --task-list TASK_LIST --linked-card CARD
+planka update task TASK --completed true
+planka move task TASK --task-list TASK_LIST
+planka delete task TASK
 planka create comment --card CARD --text "Ready for review"
 planka delete comment COMMENT
 ```
