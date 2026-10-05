@@ -485,6 +485,10 @@ legacy CLI commands remain available.
 
 ## Development and extraction boundary
 
+Before implementation, refactoring, or review, read the
+[coding standards](CODING_STANDARDS.md). Agent skill entry points and tracker
+conventions are in [AGENTS.md](AGENTS.md).
+
 `make test` runs the captured-board tests and local HTTP command tests.
 `make build` builds the gem; `make ci` runs both. CI covers Ruby 3.2, 3.4 and 4.0.
 The tests do not contact a live Planka instance. API endpoints and payload shapes

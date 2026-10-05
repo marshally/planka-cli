@@ -20,6 +20,9 @@ Workflow implementations live under `lib/planka/workflow/`.
 
 ## Ownership and interfaces
 
+Apply the [coding standards](../CODING_STANDARDS.md) when changing these
+interfaces; this document owns the workflow-specific architecture.
+
 | Module | Owns |
 | --- | --- |
 | `Planka::Client` | HTTP requests and authenticated session lifecycle. |

@@ -416,6 +416,10 @@ claimed; no new Planka endpoint is introduced.
 
 ## Canonical CLI architecture
 
+General design and review rules live in
+[CODING_STANDARDS.md](../CODING_STANDARDS.md). This section records the current
+owners and their interfaces.
+
 The coordinator in [canonical_cli.rb](../lib/planka/canonical_cli.rb) follows
 parse → validate → open session → execute → render for API commands.
 Offline operations execute and render after parsing, without configuration or a
