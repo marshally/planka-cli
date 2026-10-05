@@ -238,7 +238,10 @@ deferred. Reads support the instance directory (`get users`, `get user USER`)
 and explicit board scope (`get users --board BOARD`, `get user USER --board BOARD`).
 Board-scoped reads select users with native board membership, not every related
 user included in a board response. Preserve native permission failures without
-silently falling back between scopes. Result fields and references are being resolved in
+silently falling back between scopes. User read objects contain only `id`, `name`,
+and nullable `username`; collection and individual reads use the same shape under
+the canonical envelope. Do not project account details or authentication secrets.
+Reference and filtering behavior is being resolved in
 [issue #31](https://github.com/marshally/planka-cli/issues/31); no user commands
 are implemented.
 
