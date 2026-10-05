@@ -24,6 +24,7 @@ module Planka
   end
 end
 
+require_relative "planka/position"
 require_relative "planka/client"
 require_relative "planka/mutation"
 require_relative "planka/collection"

@@ -1,6 +1,7 @@
 require "json"
 require "net/http"
 require "uri"
+require_relative "position"
 
 module Planka
   # A signed-in session against Planka's REST API as the board's bot user.
@@ -105,7 +106,7 @@ module Planka
     def add_card_member(card_id, user_id) = request(:post, "/api/cards/#{card_id}/card-memberships", { userId: user_id }, idempotent: false)
     def remove_card_member(card_id, user_id) = request(:delete, "/api/cards/#{card_id}/card-memberships/userId:#{user_id}", idempotent: false)
 
-    def move_card(card_id, list_id, position: 65_535, idempotent: true)
+    def move_card(card_id, list_id, position: Position::MOVE_DEFAULT, idempotent: true)
       response = request(:patch, "/api/cards/#{card_id}", { listId: list_id, position: }, idempotent: idempotent)
       raise InvalidResponse, "Invalid moved card response" if @validate_responses && !response["item"].is_a?(Hash)
 

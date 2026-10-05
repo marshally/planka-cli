@@ -9,7 +9,6 @@ module Planka
     # client answers #create_card, #card, #create_task_list and #create_task.
     class Publishing
       CRITERIA_LIST = Card::CRITERIA_LIST
-      POSITION_GAP = 65_536
 
       def initialize(client, base_url:)
         @client = client
@@ -17,14 +16,14 @@ module Planka
       end
 
       # A spec: a project card with no acceptance criteria.
-      def create_spec(list_id:, name:, description: nil, position: POSITION_GAP)
+      def create_spec(list_id:, name:, description: nil, position: Position::GAP)
         card = @client.create_card(list_id, **card_attrs(name, description, position))
         { "card" => card_ref(card) }
       end
 
       # A ticket: a project card plus one "Acceptance criteria" task list with one
       # incomplete task per criterion, in order.
-      def create_ticket(list_id:, name:, criteria:, description: nil, position: POSITION_GAP)
+      def create_ticket(list_id:, name:, criteria:, description: nil, position: Position::GAP)
         card = @client.create_card(list_id, **card_attrs(name, description, position))
         fill(card.fetch("id"), criteria, card: card_ref(card))
       end
@@ -60,7 +59,7 @@ module Planka
           if existing
             state["tasks"] << task_ref(existing, reused: true)
           else
-            task = @client.create_task(list.fetch("id"), name: text, position: next_position(present))
+            task = @client.create_task(list.fetch("id"), name: text, position: Position.after(present))
             present << task
             state["tasks"] << task_ref(task, reused: false)
           end
@@ -76,14 +75,12 @@ module Planka
         raise Error, "card #{card_id} has #{named.size} #{CRITERIA_LIST} lists" if named.size > 1
 
         named.first ||
-          @client.create_task_list(card_id, name: CRITERIA_LIST, position: next_position(task_lists), showOnFrontOfCard: true)
+          @client.create_task_list(card_id, name: CRITERIA_LIST, position: Position.after(task_lists), showOnFrontOfCard: true)
       end
 
       def card_ref(card) = { "id" => card.fetch("id"), "name" => card["name"], "url" => "#{@base_url}/cards/#{card.fetch("id")}" }
 
       def task_ref(task, reused:) = { "id" => task.fetch("id"), "name" => task["name"], "isCompleted" => task["isCompleted"], "reused" => reused }
-
-      def next_position(records) = (records.map { |record| record["position"].to_f }.max || 0) + POSITION_GAP
     end
   end
 end

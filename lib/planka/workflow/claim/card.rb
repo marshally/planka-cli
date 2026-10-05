@@ -3,8 +3,6 @@ module Planka
     module Claim
       # Coordinates membership before placement; each step confirms its own response.
       class Card
-        POSITION = 65_535
-
         def self.read(client, id, base_url:)
           new(client, id, base_url).call
         end
@@ -36,7 +34,7 @@ module Planka
         def ensure_in_progress(scope)
           return if scope.in_progress?
           @progress.move do
-            scope.moved_card(@client.move_card(@id, scope.in_progress_list_id, position: POSITION, idempotent: false))
+            scope.moved_card(@client.move_card(@id, scope.in_progress_list_id, position: Position::MOVE_DEFAULT, idempotent: false))
           end
         end
       end

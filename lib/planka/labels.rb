@@ -7,8 +7,6 @@ module Planka
   #
   # client answers #board, #create_label and #add_card_label.
   class Labels
-    POSITION_GAP = 65_536
-
     def initialize(client)
       @client = client
     end
@@ -21,7 +19,7 @@ module Planka
       raise Error, "ambiguous label name #{name}: #{existing.map { |l| l["id"] }.join(", ")}" if existing.size > 1
       return { "label" => existing.first, "created" => false } if existing.first
 
-      label = @client.create_label(board_id, name:, color:, position: next_position(labels))
+      label = @client.create_label(board_id, name:, color:, position: Position.after(labels))
       { "label" => label, "created" => true }
     end
 
@@ -51,9 +49,5 @@ module Planka
       @client.add_card_label(card_id, label_id)
       { "cardId" => card_id, "labelId" => label_id, "created" => true }
     end
-
-    private
-
-    def next_position(records) = (records.map { |record| record["position"].to_f }.max || 0) + POSITION_GAP
   end
 end
