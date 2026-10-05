@@ -73,6 +73,12 @@ planka get cards --list LIST
 planka get card CARD
 planka get labels --board BOARD
 planka get comments --card CARD
+planka get tasks --card CARD --completed false
+planka get task TASK -o json
+planka get members --board BOARD
+planka get member USER --board BOARD
+planka get members --card CARD
+planka get member USER --card CARD
 planka describe board BOARD
 planka describe card CARD
 ```
@@ -108,6 +114,8 @@ is no general selector language or filter-based bulk mutation interface.
 ### Create, update, move, and delete resources
 
 ```sh
+planka create board --project PROJECT --name "Development"
+planka update board BOARD --name "Delivery"
 planka create list --board BOARD --name "Ready" --type active --position 65536
 planka update list LIST --name "Finished" --type closed
 planka create card --list LIST --name "Fix login" --description-file description.md
@@ -115,14 +123,9 @@ planka update card CARD --name "Fix session expiry" --description-file revised.m
 planka move card CARD --list LIST --position 65536
 planka delete card CARD
 planka create label --board BOARD --name enhancement --color berry-red
-planka get members --board BOARD
-planka add member USER --board BOARD --role viewer --can-comment true
 planka update member USER --board BOARD --role editor
-planka remove member USER --board BOARD
 planka create task-list --card CARD --name "Acceptance criteria" --position 65536
 planka update task-list TASK_LIST --name "Verification"
-planka get tasks --card CARD --completed false
-planka get task TASK -o json
 planka create task --task-list TASK_LIST --name "Verify login"
 planka create task --task-list TASK_LIST --linked-card CARD
 planka update task TASK --completed true
@@ -149,8 +152,8 @@ for resource-specific effects.
 ```sh
 planka add label LABEL --card CARD
 planka remove label LABEL --card CARD
-planka get members --card CARD
-planka get member USER --card CARD
+planka add member USER --board BOARD --role viewer --can-comment true
+planka remove member USER --board BOARD
 planka add member USER --card CARD
 planka remove member USER --card CARD
 ```
