@@ -8,8 +8,8 @@ operations live under `planka workflow`.
 
 Public documentation and root help call direct resource operations “resource
 commands,” distinct from convention-based workflows. These are behavioral
-categories, not permission levels. `CLI::Administration` remains an internal
-resource-command catalog name.
+categories, not permission levels. `CLI::Resources` owns the internal
+resource-command catalog.
 
 The first slice is implemented: nested dispatch/help and `planka describe card
 CARD`. The second slice adds `planka describe board BOARD`; the third adds
@@ -425,7 +425,7 @@ Legacy executables retain their existing argument/output adapters.
 
 | Owner | Interface and responsibility |
 | --- | --- |
-| [CLI::Administration](../lib/planka/cli/administration.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Separate command catalogs own paths, aliases, help, applicable flags, local validation, readers, presentation, and command-specific preparation. |
+| [CLI::Resources](../lib/planka/cli/resources.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Separate command catalogs own paths, aliases, help, applicable flags, local validation, readers, presentation, and command-specific preparation. |
 | [CLI::Catalog](../lib/planka/cli/catalog.rb) | Combine resource commands with explicitly attached catalogs and resolve declared aliases. Own root/group/leaf help selection. |
 | [CLI::Parser](../lib/planka/cli/parser.rb) | `parse` owns mutable option parsing and local syntax validation, returning an immutable invocation. No configuration or execution. |
 | [CLI::Invocation](../lib/planka/cli/invocation.rb) | Immutable snapshot of the selected definition, program, output format, reference, flags, and optional help text. No parsing, environment access, preparation, or execution. |
