@@ -175,6 +175,7 @@ Apply the shared collection completeness contract. Within a task list, order by
 ascending task position. Card-wide reads order by ascending task-list position,
 then task position; use IDs as deterministic tie-breakers at each level. Apply
 filters before taking the first `--limit N` matching tasks in that order.
+
 Task read data uses flat objects containing `id`, `cardId`, `taskListId`, `name`,
 `position`, `isCompleted`, `assigneeUserId`, `linkedCardId`, `createdAt`, and
 `updatedAt`. Assignee and linked-card IDs are null when absent; timestamps are
@@ -182,6 +183,7 @@ nullable. Resolve `cardId` through the containing task list. Do not embed relate
 user, task-list, or linked-card objects solely to expand names. Collection data is
 an array of this shape and individual data is one object, under the canonical
 envelope.
+
 Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
 for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
 neither before network requests; no explicit task-type flag is introduced.
@@ -199,11 +201,13 @@ Task creation accepts optional `--position N` and appends to the task list when
 omitted. Positions are native ordering values, not row indexes, and must be finite
 and nonnegative. Task updates accept `--position N` and preserve position when
 omitted. Verify native ordering and append calculation during implementation.
+
 Relocation uses `move task TASK --task-list TASK_LIST` for ordinary and linked tasks,
 with optional `--position N`. Restrict the destination to another task list on the
 same card; reject cross-card destinations. Append when changing lists without an
 explicit position. Field updates do not accept `--task-list`; a move to the current
 task list without a position is an idempotent no-op rather than an implicit reorder.
+
 Ordinary task updates accept `--assignee USER` or mutually exclusive
 `--clear-assignee`. Resolve the user within the task's board and require board
 membership; clearing sends the native null value. Linked tasks reject assignee
@@ -212,12 +216,19 @@ ordinary task requires a separate update, avoiding an implicit multi-write creat
 Ordinary tasks change completion through `update task TASK --completed true|false`;
 reject other values. Linked tasks reject direct completion changes and follow the
 linked card's native completion state.
-Respect native restrictions for each kind rather than translating linked-task
-updates into extra writes to its linked card. Workflow blocker commands remain
-convention-based operations over those resources. Detailed task flags and result
-contracts are being resolved in
-[issue #31](https://github.com/marshally/planka-cli/issues/31); this scope decision
-does not mark task implementation ready.
+Ordinary updates also accept `--name NAME`; names are nonempty and obey the
+verified native length limit. Change only supplied fields and reject empty updates.
+Linked tasks accept position updates only; their name and completion follow the
+linked card, and neither task kind accepts replacement of `linkedCardId` through
+update. Respect native restrictions rather than translating linked-task updates
+into extra writes to the linked card.
+
+`delete task TASK` deletes the selected ordinary or linked task, preserving its
+containing card/task list and any linked card. Follow native deletion and shared
+unknown-write/recovery rules without client-side cascades. Workflow blocker
+commands remain convention-based operations over these resources. Track this
+planned resource slice in [issue #34](https://github.com/marshally/planka-cli/issues/34);
+no task resource commands are implemented.
 
 ### List updates
 
