@@ -334,7 +334,10 @@ create/update commands are not implemented.
 Planned project management includes creation, renaming, and description editing,
 in the same resource slice as reads and native deletion. Updates change only
 supplied fields and reject empty updates. Defer ownership transfers, backgrounds,
-visibility, and favorites. Project type and description input/clearing remain
+visibility, and favorites. Creation uses `create project --name NAME` with optional
+`--type private|shared`, default private when omitted; reject other types. Type
+selection applies only to creation, not updates or implicit ownership transfers.
+Description input/clearing remains
 under specification in
 [projects issue #23](https://github.com/marshally/planka-cli/issues/23); no basic
 project create/update commands are implemented.
