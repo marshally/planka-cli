@@ -20,11 +20,14 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
   end
 
   def test_claim_status_accepts_native_archive_and_trash_lists
-    @server.lists << { "id" => "888", "boardId" => FakePlanka::BOARD_ID, "name" => "Archive", "type" => "archive", "position" => 1 }
-    @server.lists << { "id" => "889", "boardId" => FakePlanka::BOARD_ID, "name" => "Trash", "type" => "trash", "position" => 2 }
+    @server.lists << { "id" => "888", "boardId" => FakePlanka::BOARD_ID, "name" => nil, "type" => "archive", "position" => 1 }
+    @server.lists << { "id" => "889", "boardId" => FakePlanka::BOARD_ID, "name" => nil, "type" => "trash", "position" => 2 }
     out, err, status = planka("workflow", "claim-status", "-o", "json")
     assert status.success?, err
     assert_equal false, JSON.parse(out).dig("data", "held")
+    out, err, status = planka("workflow", "claim", CARD, "-o", "json")
+    assert status.success?, err
+    assert_equal true, JSON.parse(out).dig("data", "claimed")
   end
 
   def test_claim_adds_membership_then_moves_the_card_and_reports_both_effects
