@@ -45,6 +45,9 @@ module Planka
         @stderr.puts "#{program}: #{failure.message}"
         if format == "json"
           meta = invocation&.command&.dig(:mutation) ? { "changed" => false }.merge(failure.meta) : failure.meta
+          if invocation&.command&.dig(:collection_read) && invocation.reference.nil?
+            meta = { "complete" => false }.merge(meta)
+          end
           details = { "code" => failure.code, "message" => failure.message }
           details["recovery"] = failure.recovery if failure.recovery
           @stdout.puts JSON.generate({ "data" => failure.data, "meta" => meta, "error" => details })

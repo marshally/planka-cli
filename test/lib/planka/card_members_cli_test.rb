@@ -270,6 +270,7 @@ class CardMembersCLITest < Minitest::Test
       out, err, status = planka("get", "members", "--card", CARD, "-o", "json")
       assert_equal 1, status.exitstatus, err
       assert_equal category, JSON.parse(out).dig("error", "code")
+      assert_equal false, JSON.parse(out).dig("meta", "complete")
       refute_includes out + err, "private upstream body"
     end
     assert_empty resource_writes
