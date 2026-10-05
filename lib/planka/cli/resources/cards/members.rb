@@ -1,4 +1,5 @@
 require "planka/cli/failure"
+require "planka/cli/command"
 
 module Planka
   module CLI
@@ -87,20 +88,20 @@ module Planka
           GROUPS = { "get" => GET_HELP, "add" => ADD_HELP, "remove" => REMOVE_HELP }.freeze
 
           COMMANDS = {
-            ["remove", "member"] => { aliases: [["remove", "members"]], names: true, mutation: true,
+            ["remove", "member"] => Command.new(aliases: [["remove", "members"]], names: true, mutation: true,
               resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
               validate_flags: method(:validate), prepare: method(:prepare_remove),
-              help: REMOVE_HELP, reader: Planka::Cards::Members, formatter: method(:format) }.freeze,
-            ["add", "member"] => { aliases: [["add", "members"]], names: true, mutation: true,
+              help: REMOVE_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
+            ["add", "member"] => Command.new(aliases: [["add", "members"]], names: true, mutation: true,
               resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
               validate_flags: method(:validate), prepare: method(:prepare_add),
-              help: ADD_HELP, reader: Planka::Cards::Members, formatter: method(:format) }.freeze,
-            ["get", "member"] => { aliases: [["get", "members"]], optional_reference: true, names: true,
+              help: ADD_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
+            ["get", "member"] => Command.new(aliases: [["get", "members"]], optional_reference: true, names: true,
               collection_read: true,
               resource: "user", collection: "users",
               collection_flags: [:name, :limit],
               flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit }, validate_flags: method(:validate), prepare: method(:prepare),
-              help: GET_HELP, reader: Planka::Cards::Members, formatter: method(:format) }.freeze,
+              help: GET_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS

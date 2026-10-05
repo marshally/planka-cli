@@ -1,6 +1,7 @@
 require "planka/workflow/format"
 require "planka/workflow/configuration"
 require "planka/cli/failure"
+require "planka/cli/command"
 
 module Planka
   module Workflow
@@ -119,12 +120,12 @@ module Planka
       end
 
       COMMANDS = {
-        ["workflow", "claim"] => { resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, reader: Claim::Card, formatter: Format.method(:claim) }.freeze,
-        ["workflow", "next"] => { reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, reader: NextSelection, projector: Format.method(:next_card), formatter: Format.method(:next_selection) }.freeze,
-        ["workflow", "guide"] => { reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide) }.freeze,
-        ["workflow", "claim-status"] => { resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock) }.freeze,
-        ["workflow", "pending-criteria"] => { resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: PendingCriteria, formatter: Format.method(:pending_criteria) }.freeze,
-        ["workflow", "branch-name"] => { resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: BranchName, formatter: Format.method(:branch_name), prepare: method(:branch_preparation) }.freeze,
+        ["workflow", "claim"] => Planka::CLI::Command.new(resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, reader: Claim::Card, formatter: Format.method(:claim)),
+        ["workflow", "next"] => Planka::CLI::Command.new(reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, reader: NextSelection, projector: Format.method(:next_card), formatter: Format.method(:next_selection)),
+        ["workflow", "guide"] => Planka::CLI::Command.new(reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide)),
+        ["workflow", "claim-status"] => Planka::CLI::Command.new(resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock)),
+        ["workflow", "pending-criteria"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: PendingCriteria, formatter: Format.method(:pending_criteria)),
+        ["workflow", "branch-name"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: BranchName, formatter: Format.method(:branch_name), prepare: method(:branch_preparation)),
       }.freeze
       def self.commands = COMMANDS
       def self.groups = { "workflow" => GROUP_HELP }

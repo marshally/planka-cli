@@ -1,4 +1,5 @@
 require "planka"
+require "planka/cli/command"
 
 module Planka
   module CLI
@@ -32,7 +33,7 @@ module Planka
         end
 
         COMMANDS = {
-          ["describe", "board"] => { aliases: [["describe", "boards"]], resource: "board", collection: "boards", help: HELP, reader: Planka::Boards::Snapshot, formatter: method(:format) }.freeze,
+          ["describe", "board"] => Command.new(aliases: [["describe", "boards"]], resource: "board", collection: "boards", help: HELP, reader: Planka::Boards::Snapshot, formatter: method(:format)),
         }.freeze
 
         def self.commands = COMMANDS

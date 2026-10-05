@@ -24,15 +24,14 @@ module Planka
           meta["complete"] = data.complete
           data = data.data
         end
-        if command[:mutation]
+        if command.mutation?
           meta["changed"] = data.changed
           data = data.data
         end
         if invocation.output == "json"
-          data = command[:projector].call(data) if command[:projector]
-          @stdout.puts JSON.generate({ "data" => data, "meta" => meta, "error" => nil })
+          @stdout.puts JSON.generate({ "data" => command.project(data), "meta" => meta, "error" => nil })
         else
-          @stdout.puts command.fetch(:formatter).call(data)
+          @stdout.puts command.format(data)
           @stdout.puts "Results truncated; use a larger --limit or omit it." if meta["complete"] == false
         end
         0
@@ -44,8 +43,8 @@ module Planka
         format = invocation&.output || failure.output || "human"
         @stderr.puts "#{program}: #{failure.message}"
         if format == "json"
-          meta = invocation&.command&.dig(:mutation) ? { "changed" => false }.merge(failure.meta) : failure.meta
-          if invocation&.command&.dig(:collection_read) && invocation.reference.nil?
+          meta = invocation&.command&.mutation? ? { "changed" => false }.merge(failure.meta) : failure.meta
+          if invocation&.command&.collection_read? && invocation.reference.nil?
             meta = { "complete" => false }.merge(meta)
           end
           details = { "code" => failure.code, "message" => failure.message }
@@ -56,7 +55,7 @@ module Planka
       end
 
       def cleanup_failure(invocation)
-        result = invocation.command[:mutation] ? "operation result" : "read result"
+        result = invocation.command.mutation? ? "operation result" : "read result"
         @stderr.puts "#{invocation.program}: session cleanup failed; the #{result} is unchanged"
       end
 

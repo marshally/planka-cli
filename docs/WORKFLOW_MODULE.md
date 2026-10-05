@@ -76,8 +76,8 @@ Claim retains its original behavior and result shape.
 
 `require "planka/workflow/cli"` loads the workflow CLI adapter. The bundled
 executable passes it to `CanonicalCLI.run` through `extensions:`. An extension
-provides `commands`, `groups`, and `root_help`; command definitions select a
-reader, callable formatter, optional JSON projector, applicable flag definitions,
+provides `commands`, `groups`, and `root_help`; each command is a
+`Planka::CLI::Command`, which owns its defaults and selects a reader, callable formatter, optional JSON projector, applicable flag definitions,
 local flag validator, and optional `prepare` callback. Declared aliases belong to
 the catalog rather than shared grammar. Commands
 declaring `mutation: true` return a core `MutationResult`; Output projects its data
