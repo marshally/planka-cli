@@ -172,6 +172,9 @@ fields; detailed filters and ordering remain to be specified.
 Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
 for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
 neither before network requests; no explicit task-type flag is introduced.
+Ordinary task creation accepts optional `--completed true|false`, defaulting to
+incomplete when omitted. Linked-task creation rejects this flag because completion
+follows the linked card's native state.
 Task creation accepts optional `--position N` and appends to the task list when
 omitted. Positions are native ordering values, not row indexes, and must be finite
 and nonnegative. Task updates accept `--position N` and preserve position when
