@@ -571,6 +571,11 @@ produce equivalent results; `meta.complete` refers to matching results. No gener
 selector language or filter-based bulk mutations. Each capability must verify
 endpoint paging, ordering, and filtering support during implementation.
 
+Task scope is settled in the style guide's [tasks section](../STYLEGUIDE.md#tasks):
+include ordinary and linked-card tasks. Remaining command/field decisions are
+tracked in [issue #31](https://github.com/marshally/planka-cli/issues/31) before
+creating a ready task-resource implementation ticket. No task commands are implemented.
+
 Card-member vocabulary is settled in the style guide's
 [card members contract](../STYLEGUIDE.md#card-members). Track the four approved
 card-scoped operations in [issue #21](https://github.com/marshally/planka-cli/issues/21);

@@ -160,6 +160,17 @@ idempotent no-ops. Removing a member preserves both the user and card. Broader
 board/project membership operations are deferred. See
 [card members issue #21](https://github.com/marshally/planka-cli/issues/21).
 
+### Tasks
+
+Planned task resource operations cover both ordinary checklist tasks and tasks
+linked to another card: create, collection/individual read, update, and delete.
+Respect native restrictions for each kind rather than translating linked-task
+updates into extra writes to its linked card. Workflow blocker commands remain
+convention-based operations over those resources. Detailed task flags and result
+contracts are being resolved in
+[issue #31](https://github.com/marshally/planka-cli/issues/31); this scope decision
+does not mark task implementation ready.
+
 ### List updates
 
 Planned `update list LIST` accepts optional `--name`, `--color` or mutually
