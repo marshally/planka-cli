@@ -18,8 +18,13 @@ module Planka
       end
 
       def success(invocation, data)
-        @stdout.puts(invocation.output == "json" ? JSON.generate({ "data" => invocation.json_data(data), "meta" => {}, "error" => nil }) :
-          invocation.formatter.call(data))
+        command = invocation.command
+        if invocation.output == "json"
+          data = command[:projector].call(data) if command[:projector]
+          @stdout.puts JSON.generate({ "data" => data, "meta" => {}, "error" => nil })
+        else
+          @stdout.puts command.fetch(:formatter).call(data)
+        end
         0
       end
 

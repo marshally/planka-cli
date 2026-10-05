@@ -75,23 +75,23 @@ module Planka
         Example: planka workflow pending-criteria 123 -o json
       HELP
 
-      def self.branch_options(env, **)
+      def self.branch_preparation(env, **)
         { prefix: Configuration.from_env(env).branch_prefix }
       rescue ConfigurationError => error
         raise Planka::CLI::Failure.new(code: "configuration_error", message: error.message)
       end
 
-      def self.next_options(env, configuration:, flags:)
+      def self.next_preparation(env, instance:, flags:)
         board = flags.fetch(:board, []).first || env["PLANKA_BOARD_ID"]
         if board.to_s.strip.empty?
           raise Planka::CLI::Failure.new(code: "configuration_error", message: "Missing required environment: PLANKA_BOARD_ID (or supply --board BOARD)")
         end
-        { board_id: configuration.resolve_resource(board, resource: "board", collection: "boards"), labels: flags.fetch(:labels, []).uniq }
-      rescue Planka::CLI::Failure => error
-        if flags.fetch(:board, []).empty? && error.code == "invalid_input"
+        { board_id: instance.resolve(board, resource: "board", collection: "boards"), labels: flags.fetch(:labels, []).uniq }
+      rescue Planka::CLI::Instance::InvalidReference => error
+        if flags.fetch(:board, []).empty?
           raise Planka::CLI::Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a numeric board ID or same-instance board URL")
         end
-        raise
+        raise Planka::CLI::Failure.new(code: "invalid_input", status: 2, message: error.message)
       end
 
       def self.validate_next_flags(flags)
@@ -104,11 +104,11 @@ module Planka
       end
 
       COMMANDS = {
-        ["workflow", "next"] => { reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), options: method(:next_options), help: NEXT_HELP, reader: NextSelection, projector: Format.method(:next_card), formatter: Format.method(:next_selection) }.freeze,
+        ["workflow", "next"] => { reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, reader: NextSelection, projector: Format.method(:next_card), formatter: Format.method(:next_selection) }.freeze,
         ["workflow", "guide"] => { reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide) }.freeze,
         ["workflow", "claim-status"] => { resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock) }.freeze,
         ["workflow", "pending-criteria"] => { resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: PendingCriteria, formatter: Format.method(:pending_criteria) }.freeze,
-        ["workflow", "branch-name"] => { resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: BranchName, formatter: Format.method(:branch_name), options: method(:branch_options) }.freeze,
+        ["workflow", "branch-name"] => { resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: BranchName, formatter: Format.method(:branch_name), prepare: method(:branch_preparation) }.freeze,
       }.freeze
       def self.commands = COMMANDS
       def self.groups = { "workflow" => GROUP_HELP }
