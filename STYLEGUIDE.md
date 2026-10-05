@@ -171,6 +171,11 @@ Task creation accepts optional `--position N` and appends to the task list when
 omitted. Positions are native ordering values, not row indexes, and must be finite
 and nonnegative. Task updates accept `--position N` and preserve position when
 omitted. Verify native ordering and append calculation during implementation.
+Relocation uses `move task TASK --task-list TASK_LIST` for ordinary and linked tasks,
+with optional `--position N`. Restrict the destination to another task list on the
+same card; reject cross-card destinations. Append when changing lists without an
+explicit position. Field updates do not accept `--task-list`; a move to the current
+task list without a position is an idempotent no-op rather than an implicit reorder.
 Ordinary tasks change completion through `update task TASK --completed true|false`;
 reject other values. Linked tasks reject direct completion changes and follow the
 linked card's native completion state.
