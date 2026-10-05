@@ -308,7 +308,8 @@ alternate positional-name match. Collections accept exact `--name NAME` and
 filters and conflicting scalar values. Reserve `me` in `get user me` for the
 authenticated account; without board scope read it directly without directory
 access, and with `--board` validate its board membership. A literal display name
-`me` remains available through `get users --name me`. Order user collections by username, then display name, then ID, using
+`me` remains available through `get users --name me`. Order user collections by
+username, then display name, then ID, using
 locale-independent ordering with null usernames last. Filter before applying
 `--limit`; use the shared completeness and partial-result contract. Track this
 planned read-only slice in
@@ -396,16 +397,33 @@ The minimum version is a support boundary, not proof that all commands work on
 every later release or edition. Record verified edition/version and supported
 verb/resource combinations as capabilities are implemented. Future major
 versions require API verification rather than an automatic compatibility claim.
-Known unsupported versions or capabilities must fail clearly. Establish a
-reliable version/capability check from the actual API contract; do not invent a
-version endpoint or treat every API failure as proof of an old server.
+Known unsupported versions or capabilities must be documented clearly. Verify
+capabilities from the actual API contract; do not invent a version endpoint or
+treat every API failure as proof of an old server. The diagnostic lookup below
+does not gate execution or establish edition/capability support.
 
-Planned canonical version lookup runs only after an API failure, using a
-read-only bootstrap request. Do not add a version preflight to successful calls.
+Planned canonical version lookup runs only after a primary Planka API,
+authentication, network, or response-validation failure, using a read-only
+bootstrap request. Do not add a version preflight to successful calls.
 Help and offline commands skip lookup, and legacy requests/output stay unchanged.
 Validate required configuration before any network request. Reported version is
 not proof of edition or capability; do not probe support with resource mutations.
-Diagnostic failure/classification behavior is being resolved in
+Version lookup is best-effort and runs at most once for a failed invocation.
+Preserve the original error code/message, exit status, data, recovery information,
+and existing metadata (including changed/unknown outcomes). Add
+`meta.serverVersion` containing a well-formed reported semantic version, or null
+when lookup fails or the version is absent/malformed. Successful commands and
+local/configuration/dependency failures receive no diagnostic field or request,
+even if earlier resolution reads succeeded. An API attempt alone is not a trigger.
+Lookup failure cannot replace the primary error or trigger recursive
+lookup/retry, and must not bypass session cleanup.
+
+Human failures may append a reported-version line when available, retaining the
+primary error; never print raw bootstrap bodies or classify compatibility from
+version alone. A reported version below the target floor remains diagnostic
+context rather than a replacement error. Keep edition/capabilities unknown unless
+separately verified, and do not add persisted caches, mutating probes, or API
+fallback adapters. Track the planned diagnostic slice in
 [issue #32](https://github.com/marshally/planka-cli/issues/32); lookup is not implemented.
 
 ## Flags and input
