@@ -171,7 +171,10 @@ Task collection filters are exact `--name NAME`, `--completed true|false`,
 `--assignee USER`, and `--linked-card CARD`. Assignee means task assignment,
 not card membership. Combine supplied filters with AND before `--limit`, resolving
 references under the shared scope rules and rejecting conflicting scalar values.
-Apply the shared collection completeness contract; ordering remains to be specified.
+Apply the shared collection completeness contract. Within a task list, order by
+ascending task position. Card-wide reads order by ascending task-list position,
+then task position; use IDs as deterministic tie-breakers at each level. Apply
+filters before taking the first `--limit N` matching tasks in that order.
 Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
 for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
 neither before network requests; no explicit task-type flag is introduced.
