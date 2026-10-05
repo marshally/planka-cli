@@ -230,6 +230,14 @@ commands remain convention-based operations over these resources. Track this
 planned resource slice in [issue #34](https://github.com/marshally/planka-cli/issues/34);
 no task resource commands are implemented.
 
+### Users
+
+The initial planned user-resource slice is read-only: `get users` and
+`get user USER`. Account creation, updates, deletion, and credential changes are
+deferred. Collection scope and result fields are being resolved in
+[issue #31](https://github.com/marshally/planka-cli/issues/31); no user commands
+are implemented.
+
 ### List updates
 
 Planned `update list LIST` accepts optional `--name`, `--color` or mutually
