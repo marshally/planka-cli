@@ -245,7 +245,10 @@ Positional user names match display names exactly within the selected directory
 or board scope, rejecting ambiguity with candidate IDs. Username is not an
 alternate positional-name match. Collections accept exact `--name NAME` and
 `--username USERNAME`, combined with AND before `--limit`; reject unsupported
-filters and conflicting scalar values. Remaining reference details are being resolved in
+filters and conflicting scalar values. Reserve `me` in `get user me` for the
+authenticated account; without board scope read it directly without directory
+access, and with `--board` validate its board membership. A literal display name
+`me` remains available through `get users --name me`. Collection ordering is being resolved in
 [issue #31](https://github.com/marshally/planka-cli/issues/31); no user commands
 are implemented.
 
