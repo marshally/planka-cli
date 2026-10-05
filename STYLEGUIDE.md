@@ -137,6 +137,18 @@ planka get comments --card CARD
 planka delete comment COMMENT
 ```
 
+### List updates
+
+Planned `update list LIST` accepts optional `--name`, `--color` or mutually
+exclusive `--clear-color`, `--position`, and `--type active|closed`. Change only
+supplied fields and reject empty updates. Names are nonempty and obey the verified
+server length limit; colors use the verified native enum, `--clear-color` sends
+null, and positions are finite and nonnegative. Keep the list on its current board.
+Type changes preserve native server effects; document and test their effect on
+linked tasks and workflow eligibility without additional client-side card/task
+writes. See [lists issue #18](https://github.com/marshally/planka-cli/issues/18)
+for the accepted field contract and pinned version-specific evidence.
+
 ## References and scope
 
 - Put existing targets in positional arguments: `update card CARD`, not

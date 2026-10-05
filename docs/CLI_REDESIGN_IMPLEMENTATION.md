@@ -518,6 +518,11 @@ Do not rewrite retry behavior merely as a side effect of reorganizing commands.
 
 ## Settled decisions and implementation deliverables
 
+The resource-sized [lists issue #18](https://github.com/marshally/planka-cli/issues/18)
+now has a settled update-field contract. See the style guide’s
+[list updates](../STYLEGUIDE.md#list-updates); implementation and API acceptance
+remain outstanding.
+
 The design decisions below are settled. Per-command schemas, error codes,
 recovery actions, and API capability evidence remain deliverables of each
 implementation slice; they do not reopen the shared contract.
