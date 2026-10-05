@@ -164,6 +164,9 @@ board/project membership operations are deferred. See
 
 Planned task resource operations cover both ordinary checklist tasks and tasks
 linked to another card: create, collection/individual read, update, and delete.
+Ordinary tasks change completion through `update task TASK --completed true|false`;
+reject other values. Linked tasks reject direct completion changes and follow the
+linked card's native completion state.
 Respect native restrictions for each kind rather than translating linked-task
 updates into extra writes to its linked card. Workflow blocker commands remain
 convention-based operations over those resources. Detailed task flags and result
