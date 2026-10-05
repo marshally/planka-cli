@@ -92,6 +92,7 @@ module Planka
           validate_flags: method(:validate), prepare: method(:prepare_add),
           help: ADD_HELP, reader: Planka::CardMembers, formatter: method(:format) }.freeze,
         ["get", "member"] => { aliases: [["get", "members"]], optional_reference: true, names: true,
+          collection_read: true,
           resource: "user", collection: "users",
           collection_flags: [:name, :limit],
           flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit }, validate_flags: method(:validate), prepare: method(:prepare),
