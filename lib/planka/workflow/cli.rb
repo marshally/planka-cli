@@ -119,7 +119,7 @@ module Planka
       end
 
       COMMANDS = {
-        ["workflow", "claim"] => { resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, reader: ClaimCard, formatter: Format.method(:claim) }.freeze,
+        ["workflow", "claim"] => { resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, reader: Claim::Card, formatter: Format.method(:claim) }.freeze,
         ["workflow", "next"] => { reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, reader: NextSelection, projector: Format.method(:next_card), formatter: Format.method(:next_selection) }.freeze,
         ["workflow", "guide"] => { reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide) }.freeze,
         ["workflow", "claim-status"] => { resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock) }.freeze,
