@@ -577,6 +577,13 @@ same-card moves. The approved resource ticket is
 [issue #34](https://github.com/marshally/planka-cli/issues/34), expanded from the
 consumer's completion-only request. No task commands are implemented.
 
+User reads are settled in the style guide's [users section](../STYLEGUIDE.md#users):
+directory and explicit board scopes, minimal identity results, explicit username
+filters, authenticated-user shorthand, and username-first ordering. Account
+mutations are deferred. Track implementation in
+[issue #35](https://github.com/marshally/planka-cli/issues/35); no user commands
+are implemented.
+
 Card-member vocabulary is settled in the style guide's
 [card members contract](../STYLEGUIDE.md#card-members). Track the four approved
 card-scoped operations in [issue #21](https://github.com/marshally/planka-cli/issues/21);

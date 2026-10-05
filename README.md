@@ -63,6 +63,8 @@ Explicit parent flags select scope; ambiguous names are rejected.
 ### Read resources
 
 ```sh
+planka get users --board BOARD --username marshall
+planka get user me
 planka get projects
 planka get boards --project PROJECT
 planka get lists --board BOARD
