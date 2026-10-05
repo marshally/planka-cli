@@ -400,6 +400,14 @@ Known unsupported versions or capabilities must fail clearly. Establish a
 reliable version/capability check from the actual API contract; do not invent a
 version endpoint or treat every API failure as proof of an old server.
 
+Planned canonical version lookup runs only after an API failure, using a
+read-only bootstrap request. Do not add a version preflight to successful calls.
+Help and offline commands skip lookup, and legacy requests/output stay unchanged.
+Validate required configuration before any network request. Reported version is
+not proof of edition or capability; do not probe support with resource mutations.
+Diagnostic failure/classification behavior is being resolved in
+[issue #32](https://github.com/marshally/planka-cli/issues/32); lookup is not implemented.
+
 ## Flags and input
 
 Use consistent long flags across resources. Reserve `-h` for `--help` and `-o`
