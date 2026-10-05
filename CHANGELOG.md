@@ -11,6 +11,12 @@ requests disable net-http's internal retry as well as blind client retries.
 Community 2.0.0, 2.1.1, and 2.2.1 source evidence is recorded; live acceptance
 and other editions/releases remain unverified. Legacy CLI contracts are retained.
 
+Card-member operations live under `Planka::Cards::Members`; their CLI definitions
+live under `Planka::CLI::Resources::Cards::Members`. Resource-specific command
+modules sit beneath their parent resource, separate from shared parsing and
+presentation machinery. The earlier internal CardMembers constants and paths
+are removed; command behavior is unchanged.
+
 Added `planka workflow claim CARD` with canonical results, effect metadata,
 offline help, membership-then-move behavior, and no-op reclaims. Partial failures
 retain confirmed effects and membership IDs; unknown writes require readback
