@@ -107,6 +107,7 @@ is no general selector language or filter-based bulk mutation interface.
 
 ```sh
 planka create list --board BOARD --name "Ready" --type active --position 65536
+planka update list LIST --name "Finished" --type closed
 planka create card --list LIST --name "Fix login" --description-file description.md
 planka update card CARD --name "Fix session expiry" --description-file revised.md
 planka move card CARD --list LIST --position 65536
