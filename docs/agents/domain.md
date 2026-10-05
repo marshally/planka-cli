@@ -17,6 +17,8 @@ and the reason to revisit it.
 
 ## Document ownership
 
+- [Domain glossary](../../CONTEXT.md): settled resource and workflow terminology.
+
 - [Coding standards](../../CODING_STANDARDS.md): general design and review rules.
 - [CLI style guide](../../STYLEGUIDE.md): target CLI behavior and compatibility.
 - [Implementation handoff](../CLI_REDESIGN_IMPLEMENTATION.md): current slices,
