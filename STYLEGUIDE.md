@@ -167,6 +167,10 @@ linked to another card: create, collection/individual read, update, and delete.
 Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
 for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
 neither before network requests; no explicit task-type flag is introduced.
+Task creation accepts optional `--position N` and appends to the task list when
+omitted. Positions are native ordering values, not row indexes, and must be finite
+and nonnegative. Task updates accept `--position N` and preserve position when
+omitted. Verify native ordering and append calculation during implementation.
 Ordinary tasks change completion through `update task TASK --completed true|false`;
 reject other values. Linked tasks reject direct completion changes and follow the
 linked card's native completion state.
