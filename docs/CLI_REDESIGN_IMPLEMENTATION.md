@@ -424,9 +424,9 @@ resource writes. It preserves membership-then-move intent, avoids duplicate
 membership, and skips moves/repositioning when already in progress. Other users'
 memberships remain; no exclusivity or transaction is asserted.
 
-[Workflow::ClaimCard](../lib/planka/workflow/claim_card.rb) coordinates the claim.
-[ClaimScope](../lib/planka/workflow/claim_scope.rb) owns scoped reads and response
-validation; [ClaimProgress](../lib/planka/workflow/claim_progress.rb) owns confirmed
+[Workflow::Claim::Card](../lib/planka/workflow/claim/card.rb) coordinates the claim.
+[Claim::Scope](../lib/planka/workflow/claim/scope.rb) owns scoped reads and response
+validation; [Claim::Progress](../lib/planka/workflow/claim/progress.rb) owns confirmed
 and uncertain effects, result projection, and recovery state. Both write steps
 confirm only after response validation. The legacy [Claim](../lib/planka/workflow/claim.rb)
 adapter remains unchanged. Core [mutation outcomes](../lib/planka/mutation.rb)
