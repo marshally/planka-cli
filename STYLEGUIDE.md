@@ -179,6 +179,10 @@ viewer comment permission and is null for editors. Join native membership record
 with user identities. Individual data is one object; collection data is an array
 of the same shape under the canonical envelope.
 
+Board-member collections accept exact `--name NAME`, `--username USERNAME`, and
+`--role editor|viewer` filters, combined with AND before `--limit`. Reject unsupported
+filters, including `--can-comment` on reads, and conflicting scalar values.
+
 Adding an existing board member with matching requested permissions succeeds as
 an idempotent no-op. If permissions differ, report an actionable conflict and
 preserve the membership; require `update member` rather than implicitly changing
