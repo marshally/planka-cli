@@ -164,6 +164,9 @@ board/project membership operations are deferred. See
 
 Planned task resource operations cover both ordinary checklist tasks and tasks
 linked to another card: create, collection/individual read, update, and delete.
+Creation uses `create task --task-list TASK_LIST` with exactly one of `--name NAME`
+for an ordinary task or `--linked-card CARD` for a linked task. Reject both or
+neither before network requests; no explicit task-type flag is introduced.
 Ordinary tasks change completion through `update task TASK --completed true|false`;
 reject other values. Linked tasks reject direct completion changes and follow the
 linked card's native completion state.
