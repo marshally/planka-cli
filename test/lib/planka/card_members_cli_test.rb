@@ -171,6 +171,20 @@ class CardMembersCLITest < Minitest::Test
     assert_empty resource_writes
   end
 
+  def test_partial_collections_still_apply_filters_order_and_limits
+    @server.memberships.concat([membership, { "id" => "unsafe", "cardId" => CARD }])
+    out, err, status = planka("get", "members", "--card", CARD, "--name", "Grace", "--limit", "1", "-o", "json")
+    assert_equal 1, status.exitstatus, err
+    assert_equal [], JSON.parse(out)["data"]
+    assert_equal false, JSON.parse(out).dig("meta", "complete")
+    @server.memberships.replace([membership(USER, "803"), membership("602", "802"), { "id" => "unsafe", "cardId" => CARD }])
+    @server.users << { "id" => "602", "name" => "Grace", "username" => nil }
+    out, err, status = planka("get", "members", "--card", CARD, "--limit", "1", "-o", "json")
+    assert_equal 1, status.exitstatus, err
+    assert_equal ["602"], JSON.parse(out)["data"].map { |member| member["id"] }
+    assert_equal false, JSON.parse(out).dig("meta", "complete")
+  end
+
   def test_root_group_and_leaf_help_advertise_implemented_member_commands_offline
     [["--help"], ["get", "--help"], ["add", "--help"], ["remove", "--help"],
       ["get", "members", "--help"], ["add", "member", "--help"], ["remove", "members", "--help"]].each do |args|
