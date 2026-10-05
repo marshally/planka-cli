@@ -114,6 +114,9 @@ is no general selector language or filter-based bulk mutation interface.
 ### Create, update, move, and delete resources
 
 ```sh
+planka create project --name "Delivery" --description "Release planning"
+planka update project PROJECT --description-file description.md
+planka update project PROJECT --clear-description
 planka create board --project PROJECT --name "Development"
 planka update board BOARD --name "Delivery"
 planka create list --board BOARD --name "Ready" --type active --position 65536

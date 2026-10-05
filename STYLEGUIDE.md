@@ -331,16 +331,26 @@ create/update commands are not implemented.
 
 ### Basic project creation and updates
 
-Planned project management includes creation, renaming, and description editing,
-in the same resource slice as reads and native deletion. Updates change only
-supplied fields and reject empty updates. Defer ownership transfers, backgrounds,
-visibility, and favorites. Creation uses `create project --name NAME` with optional
-`--type private|shared`, default private when omitted; reject other types. Type
-selection applies only to creation, not updates or implicit ownership transfers.
-Description input/clearing remains
-under specification in
-[projects issue #23](https://github.com/marshally/planka-cli/issues/23); no basic
-project create/update commands are implemented.
+Planned `create project --name NAME` accepts optional `--type private|shared`,
+default private when omitted. Type selection is creation-only; no implicit
+ownership-transfer update. Names are nonempty and obey the verified native length
+limit. Creation may omit description; preserve the native no-description state.
+
+Creation and updates accept mutually exclusive `--description TEXT` or
+`--description-file FILE`, with `--description-file -` reading stdin. Updates also
+accept mutually exclusive `--clear-description`, sending native null; reject clear
+on creation. Nonempty descriptions obey the verified native length limit; reject
+empty input rather than interpreting it as clearing. Read/validate description
+inputs before network requests and do not silently truncate them.
+
+Planned `update project PROJECT` accepts `--name` and the description inputs
+above, changing only supplied fields, preserving omitted description, and rejecting
+empty updates. Defer ownership transfers, backgrounds, visibility, and favorites.
+Preserve native project creation's own manager/owner effects without extra
+client-side manager writes; this does not bring deferred project-manager commands
+into scope. Track the resource slice in
+[projects issue #23](https://github.com/marshally/planka-cli/issues/23); basic
+create/update commands are not implemented.
 
 ### List updates
 

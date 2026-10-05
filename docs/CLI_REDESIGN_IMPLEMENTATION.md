@@ -623,6 +623,16 @@ native deletion. Extra settings/import/subscription surfaces remain deferred;
 create/update are not implemented. Verify native append, permissions, creation
 side effects and per-version/edition support during implementation.
 
+Basic project creation/update is settled in the style guide's
+[project contract](../STYLEGUIDE.md#basic-project-creation-and-updates): default
+private creation and supplied-fields-only name/description editing with mutually
+exclusive inline/file/stdin input and explicit update-only clearing. Track it in
+[issue #23](https://github.com/marshally/planka-cli/issues/23), alongside reads and
+native deletion. Ownership transfers and presentation/preferences remain deferred;
+create/update are not implemented. Verify native permissions, limits, creation
+effects and per-version/edition support during implementation; no extra
+client-side manager writes.
+
 The supported-version floor is settled: target Planka 2.0.0 and higher, with no
 Planka 1.x API adapters. This minimum does not establish compatibility with every
 later release or edition. Record verified versions and verb/resource capabilities
