@@ -24,10 +24,10 @@ module Planka
         ## Find and work a ticket
         1. `planka describe board BOARD -o json`: inspect lists, cards, and tasks.
         2. `planka workflow next --board BOARD -o json`: select an unclaimed,
-           unblocked ticket in ready-for-agent. Add `--label feature:SLUG` for
+           unblocked, unquarantined ticket in ready-for-agent. Add `--label feature:SLUG` for
            ticket order or `--label effort:SLUG` for map/frontier; repeated labels
            AND-match. Without --board, PLANKA_BOARD_ID supplies scope. No available
-           card is a normal result.
+           card is normal.
         3. `planka describe card CARD -o json`: inspect description, criteria,
            blockers, comments, and memberships before acting.
         4. `planka workflow claim-status -o json`: inspect your first open claim

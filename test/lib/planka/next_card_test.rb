@@ -31,6 +31,15 @@ class Planka::NextCardTest < Minitest::Test
     REPORT
   end
 
+  def test_a_quarantined_ticket_is_never_picked_and_waits_as_quarantined
+    add_label("quarantine", card_id("Contract edits"))
+
+    report = next_card("feature:workspaces")
+
+    assert report.start_with?("none:\n"), report
+    assert_includes report.lines.map(&:chomp), "- #{line("Contract edits")}: quarantined"
+  end
+
   def test_an_open_blocker_pr_stacks_on_its_branch
     close(card_id("Contract edits"))
     report = next_card("feature:workspaces",

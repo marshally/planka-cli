@@ -7,47 +7,21 @@ module Planka
       class << self
         def read(client, reference = nil, card_id:, base_url:, board_id: nil, name: nil, limit: nil, operation: nil)
           data = []
-          card, board = card_scope(client, card_id: card_id, board_id: board_id)
-          card_id = card.fetch("item").fetch("id")
+          card, board = Scope.read(client, card_id: card_id, board_id: board_id)
           users = identities(board)
-          user = resolve_user(reference, users, board, card.fetch("item").fetch("boardId")) if reference
-          hydrate_members!(data, card, users, card_id)
+          user = resolve_user(reference, users, board, Scope.board_id(card)) if reference
+          hydrate_members!(data, card, users, Scope.card_id(card))
           return collection(data, name: name, limit: limit) unless reference
 
-          member = data.find { |record| record["id"] == user["id"] }
-          return mutate(client, operation, user, card_id, member) if operation
-          raise ReferenceError.new("User is not assigned to this card", code: "not_found", status: 1) unless member
-          member
+          member = assignment(data, user)
+          return mutate(client, operation, user, Scope.card_id(card), member) if operation
+          assigned!(member)
         rescue *OPERATION_ERRORS => error
           raise if reference || error.is_a?(ReferenceError)
           raise CollectionFailure.new(data: collection(data, name: name, limit: limit).data)
         end
 
         private
-
-        def card_scope(client, card_id:, board_id:)
-          unless Records.id?(card_id)
-            board = client.board(board_id)
-            card_id = resolve_card_name(card_id, board, board_id)
-          end
-          card = client.card(card_id)
-          item = card["item"]
-          unless item.is_a?(Hash) && item["id"] == card_id && Records.id?(item["boardId"])
-            raise InvalidResponse, "Invalid member card"
-          end
-          raise ReferenceError, "Card does not belong to --board" if board_id && board_id != item["boardId"]
-          [card, board || client.board(item["boardId"])]
-        end
-
-        def resolve_card_name(name, board, board_id)
-          cards = board["cards"]
-          unless cards.is_a?(Array) && cards.all? { |record| record.is_a?(Hash) && Records.id?(record["id"]) &&
-              record["boardId"] == board_id && record["name"].is_a?(String) } &&
-              cards.map { |record| record["id"] }.uniq.size == cards.size
-            raise InvalidResponse, "Invalid card name scope"
-          end
-          resolve(cards, name, resource: "card").fetch("id")
-        end
 
         def identities(board)
           users = board["users"]
@@ -66,16 +40,7 @@ module Planka
             raise InvalidResponse, "Invalid board member scope"
           end
           scoped = users.select { |user| members.any? { |member| member["userId"] == user["id"] } }
-          resolve(scoped, reference, resource: "user")
-        end
-
-        def resolve(records, reference, resource:)
-          matches = records.select { |record| Records.id?(reference) ? record["id"] == reference : record["name"] == reference }
-          raise ReferenceError.new("#{resource.capitalize} not found on the specified board", code: "not_found", status: 1) if matches.empty?
-          if matches.size > 1
-            raise ReferenceError, "Ambiguous #{resource} name; candidate IDs: #{matches.map { |record| record['id'] }.join(', ')}"
-          end
-          matches.first
+          Reference.resolve(scoped, reference, resource: "user")
         end
 
         def hydrate_members!(data, card, users, card_id)
@@ -92,6 +57,13 @@ module Planka
             end
             data << member_data(user, card_id, record)
           end
+        end
+
+        def assignment(data, user) = data.find { |record| record["id"] == user["id"] }
+
+        def assigned!(member)
+          raise ReferenceError.new("User is not assigned to this card", code: "not_found", status: 1) unless member
+          member
         end
 
         def validate_membership!(record, card_id:, user_id: nil, membership_id: nil)
@@ -122,18 +94,25 @@ module Planka
           end
 
           begin
-            response = assigned ? client.add_card_member(card_id, user["id"]) : client.remove_card_member(card_id, user["id"])
-            record = response["item"]
+            record = write(client, assigned, card_id, user["id"])["item"]
             validate_membership!(record, card_id: card_id, user_id: user["id"], membership_id: member&.fetch("membershipId"))
             result = assigned ? member_data(user, card_id, record) : known
             MutationResult.new(data: result.merge("assigned" => assigned), changed: true)
           rescue *OPERATION_ERRORS => error
-            uncertain = !Client.unapplied?(error)
-            raise MutationFailure.new(data: known.merge("assigned" => uncertain ? nil : !member.nil?),
-              changed: uncertain ? nil : false, uncertain: uncertain,
-              recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => card_id },
-                { "type" => "user", "id" => user["id"] }] })
+            raise write_failure(error, known, member, card_id, user)
           end
+        end
+
+        def write(client, assigned, card_id, user_id)
+          assigned ? client.add_card_member(card_id, user_id) : client.remove_card_member(card_id, user_id)
+        end
+
+        def write_failure(error, known, member, card_id, user)
+          uncertain = !Client.unapplied?(error)
+          MutationFailure.new(data: known.merge("assigned" => uncertain ? nil : !member.nil?),
+            changed: uncertain ? nil : false, uncertain: uncertain,
+            recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => card_id },
+              { "type" => "user", "id" => user["id"] }] })
         end
       end
     end

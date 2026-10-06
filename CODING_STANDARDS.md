@@ -16,6 +16,17 @@ Parser. Extract a class when it owns a distinct responsibility and hides useful
 implementation behind a small interface. Evaluate the resulting ownership and
 change cost, rather than the number of lines moved.
 
+Keep each method at a single level of abstraction (SLAP). A method that
+coordinates stages names those stages and delegates their detail, as
+`Parser#parse` names `parse_options!`, `resolve_command!`, and
+`validate_flags!`; it does not also unpack response hashes, validate records
+inline, or assemble results between them. When levels mix, extract the
+lower-level work into a private method named for its intent. Nested
+conditionals that raise different failures at different depths are a common
+sign. A method that works entirely at one level, such as a record validator,
+may stay long. Give sibling implementations the same stage structure so they
+remain comparable.
+
 Preserve ordering constraints when simplifying a flow. For example, help skips
 required references but still validates flags and extra arguments. Early returns,
 error precedence, and cleanup behavior are observable parts of the contract.
@@ -85,8 +96,10 @@ the responsibility or dependency involved, explain a plausible change that makes
 its cost visible, and propose the smallest useful correction. Distinguish a
 contract violation from a design judgment. Method length, data attributes,
 ordinary collection chains, and collaborator construction alone are signals to
-investigate, not findings. Consider deletion and simpler ownership before adding
-another layer. Report Standards and Spec findings separately.
+investigate, not findings; a long method becomes a finding when it mixes levels
+of abstraction, and the finding names the levels it mixes. Consider deletion and
+simpler ownership before adding another layer. Report Standards and Spec
+findings separately.
 
 ## Design references
 

@@ -85,7 +85,7 @@ module Planka
       Waiting = Data.define(:cards) do
         def as_json
           { "card" => nil,
-            "waiting" => cards.map { |card| card.ref.merge("claimed" => card.claimed?, "blockedBy" => card.open_blockers.map(&:ref)) } }
+            "waiting" => cards.map { |card| card.ref.merge("claimed" => card.claimed?, "quarantined" => card.quarantined?, "blockedBy" => card.open_blockers.map(&:ref)) } }
         end
 
         def to_s = [ "none:", *cards.map { |card| "- #{card}: #{holds(card)}" } ].join("\n")
@@ -94,7 +94,7 @@ module Planka
 
         def holds(card)
           blocked_by = card.open_blockers.map(&:name)
-          [ ("claimed" if card.claimed?), ("blocked by #{blocked_by.join(", ")}" if blocked_by.any?) ].compact.join("; ")
+          [ ("claimed" if card.claimed?), ("quarantined" if card.quarantined?), ("blocked by #{blocked_by.join(", ")}" if blocked_by.any?) ].compact.join("; ")
         end
       end
 

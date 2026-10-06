@@ -6,9 +6,9 @@
 #   planka next-card <feature-label>     e.g. feature:workspaces
 #   planka next-card <effort-label>      e.g. effort:search
 #
-# With no label it prints the highest-positioned unclaimed, unblocked ticket
+# With no label it prints the highest-positioned unclaimed, unblocked, unquarantined ticket
 # in ready-for-agent (the human orders the list by priority), its spec and
-# the parent branch. A feature label prints the next unclaimed, unblocked ticket in
+# the parent branch. A feature label prints the next unclaimed, unblocked, unquarantined ticket in
 # ready-for-agent, its spec, its two-digit place among the feature's tickets
 # (nn) and the parent branch to stack it on, or "none:" and what holds each
 # waiting ticket. Neither ever picks a spec card. An effort label prints the wayfinder frontier and its map.
