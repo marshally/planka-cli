@@ -1,7 +1,7 @@
 module Planka
   module Cards
     # Completes one native ordinary task, independently of workflow criteria.
-    class TaskCompletion
+    class Tasks
       OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
 
       def self.read(client, reference, card:, completed:, base_url:)
