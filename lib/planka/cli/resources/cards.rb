@@ -21,21 +21,26 @@ module Planka
         def self.prepare_scope(env, instance:, flags:)
           raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --card is required") unless flags[:card]
           card = instance.resolve(flags.fetch(:card).first, resource: "card", collection: "cards", names: true)
-          board = flags[:board]&.first
-          if !Records.id?(card) && !board
-            board = env["PLANKA_BOARD_ID"]
-            if board.nil? || board.empty?
-              raise Failure.new(code: "invalid_input", status: 2, message: "Card names require --board or PLANKA_BOARD_ID")
-            end
-            begin
-              board = instance.resolve(board, resource: "board", collection: "boards")
-            rescue Instance::InvalidReference
-              raise Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a board ID or same-instance URL")
-            end
-          end
-          board = instance.resolve(board, resource: "board", collection: "boards") if board
-          { card_id: card, board_id: board }
+          { card_id: card, board_id: scope_board(env, instance, card, flags[:board]&.first) }
         end
+
+        # An explicit --board always asserts the parent; card names fall back to
+        # PLANKA_BOARD_ID; IDs and URLs need no board.
+        def self.scope_board(env, instance, card, explicit)
+          return instance.resolve(explicit, resource: "board", collection: "boards") if explicit
+          default_board(env, instance) unless Records.id?(card)
+        end
+
+        def self.default_board(env, instance)
+          board = env["PLANKA_BOARD_ID"]
+          if board.nil? || board.empty?
+            raise Failure.new(code: "invalid_input", status: 2, message: "Card names require --board or PLANKA_BOARD_ID")
+          end
+          instance.resolve(board, resource: "board", collection: "boards")
+        rescue Instance::InvalidReference
+          raise Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a board ID or same-instance URL")
+        end
+        private_class_method :scope_board, :default_board
 
         def self.validate_scope_flags(flags)
           return "Conflicting scalar flags" if flags.values.any? { |values| values.uniq.size > 1 }
