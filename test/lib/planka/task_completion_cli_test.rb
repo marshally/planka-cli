@@ -16,4 +16,15 @@ class Planka::TaskCompletionCLITest < Planka::LabelRelationshipCLITest
     assert_equal 1, status.exitstatus
     assert_equal "linked_task", JSON.parse(out).dig("error", "code")
   end
+
+  def test_unknown_and_ambiguous_task_references_use_the_shared_reference_failures
+    @server.task_lists << { "id" => "600", "cardId" => CARD, "name" => "Any tasks", "position" => 1 }
+    2.times { |i| @server.tasks << { "id" => "70#{i}", "taskListId" => "600", "name" => "Verify", "isCompleted" => false, "linkedCardId" => nil, "position" => i } }
+    out, err, status = planka("update", "task", "Missing", "--card", CARD, "--completed", "-o", "json")
+    assert_equal 1, status.exitstatus, err
+    assert_equal({ "code" => "not_found", "message" => "Task not found on the card" }, JSON.parse(out)["error"])
+    out, err, status = planka("update", "task", "Verify", "--card", CARD, "--completed", "-o", "json")
+    assert_equal 2, status.exitstatus, err
+    assert_equal "Ambiguous task name; candidate IDs: 700, 701", JSON.parse(out).dig("error", "message")
+  end
 end

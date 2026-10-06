@@ -12,10 +12,7 @@ module Planka
         unless lists.is_a?(Array) && lists.all? { |list| list.is_a?(Hash) && list['cardId'] == card && list['id'].is_a?(String) } && tasks.is_a?(Array) && tasks.all? { |task| task.is_a?(Hash) && task['id'].is_a?(String) && task['name'].is_a?(String) && [true, false].include?(task['isCompleted']) && lists.any? { |list| list['id'] == task['taskListId'] } }
           raise InvalidResponse, 'Invalid card task records'
         end
-        matches = tasks.select { |task| reference.match?(/\A\d+\z/) ? task['id'] == reference : task['name'] == reference }
-        raise ReferenceError.new('Task not found on card', code: 'not_found', status: 1) if matches.empty?
-        raise ReferenceError, "Ambiguous task name; candidate IDs: #{matches.map { |task| task['id'] }.join(', ')}" if matches.size > 1
-        task = matches.first
+        task = Reference.resolve(tasks, reference, resource: 'task', scope: 'the card')
         raise ReferenceError.new('Linked tasks follow their blocker card; never complete them manually', code: 'linked_task', status: 1) if task['linkedCardId']
         data = task.slice('id', 'name', 'taskListId', 'isCompleted').merge('cardId' => card)
         return MutationResult.new(data: data, changed: false) if task['isCompleted'] == completed
