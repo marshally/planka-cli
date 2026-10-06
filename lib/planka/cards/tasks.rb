@@ -5,11 +5,12 @@ module Planka
       OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
 
       class << self
-        def read(client, reference, card_id:, completed:, base_url:, board_id: nil)
+        def read(client, reference, card_id:, completed:, base_url:, board_id: nil) # rubocop:disable Lint/UnusedMethodArgument -- base_url is part of the shared prepared-reader contract.
           card = Scope.card(client, card_id: card_id, board_id: board_id)
           task = ordinary_task(card, reference)
           data = task.slice("id", "name", "taskListId", "isCompleted").merge("cardId" => Scope.card_id(card))
           return MutationResult.new(data: data, changed: false) if task["isCompleted"] == completed
+
           mutate(client, data, completed)
         end
 
@@ -20,18 +21,23 @@ module Planka
           if task["linkedCardId"]
             raise ReferenceError.new("Linked tasks follow their blocker card; never complete them manually", code: "linked_task", status: 1)
           end
+
           task
         end
 
         def card_tasks(card)
           included = card["included"]
           raise InvalidResponse, "Invalid task card" unless included.is_a?(Hash)
+
           lists, tasks = included.values_at("taskLists", "tasks")
           unless lists.is_a?(Array) && lists.all? { |list| list.is_a?(Hash) && list["cardId"] == Scope.card_id(card) && list["id"].is_a?(String) } &&
-              tasks.is_a?(Array) && tasks.all? { |task| task.is_a?(Hash) && task["id"].is_a?(String) && task["name"].is_a?(String) &&
-                [true, false].include?(task["isCompleted"]) && lists.any? { |list| list["id"] == task["taskListId"] } }
+                 tasks.is_a?(Array) && tasks.all? { |task|
+                                         task.is_a?(Hash) && task["id"].is_a?(String) && task["name"].is_a?(String) &&
+                                         [true, false].include?(task["isCompleted"]) && lists.any? { |list| list["id"] == task["taskListId"] }
+                                       }
             raise InvalidResponse, "Invalid card task records"
           end
+
           tasks
         end
 
@@ -51,8 +57,8 @@ module Planka
         def write_failure(error, data, completed)
           uncertain = !Client.unapplied?(error)
           MutationFailure.new(data: data.merge("isCompleted" => uncertain ? nil : !completed),
-            changed: uncertain ? nil : false, uncertain: uncertain,
-            recovery: { "action" => "readback-task", "resources" => [{ "type" => "card", "id" => data["cardId"] }, { "type" => "task", "id" => data["id"] }] })
+                              changed: uncertain ? nil : false, uncertain: uncertain,
+                              recovery: { "action" => "readback-task", "resources" => [{ "type" => "card", "id" => data["cardId"] }, { "type" => "task", "id" => data["id"] }] })
         end
       end
     end

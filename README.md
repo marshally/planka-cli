@@ -668,6 +668,7 @@ RuboCop and Minitest-extension version bounds in `Gemfile` deliberately. The
 repository continues to ignore `Gemfile.lock`; local dependency resolutions stay
 in the development checkout. Keep any suppression limited to the relevant code
 and explain the contract or trusted input that justifies it.
+
 The tests do not contact a live Planka instance. API endpoints and payload shapes
 are inherited from Lucenta, including its captured Community board fixture;
 compatibility with other Planka releases has not been established.

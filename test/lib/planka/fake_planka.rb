@@ -221,24 +221,24 @@ class FakePlanka
   def route(method, path, body)
     data = body.to_s.empty? ? {} : JSON.parse(body)
     seg = path.split("/").reject(&:empty?)
-    case [ method, seg ]
-    in [ "PATCH", [ "api", "tasks", id ] ]
+    case [method, seg]
+    in ["PATCH", ["api", "tasks", id]]
       task = @state[:tasks].find { |entry| entry["id"] == id }
       task.merge!(data)
       [200, { "item" => task }]
-    in [ "POST", [ "api", "access-tokens" ] ] then [ 200, { "item" => "fake-token" } ]
-    in [ "DELETE", [ "api", "access-tokens", "me" ] ] then [ 200, {} ]
-    in [ "GET", [ "api", "boards", id ] ] then [ 200, board_payload(id) ]
-    in [ "GET", [ "api", "users", "me" ] ] then [ 200, { "item" => { "id" => "user-bot" } } ]
-    in [ "GET", [ "api", "projects" ] ] then [ 200, { "included" => { "boards" => @boards } } ]
-    in [ "GET", [ "api", "cards", id, "comments" ] ] then [ 200, { "items" => comments_for(id) } ]
-    in [ "GET", [ "api", "cards", id ] ] then [ 200, card_payload(id) ]
-    in [ "GET", [ "api", "lists", id, "cards" ] ] then [ 200, { "items" => @state[:cards].select { |c| c["listId"] == id }, "included" => {} } ]
-    in [ "POST", [ "api", "boards", id, "lists" ] ] then [ 200, { "item" => make_list(id, data) } ]
-    in [ "POST", [ "api", "lists", id, "cards" ] ] then [ 200, { "item" => make_card(id, data) } ]
-    in [ "PATCH", [ "api", "cards", id ] ] then [ 200, { "item" => patch_card(id, data) } ]
-    in [ "POST", [ "api", "boards", id, "labels" ] ] then [ 200, { "item" => make_label(id, data) } ]
-    in [ "DELETE", [ "api", "cards", id, "card-labels", label_ref ] ]
+    in ["POST", ["api", "access-tokens"]] then [200, { "item" => "fake-token" }]
+    in ["DELETE", ["api", "access-tokens", "me"]] then [200, {}]
+    in ["GET", ["api", "boards", id]] then [200, board_payload(id)]
+    in ["GET", ["api", "users", "me"]] then [200, { "item" => { "id" => "user-bot" } }]
+    in ["GET", ["api", "projects"]] then [200, { "included" => { "boards" => @boards } }]
+    in ["GET", ["api", "cards", id, "comments"]] then [200, { "items" => comments_for(id) }]
+    in ["GET", ["api", "cards", id]] then [200, card_payload(id)]
+    in ["GET", ["api", "lists", id, "cards"]] then [200, { "items" => @state[:cards].select { |c| c["listId"] == id }, "included" => {} }]
+    in ["POST", ["api", "boards", id, "lists"]] then [200, { "item" => make_list(id, data) }]
+    in ["POST", ["api", "lists", id, "cards"]] then [200, { "item" => make_card(id, data) }]
+    in ["PATCH", ["api", "cards", id]] then [200, { "item" => patch_card(id, data) }]
+    in ["POST", ["api", "boards", id, "labels"]] then [200, { "item" => make_label(id, data) }]
+    in ["DELETE", ["api", "cards", id, "card-labels", label_ref]]
       label_id = label_ref.delete_prefix("labelId:")
       @state[:cardLabels].reject! { |entry| entry["cardId"] == id && entry["labelId"] == label_id }
       [200, { "item" => { "cardId" => id, "labelId" => label_id } }]

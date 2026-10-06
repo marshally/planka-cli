@@ -27,18 +27,19 @@ module Planka
             unless flags[:completed]
               raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --completed or --no-completed is required")
             end
+
             scope.merge(completed: flags.fetch(:completed).first)
           end
 
-          def self.format(data) = "#{data['name']} (#{data['id']}) on card #{data['cardId']}\ncompleted: #{data['isCompleted']}"
+          def self.format(data) = "#{data["name"]} (#{data["id"]}) on card #{data["cardId"]}\ncompleted: #{data["isCompleted"]}"
 
           GROUP_HELP = { "update" => "  task TASK --card CARD  Set one ordinary task's completion\n" }.freeze
 
           COMMANDS = {
             ["update", "task"] => Command.new(aliases: [["update", "tasks"]], names: true, mutation: true,
-              resource: "task", collection: "tasks", flags: { "--card CARD" => :card, "--board BOARD" => :board, "--[no-]completed" => :completed },
-              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare),
-              help: UPDATE_HELP, reader: Planka::Cards::Tasks, formatter: method(:format)),
+                                              resource: "task", collection: "tasks", flags: { "--card CARD" => :card, "--board BOARD" => :board, "--[no-]completed" => :completed },
+                                              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare),
+                                              help: UPDATE_HELP, reader: Planka::Cards::Tasks, formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS
