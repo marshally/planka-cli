@@ -42,6 +42,7 @@ module Planka
         Repeated --label values AND-match exactly before selection, including specs/maps.
         At most one distinct feature: or effort: mode label; other labels narrow the queue.
         Completed linked tasks retain blocker handoff/stacking metadata; unfinished ones prevent selection.
+        Cards labelled quarantine are never selected; waiting reports mark them quarantined.
         gh must be installed for blocker PR lookup, with authentication for private repositories.
         Unknown/failed PR lookups preserve the recorded branch and an unknown state; malformed results fail.
         No handoff or multiple unmerged blockers yield AMBIGUOUS; an empty queue succeeds.

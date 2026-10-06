@@ -8,6 +8,8 @@ module Planka
       READY_LIST = "ready-for-agent"
       IN_PROGRESS_LIST = "in-progress"
       CRITERIA_LIST = "Acceptance criteria"
+      # A quarantined card is never selected, by workflow next or legacy next-card.
+      QUARANTINE_LABEL = "quarantine"
 
       def_delegators :@card, :id, :name, :position, :created_at, :url, :to_s, :open?, :closed?, :labelled?
 
@@ -22,7 +24,8 @@ module Planka
       def unticked_criteria = @card.tasks_in(CRITERIA_LIST).reject { |task| task["isCompleted"] }.map { |task| task["name"] }
       def claimed? = @card.members.any?
       def claimed_by?(user_id) = @card.members.include?(user_id)
-      def takeable? = ready? && !claimed? && !labelled?("quarantine") && open_blockers.empty?
+      def quarantined? = labelled?(QUARANTINE_LABEL)
+      def takeable? = ready? && !claimed? && !quarantined? && open_blockers.empty?
       def ref = { "id" => id, "name" => name, "url" => url }
 
       def claimed_at(user_id)

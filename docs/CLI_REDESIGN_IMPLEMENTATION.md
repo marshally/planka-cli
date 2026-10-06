@@ -351,8 +351,8 @@ before configuration or network access. These are the approved label-mode rules.
 Unknown labels and empty matching queues succeed without a card.
 
 The existing `NextCard.for` selector remains the operation owner. Without a mode
-label, ready-for-agent tickets are selected by position, excluding claimed and
-unfinished-blocked cards. A feature mode uses ticket creation order and numbers
+label, ready-for-agent tickets are selected by position, excluding claimed,
+quarantined (labelled `quarantine`) and unfinished-blocked cards. A feature mode uses ticket creation order and numbers
 the matching feature tickets starting at one. Specs/maps must also match all
 supplied labels; blocker lookup retains the original board even when the blocker
 does not match filters. An effort mode returns wayfinder:map cards and takeable
@@ -364,8 +364,8 @@ that report's existing projection in `data`, with `meta: {}` and `error: null`:
 - Pick: `card`, `specs`, `number` (null for priority), `blockers`, and `parent`.
   Card references have `id`, `name`, `url`. Each blocker has `card`, `branch`,
   `pullRequest`, and `pullRequestState` (nullable).
-- Waiting: `card: null` and `waiting`, whose card references add `claimed` and
-  `blockedBy` card references. Empty waiting succeeds with an empty array.
+- Waiting: `card: null` and `waiting`, whose card references add `claimed`,
+  `quarantined` and `blockedBy` card references. Empty waiting succeeds with an empty array.
 - Effort: `card` (first frontier card or null), `maps`, and `frontier` references.
   Empty frontier succeeds, retaining any matching maps.
 
@@ -398,7 +398,9 @@ data on failure. Sign-out failure preserves successful reports and primary
 failures. Credentials and raw upstream/tool bodies stay out of output. Root,
 workflow, and leaf help work offline. All legacy `next-card` and direct executable
 arguments, human text, bare JSON, exits, and lookup behavior remain unchanged
-indefinitely; help names the replacement without runtime warnings.
+indefinitely; help names the replacement without runtime warnings. One deliberate
+exception: legacy `next-card` shares the quarantine rule, so it never selects a
+card labelled `quarantine` and its waiting JSON adds a `quarantined` boolean.
 
 Shared invocation parsing accepts descriptor-owned flags only on applicable
 commands. Pre-session options resolve board scope and labels. The workflow CLI

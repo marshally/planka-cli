@@ -410,7 +410,8 @@ uses ready-for-agent priority by position; `feature:` uses ticket creation order
 `effort:` returns the wayfinder map and takeable frontier by position. Repeated
 `--label` values AND-match before selection. At most one distinct `feature:` or
 `effort:` label selects a mode; other labels narrow that queue, including specs
-and maps. Unknown labels and empty queues succeed with no card.
+and maps. Cards labelled `quarantine` are never selected, by this command or
+legacy `next-card`. Unknown labels and empty queues succeed with no card.
 
 Human output matches `next-card`. Canonical JSON wraps its pick, waiting, or
 frontier data in `data`, with empty `meta` and null `error`. Completed linked tasks

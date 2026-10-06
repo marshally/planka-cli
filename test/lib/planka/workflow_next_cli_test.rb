@@ -66,6 +66,21 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     cards.each { |card| @server.card_labels << { "cardId" => card, "labelId" => id } }
   end
 
+  def test_quarantined_tickets_are_skipped_by_canonical_and_legacy_selection
+    quarantined = ticket("400000000000000002", "Quarantined", position: 1)
+    label("quarantine", quarantined)
+    out, err, status = planka("workflow", "next", "-o", "json")
+    assert status.success?, err
+    waiting = JSON.parse(out).dig("data", "waiting")
+    assert_equal [[quarantined, true, false]], waiting.map { |card| [card["id"], card["quarantined"], card["claimed"]] }
+    legacy, err, status = planka("next-card", "--output", "json")
+    assert status.success?, err
+    assert_equal JSON.parse(out).fetch("data"), JSON.parse(legacy)
+    human, err, status = planka("next-card")
+    assert status.success?, err
+    assert_equal "none:\n- Quarantined (#{@server.base_url}/cards/#{quarantined}): quarantined\n", human
+  end
+
   def test_repeated_labels_and_match_before_feature_selection_and_unknown_labels_are_empty
     first = ticket("400000000000000002", "First", position: 99)
     second = ticket("400000000000000003", "Second", created_at: "2026-09-02T00:00:00Z")
