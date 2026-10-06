@@ -4,17 +4,10 @@ module Planka
     # name within an asserted board. Returns the card response and its board.
     module Scope
       def self.read(client, card_id:, board_id:)
-        unless Records.id?(card_id)
-          board = client.board(board_id)
-          card_id = resolve_name(card_id, board, board_id)
-        end
-        card = client.card(card_id)
-        item = card["item"]
-        unless item.is_a?(Hash) && item["id"] == card_id && Records.id?(item["boardId"])
-          raise InvalidResponse, "Invalid scoped card"
-        end
-        raise ReferenceError, "Card does not belong to --board" if board_id && board_id != item["boardId"]
-        [card, board || client.board(item["boardId"])]
+        named_board = client.board(board_id) unless Records.id?(card_id)
+        card_id = resolve_name(card_id, named_board, board_id) if named_board
+        card = verified_card(client, card_id, board_id)
+        [card, named_board || client.board(self.board_id(card))]
       end
 
       def self.card_id(card) = card.fetch("item").fetch("id")
@@ -29,7 +22,18 @@ module Planka
         end
         Reference.resolve(cards, name, resource: "card").fetch("id")
       end
-      private_class_method :resolve_name
+
+      # The card exists as requested and, when --board was given, belongs to it.
+      def self.verified_card(client, card_id, board_id)
+        card = client.card(card_id)
+        item = card["item"]
+        unless item.is_a?(Hash) && item["id"] == card_id && Records.id?(item["boardId"])
+          raise InvalidResponse, "Invalid scoped card"
+        end
+        raise ReferenceError, "Card does not belong to --board" if board_id && board_id != item["boardId"]
+        card
+      end
+      private_class_method :resolve_name, :verified_card
     end
   end
 end
