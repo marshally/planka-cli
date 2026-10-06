@@ -88,25 +88,20 @@ module Planka
         def self.named?(reference) = reference && !reference.match?(%r{\A(?:\d+\z|https?://)})
 
         def self.prepare_scope(env, instance:, flags:)
-          scope = flags[:card] ? Cards.prepare_scope(env, instance: instance, flags: flags) : {
-            board_id: flags[:board] && instance.resolve(flags[:board].first, resource: "board", collection: "boards"),
-          }
-          if flags[:task_list]
-            list = instance.resolve(flags[:task_list].first, resource: "task list", collection: ["task-lists", "api/task-lists"], names: true)
-            raise Failure.new(code: "invalid_input", status: 2, message: "Task-list names require --card") if named?(list) && !scope[:card_id]
+          scope = initial_scope(env, instance, flags)
+          return scope unless flags[:task_list]
 
-            scope[:task_list_id] = list
-          end
-          scope
+          list = task_list_reference(instance, flags)
+          validate_task_list_scope!(list, scope)
+          task_list_scope(scope, list)
         end
 
         def self.prepare_get(env, instance:, flags:)
-          filters = {}
-          filters["name"] = flags[:name].first if flags[:name]
-          filters["isCompleted"] = flags[:completed].first == "true" if flags[:completed]
-          assignee = flags[:assignee] && instance.resolve(flags[:assignee].first, resource: "user", collection: "users", names: true)
-          linked = flags[:linked_card] && instance.resolve(flags[:linked_card].first, resource: "card", collection: "cards", names: true)
-          prepare_scope(env, instance: instance, flags: flags).merge(filters: filters, assignee: assignee, linked_card: linked, limit: flags[:limit]&.first&.to_i)
+          filters = collection_filters(flags)
+          assignee = user_reference(instance, flags)
+          linked = linked_card_reference(instance, flags)
+          scope = prepare_scope(env, instance: instance, flags: flags)
+          read_options(scope, filters, assignee, linked, flags)
         end
 
         def self.validate_create(_reference, flags)
@@ -117,12 +112,10 @@ module Planka
         end
 
         def self.prepare_create(env, instance:, flags:)
-          attrs = {}
-          attrs["name"] = flags[:name].first if flags[:name]
-          attrs["isCompleted"] = flags[:completed] ? flags[:completed].first == "true" : false if flags[:name]
-          attrs["position"] = Float(flags[:position].first) if flags[:position]
-          linked = flags[:linked_card] && instance.resolve(flags[:linked_card].first, resource: "card", collection: "cards", names: true)
-          prepare_scope(env, instance: instance, flags: flags).merge(attributes: attrs, linked_card: linked)
+          attrs = create_attributes(flags)
+          linked = linked_card_reference(instance, flags)
+          scope = prepare_scope(env, instance: instance, flags: flags)
+          creation_options(scope, attrs, linked)
         end
 
         def self.validate_target(reference, flags)
@@ -138,14 +131,10 @@ module Planka
         end
 
         def self.prepare_update(env, instance:, flags:)
-          attrs = {}
-          attrs["name"] = flags[:name].first if flags[:name]
-          attrs["position"] = Float(flags[:position].first) if flags[:position]
-          attrs["isCompleted"] = flags[:completed].first != "false" if flags[:completed]
-          attrs["isCompleted"] = false if flags[:incomplete]
-          attrs["assigneeUserId"] = nil if flags[:clear_assignee]
-          user = flags[:assignee] && instance.resolve(flags[:assignee].first, resource: "user", collection: "users", names: true)
-          prepare_scope(env, instance: instance, flags: flags).merge(attributes: attrs, assignee: user)
+          attrs = update_attributes(flags)
+          user = user_reference(instance, flags)
+          scope = prepare_scope(env, instance: instance, flags: flags)
+          update_options(scope, attrs, user)
         end
 
         def self.validate_move(reference, flags)
@@ -155,10 +144,83 @@ module Planka
         end
 
         def self.prepare_move(env, instance:, flags:)
-          scope = prepare_scope(env, instance: instance, flags: flags.reject { |key, _| key == :task_list })
-          destination = instance.resolve(flags[:task_list].first, resource: "task list", collection: ["task-lists", "api/task-lists"], names: true)
-          scope.merge(destination: destination, position: flags[:position] && Float(flags[:position].first))
+          scope = prepare_scope(env, instance: instance, flags: source_flags(flags))
+          destination = task_list_reference(instance, flags)
+          move_options(scope, destination, position_value(flags))
         end
+
+        def self.initial_scope(env, instance, flags)
+          return Cards.prepare_scope(env, instance: instance, flags: flags) if flags[:card]
+
+          board_scope(reference_flag(instance, flags, :board, resource: "board", collection: "boards"))
+        end
+
+        def self.board_scope(board_id) = { board_id: board_id }
+        def self.task_list_scope(scope, list) = scope.merge(task_list_id: list)
+        def self.source_flags(flags) = flags.reject { |key, _| key == :task_list }
+
+        def self.validate_task_list_scope!(list, scope)
+          if named?(list) && !scope[:card_id]
+            raise Failure.new(code: "invalid_input", status: 2, message: "Task-list names require --card")
+          end
+        end
+
+        def self.reference_flag(instance, flags, key, resource:, collection:, names: false)
+          value = flags[key]&.first
+          value && instance.resolve(value, resource: resource, collection: collection, names: names)
+        end
+
+        def self.task_list_reference(instance, flags)
+          reference_flag(instance, flags, :task_list, resource: "task list", collection: ["task-lists", "api/task-lists"], names: true)
+        end
+
+        def self.user_reference(instance, flags)
+          reference_flag(instance, flags, :assignee, resource: "user", collection: "users", names: true)
+        end
+
+        def self.linked_card_reference(instance, flags)
+          reference_flag(instance, flags, :linked_card, resource: "card", collection: "cards", names: true)
+        end
+
+        def self.position_value(flags) = flags[:position] && Float(flags[:position].first)
+
+        def self.collection_filters(flags)
+          filters = {}
+          filters["name"] = flags[:name].first if flags[:name]
+          filters["isCompleted"] = flags[:completed].first == "true" if flags[:completed]
+          filters
+        end
+
+        def self.create_attributes(flags)
+          attrs = {}
+          attrs["name"] = flags[:name].first if flags[:name]
+          attrs["isCompleted"] = flags[:completed] ? flags[:completed].first == "true" : false if flags[:name]
+          attrs["position"] = position_value(flags) if flags[:position]
+          attrs
+        end
+
+        def self.update_attributes(flags)
+          attrs = {}
+          attrs["name"] = flags[:name].first if flags[:name]
+          attrs["position"] = position_value(flags) if flags[:position]
+          attrs["isCompleted"] = flags[:completed].first != "false" if flags[:completed]
+          attrs["isCompleted"] = false if flags[:incomplete]
+          attrs["assigneeUserId"] = nil if flags[:clear_assignee]
+          attrs
+        end
+
+        def self.read_options(scope, filters, assignee, linked, flags)
+          scope.merge(filters: filters, assignee: assignee, linked_card: linked, limit: flags[:limit]&.first&.to_i)
+        end
+
+        def self.creation_options(scope, attributes, linked) = scope.merge(attributes: attributes, linked_card: linked)
+        def self.update_options(scope, attributes, assignee) = scope.merge(attributes: attributes, assignee: assignee)
+        def self.move_options(scope, destination, position) = scope.merge(destination: destination, position: position)
+
+        private_class_method :initial_scope, :board_scope, :task_list_scope, :source_flags, :validate_task_list_scope!,
+                             :reference_flag, :task_list_reference, :user_reference, :linked_card_reference, :position_value,
+                             :collection_filters, :create_attributes, :update_attributes, :read_options,
+                             :creation_options, :update_options, :move_options
 
         def self.format(data)
           records = data.is_a?(Array) ? data : [data]
