@@ -12,6 +12,7 @@ require "optparse"
 
 options = { color: "berry-red" }
 parser = OptionParser.new do |o|
+  o.separator "Canonical replacement: planka create label --board BOARD --name NAME --color COLOR (always creates)"
   o.banner = "usage: planka create-label --name NAME [--board ID] [--color COLOR] [--output human|json]"
   o.on("--name NAME", "label name") { |v| options[:name] = v }
   o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }

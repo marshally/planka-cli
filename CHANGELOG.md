@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+Added native label resource reads, create, supplied-field update, and target
+delete with singular/plural aliases, offline help, complete board snapshots,
+exact filtering before limits, and deterministic position/ID order. Board scope
+is required even for label IDs/URLs. Canonical create always creates; legacy
+create-label still reuses exact names. Updates skip satisfied fields, deletion
+uses native assignment cleanup, and unknown writes require label/board readback
+without blind retries. Result schemas and Community v2.2.1 evidence/limits are
+recorded in README and the implementation handoff. All flat/direct commands
+retain their runtime contracts indefinitely. AGENTS.md records standing approval
+for CLI/local HTTP and installed-gem TDD seams.
+
 Added card-scoped `update task TASK --completed|--no-completed` with a plural
 alias, offline help, and the same card scope, reference failures and write
 outcome classification as card members and labels. TASK is a task ID or exact

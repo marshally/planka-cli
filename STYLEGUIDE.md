@@ -4,7 +4,8 @@ This document defines the target interface for a general Planka resource
 CLI. It is a design contract for staged changes; the current executable supports
 `describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
 `workflow claim-status`, `workflow guide`, `workflow next`, `workflow claim`,
-card-scoped `get members`, `get member`, `add member`, `remove member`, and nested help alongside all flat commands in
+card-scoped `get members`, `get member`, `add member`, `remove member`,
+label `get`, `create`, `update`, `delete`, card-label `add`/`remove`, and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -141,6 +142,27 @@ planka create comment --card CARD --text "Ready for review"
 planka get comments --card CARD
 planka delete comment COMMENT
 ```
+
+### Labels
+
+Implemented label resource commands are `get labels --board BOARD`,
+`get label LABEL --board BOARD`, `create label`, `update label LABEL`,
+`delete label LABEL`, plus card-label `add`/`remove`. Singular/plural spellings
+are aliases. Board scope (`--board` or `PLANKA_BOARD_ID`) is required for resource
+reads/update/delete even for IDs/URLs because the verified native routes have no
+individual label GET. Names resolve exactly in that scope, without cross-board
+fallback. Reads use the full board label snapshot, ordered by position then ID;
+exact `--name` precedes `--limit` and matching completeness reporting.
+
+Create requires name/color and always creates; omitted position appends. Update
+changes supplied name/color/position only; names cannot be cleared and empty
+updates fail. Already-satisfied updates are no-ops. Delete follows native label
+assignment cleanup, retaining cards and issuing no client cascade. The
+[current label contract](README.md#canonical-labels) defines values, human/JSON
+schemas, partial results, and readback recovery; the
+[implementation evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-label-resource-operations)
+records the verified release and limits. Legacy exact-name create reuse and
+flat/direct entry points retain their separate contracts indefinitely.
 
 ### Card members
 

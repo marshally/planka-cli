@@ -76,7 +76,14 @@ module Planka
 
     def create_list(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/lists", attrs, idempotent: false).fetch("item")
 
-    def create_label(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/labels", attrs, idempotent: false).fetch("item")
+    def create_label(board_id, **attrs)
+      response = request(:post, "/api/boards/#{board_id}/labels", attrs, idempotent: false)
+      @validate_responses ? response["item"] : response.fetch("item")
+    end
+
+    def delete_label(id) = request(:delete, "/api/labels/#{id}", idempotent: false)["item"]
+
+    def update_label(id, **attrs) = request(:patch, "/api/labels/#{id}", attrs, idempotent: false)["item"]
 
     def add_card_label(card_id, label_id) = request(:post, "/api/cards/#{card_id}/card-labels", { labelId: label_id }, idempotent: false)
 

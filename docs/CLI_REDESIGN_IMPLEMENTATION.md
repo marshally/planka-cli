@@ -18,8 +18,9 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow claim-status`; the sixth adds
 `planka workflow guide`; the seventh adds
 `planka workflow next`; the eighth adds `planka workflow claim CARD`. All legacy entry
-points are preserved. Other resource operations
-remain planned. README's **Current interface** describes working commands; its
+points are preserved. Label resource reads/create/update/delete and card-label
+add/remove are implemented; other resource operations remain staged as described
+below. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
 
 Read [STYLEGUIDE.md](../STYLEGUIDE.md) for the design contract, including the full
@@ -647,6 +648,54 @@ snapshot collections still become empty arrays; card detail still fails if its
 related board cannot supply the fields required by its index. Credentials remain
 in memory and sign-out failures preserve the primary result. This restructuring
 adds no new commands or endpoints.
+
+## Implemented label resource operations
+
+Issue #16 adds board-scoped label collection/individual reads, creation,
+supplied-field updates, and target deletion alongside existing card-label
+add/remove. [README](../README.md#canonical-labels) owns result schemas and
+recovery instructions; [STYLEGUIDE](../STYLEGUIDE.md#labels) owns the contract.
+`CLI::Resources::Labels` owns help, flag validation, scope preparation, and
+formatting; `Planka::Labels`' resource readers own label operations independently
+of workflows and legacy `Labels#find_or_create` reuse. Core loading stays free of
+CLI/workflow dependencies. Session lifecycle and canonical presentation remain
+shared. `AGENTS.md` records standing approval for CLI/local HTTP and installed-gem
+TDD seams.
+
+Official Community v2.2.1 evidence:
+
+- [Routes](https://github.com/plankanban/planka/blob/v2.2.1/server/config/routes.js)
+  define POST `/api/boards/:boardId/labels`, PATCH/DELETE `/api/labels/:id`,
+  and card-label POST/DELETE. There is no label GET route. CLI `/labels/ID`
+  reference syntax is separate from the native browser URL surface.
+- [Board read](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js)
+  fetches all labels by board ID without pagination, independently of the
+  finite-list card subset. Board visibility requires native project-owner or
+  membership access. The CLI uses this source, not an invented labels endpoint.
+- [Create](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/labels/create.js),
+  [update](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/labels/update.js),
+  [delete](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/labels/delete.js)
+  require board editor membership and return `item`. Native input validation
+  defines name length 128, nonnegative position, and the
+  [Label color enum/model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/Label.js).
+  The CLI accepts named create/update only; native null names remain readable.
+- Native [create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/labels/create-one.js)
+  and [update helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/labels/update-one.js)
+  use [position normalization](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/utils/insert-to-positionables.js).
+  Highest position plus the existing CLI gap 65536 requests append; the CLI
+  reports server-returned positions and delegates neighboring changes to Planka.
+- Native [delete helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/labels/delete-one.js)
+  calls [delete-related](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/labels/delete-related.js)
+  to remove CardLabel relationships, preserving cards and other labels.
+
+Public CLI/local HTTP red-green verification covers each new verb, exact
+filter/order/limit behavior, malformed records and writes, no-ops, pre-request
+rejection, cleanup, uncertain effects without retries, and affected legacy parity.
+Installed-gem checks exercise packaged commands outside the checkout. These
+boundaries are not live acceptance or compatibility across all 2.0.0+ editions.
+No live resource writes are authorized by this issue. Context7 is unavailable;
+locked net-http 0.9.1 source verifies `max_retries=`, while official pinned Planka
+source verifies API behavior. Dependency versions and Bundler are unchanged.
 
 ## Subsequent implementation sequence
 

@@ -10,6 +10,7 @@ require "optparse"
 
 options = {}
 parser = OptionParser.new do |o|
+  o.separator "Canonical replacement: planka get labels --board BOARD"
   o.banner = "usage: planka labels [--board ID] [--output human|json]"
   o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
   Planka::CLI.output_option(o, options)

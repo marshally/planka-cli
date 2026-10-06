@@ -52,6 +52,14 @@ module Planka
         and `planka remove member USER --card CARD`. Add/remove preserve placement
         and skip satisfied assignments; read back unknown outcomes.
 
+        Labels use `planka get labels --board BOARD`, `planka get label LABEL --board BOARD`,
+        `planka create label --board BOARD --name NAME --color COLOR`,
+        `planka update label LABEL --board BOARD --name NAME`, and
+        `planka delete label LABEL --board BOARD`. Board scope or PLANKA_BOARD_ID
+        is required even for label IDs. Create always creates; unknown writes
+        require board/label readback before retrying. Attach/detach existing labels
+        with `planka add label LABEL --card CARD` / `planka remove label LABEL --card CARD`.
+
         Publishing still uses legacy commands. Specs have no
         Acceptance criteria list; tickets have one. Share feature:SLUG labels.
         `planka create-spec` and `planka create-ticket` take --list ID_OR_NAME and

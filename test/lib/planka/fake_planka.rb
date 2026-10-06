@@ -238,6 +238,12 @@ class FakePlanka
     in ["POST", ["api", "lists", id, "cards"]] then [200, { "item" => make_card(id, data) }]
     in ["PATCH", ["api", "cards", id]] then [200, { "item" => patch_card(id, data) }]
     in ["POST", ["api", "boards", id, "labels"]] then [200, { "item" => make_label(id, data) }]
+    in ["DELETE", ["api", "labels", id]]
+      record = fetch(@state[:labels], id)
+      @state[:labels].delete(record)
+      @state[:cardLabels].reject! { |relation| relation["labelId"] == id }
+      [200, { "item" => record }]
+    in ["PATCH", ["api", "labels", id]] then [200, { "item" => fetch(@state[:labels], id).merge!(data) }]
     in ["DELETE", ["api", "cards", id, "card-labels", label_ref]]
       label_id = label_ref.delete_prefix("labelId:")
       @state[:cardLabels].reject! { |entry| entry["cardId"] == id && entry["labelId"] == label_id }
