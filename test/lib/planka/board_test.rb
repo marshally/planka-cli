@@ -60,6 +60,15 @@ class Planka::BoardTest < Minitest::Test
     assert_empty board.card(id).open_blockers
   end
 
+  def test_a_core_card_answers_from_its_own_related_records
+    card = Planka::Board.new(payload, base_url: "https://planka.test/").card(card_id("Contract edits"))
+
+    assert_equal "ready-for-agent", card.list_name
+    assert_includes card.label_names, "feature:workspaces"
+    assert_includes card.task_list_names, "Acceptance criteria"
+    assert_equal "https://planka.test/cards/#{card.id}", card.url
+  end
+
   def test_a_card_renders_as_its_name_and_link
     assert_equal "Transferring ownership (https://planka.home.yountlabs.com/cards/#{card_id("Transferring")})",
       board.card(card_id("Transferring")).to_s

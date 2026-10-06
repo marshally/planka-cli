@@ -1,6 +1,8 @@
 require "json"
 require "net/http"
 require "uri"
+require_relative "position"
+require_relative "records"
 
 module Planka
   # A signed-in session against Planka's REST API as the board's bot user.
@@ -12,7 +14,7 @@ module Planka
     ensure
       begin
         client&.sign_out(suppress_errors: on_cleanup_error.nil?)
-      rescue Error, SystemCallError, SocketError, Timeout::Error, EOFError, IOError, JSON::ParserError, OpenSSL::SSL::SSLError => e
+      rescue Error, JSON::ParserError, *NETWORK_ERRORS => e
         raise unless on_cleanup_error
 
         on_cleanup_error.call(e)
@@ -94,7 +96,7 @@ module Planka
       if @validate_responses
         boards = document["included"].is_a?(Hash) && document["included"]["boards"]
         unless boards.is_a?(Array) && boards.all? { |board|
-          board.is_a?(Hash) && board["id"].is_a?(String) && board["id"].match?(/\A\d+\z/)
+          board.is_a?(Hash) && Records.id?(board["id"])
         }
           raise InvalidResponse, "Invalid accessible board records"
         end
@@ -105,7 +107,7 @@ module Planka
     def add_card_member(card_id, user_id) = request(:post, "/api/cards/#{card_id}/card-memberships", { userId: user_id }, idempotent: false)
     def remove_card_member(card_id, user_id) = request(:delete, "/api/cards/#{card_id}/card-memberships/userId:#{user_id}", idempotent: false)
 
-    def move_card(card_id, list_id, position: 65_535, idempotent: true)
+    def move_card(card_id, list_id, position: Position::MOVE_DEFAULT, idempotent: true)
       response = request(:patch, "/api/cards/#{card_id}", { listId: list_id, position: }, idempotent: idempotent)
       raise InvalidResponse, "Invalid moved card response" if @validate_responses && !response["item"].is_a?(Hash)
 
@@ -137,6 +139,12 @@ module Planka
     # have applied the change. Retrying is safe only when the call is idempotent.
     UNKNOWN = [ ServerError, Errno::ECONNRESET, Net::ReadTimeout, EOFError ].freeze
     TRANSIENT = (UNSENT + UNKNOWN).freeze
+    # Every failure to reach Planka or keep a connection to it.
+    NETWORK_ERRORS = [ SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError ].freeze
+
+    # Whether a failed request certainly left Planka unchanged: Planka rejected
+    # it with an HTTP status, or it never reached Planka.
+    def self.unapplied?(error) = error.is_a?(HTTPError) || UNSENT.any? { |type| error.is_a?(type) }
 
     def request(method, path, body = nil, idempotent: true)
       attempt = 0

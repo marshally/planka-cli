@@ -11,7 +11,7 @@ module Planka
         @commands = catalogs.flat_map { |catalog| catalog.commands.to_a }.to_h
         @groups = catalogs.flat_map { |catalog| catalog.groups.to_a }.to_h
         @aliases = @commands.flat_map { |path, command|
-          command.fetch(:aliases, []).map { |alias_path| [alias_path, path] }
+          command.aliases.map { |alias_path| [alias_path, path] }
         }.to_h
         @root_help = [*catalogs.map(&:root_help), "Legacy commands (deprecated, retained indefinitely):\n",
           "\ncommands: #{legacy_commands.join(', ')}\n\nRun planka <command> --help for command usage and options."].join
@@ -25,7 +25,7 @@ module Planka
       def help_text(args, command)
         return @root_help if args.empty?
         return @groups.fetch(args.first) if args.size == 1
-        command.fetch(:help)
+        command.help
       end
     end
   end

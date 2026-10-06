@@ -53,19 +53,19 @@ module Planka
       end
 
       def validate_flags!
-        allowed = @command ? @command.fetch(:flags, {}).values : []
+        allowed = @command ? @command.flag_keys : []
         invalid!("Unsupported flags; see #{@program} --help") unless (@flag_values.keys - allowed).empty?
-        if @command&.dig(:optional_reference) && @args.size > 2 &&
-            !(@flag_values.keys & @command.fetch(:collection_flags, [])).empty?
+        if @command&.optional_reference? && @args.size > 2 &&
+            !(@flag_values.keys & @command.collection_flags).empty?
           invalid!("Collection filters and limits require an omitted reference")
         end
-        if @command && (message = @command[:validate_flags]&.call(@flag_values))
+        if @command && (message = @command.flag_error(@flag_values))
           invalid!(message)
         end
       end
 
       def argument_count
-        @command && !@command.fetch(:reference, true) ? 2 : 3
+        @command && !@command.reference? ? 2 : 3
       end
 
       def validate_extra_arguments!
@@ -73,22 +73,22 @@ module Planka
       end
 
       def validate_required_arguments!
-        minimum = @command&.dig(:optional_reference) ? argument_count - 1 : argument_count
+        minimum = @command&.optional_reference? ? argument_count - 1 : argument_count
         unless @command && @args.size >= minimum
           invalid!("Expected a command and reference; see #{@program} --help")
         end
       end
 
       def parse_reference!
-        return unless @command.fetch(:reference, true)
-        return if @command[:optional_reference] && @args.size == 2
+        return unless @command.reference?
+        return if @command.optional_reference? && @args.size == 2
 
         @reference = @args.last
-        if @command[:names] && !@reference.strip.empty? && !@reference.match?(%r{\A(?:https?://|/|\.\./)})
+        if @command.names? && !@reference.strip.empty? && !@reference.match?(%r{\A(?:https?://|/|\.\./)})
           return
         end
-        unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.fetch(:collection)}/\d+/?\z})
-          resource = @command[:resource]
+        unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.collection}/\d+/?\z})
+          resource = @command.resource
           invalid!("Expected a numeric #{resource} ID or supported #{resource} URL")
         end
       end
@@ -106,7 +106,7 @@ module Planka
             @seen_output = @output = value
           end
           parser.on("-h", "--help") { @show_help = true }
-          commands.flat_map { |command| command.fetch(:flags, {}).to_a }.uniq.each do |syntax, key|
+          commands.flat_map { |command| command.flags.to_a }.uniq.each do |syntax, key|
             parser.on(syntax) { |value| (@flag_values[key] ||= []) << value }
           end
         end

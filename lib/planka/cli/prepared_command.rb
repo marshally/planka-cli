@@ -6,19 +6,19 @@ module Planka
     class PreparedCommand
       def self.build(invocation, env:)
         command = invocation.command
-        return new(command.fetch(:reader), [], {}) unless command.fetch(:session, true)
+        return new(command.reader, [], {}) unless command.session?
 
         configuration = Configuration.from_env(env)
         instance = configuration.instance
-        arguments = if command.fetch(:reference, true)
-          [invocation.reference && instance.resolve(invocation.reference, resource: command.fetch(:resource),
-            collection: command.fetch(:collection), names: command.fetch(:names, false))]
+        arguments = if command.reference?
+          [invocation.reference && instance.resolve(invocation.reference, resource: command.resource,
+            collection: command.collection, names: command.names?)]
         else
           []
         end
         options = { base_url: instance.base_url }
-        options.merge!(command[:prepare].call(env, instance: instance, flags: invocation.flags)) if command[:prepare]
-        new(command.fetch(:reader), arguments, options, configuration: configuration)
+        options.merge!(command.preparation(env, instance: instance, flags: invocation.flags))
+        new(command.reader, arguments, options, configuration: configuration)
       rescue Instance::InvalidReference => error
         raise Failure.new(code: "invalid_input", status: 2, message: error.message)
       end

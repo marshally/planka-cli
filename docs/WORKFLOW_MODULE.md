@@ -30,7 +30,7 @@ interfaces; this document owns the workflow-specific architecture.
 | `Workflow::Board`, `Workflow::Card` | Interpret core snapshots using agent conventions: ticket/spec classification, ready/in-progress lists, acceptance criteria, feature labels, claims, and blockers. |
 | Workflow operations | Branch naming, pending criteria, queue selection, claiming, claim inspection, blocking links, spec/ticket publishing, handoff interpretation, and completed specs. |
 | `Workflow::Configuration` | Explicitly captures workflow settings from a supplied environment. Branch-prefix validation belongs here, independently of connection settings. |
-| `Workflow::Format` | Workflow human text and legacy result projections, without IO or session ownership. |
+| `Workflow::Format` | Workflow human text, without IO or session ownership. Next-card reports answer their own `as_json` projection. |
 | `Workflow::CLI` | Workflow command definitions, help, formatters, and conversion of workflow configuration failures into canonical CLI failures. |
 | Shared CLI modules | Catalog composition, parsing to immutable invocations, captured connection settings, instance reference resolution, pre-session command preparation, session coordination, canonical presentation and exit handling. |
 
@@ -49,7 +49,9 @@ creation. Legacy `Prime` retains its original instructions separately.
 
 NextSelection returns the existing queue report; the workflow CLI projects it to
 JSON or formats it for people. QueueSnapshot and HandoffComments validate records
-used by canonical selection; PullRequestLookup owns sanitized GitHub tool reads.
+used by canonical selection; PullRequestLookup owns GitHub tool reads, sanitized
+for canonical selection and unchanged for legacy `next-card` through
+`PullRequestLookup::Legacy`. `PullRequest` is a plain value.
 
 Pure selection algorithms accept workflow board/card interpretations and their
 existing external dependencies. Construct a workflow board from a general board
@@ -76,8 +78,8 @@ Claim retains its original behavior and result shape.
 
 `require "planka/workflow/cli"` loads the workflow CLI adapter. The bundled
 executable passes it to `CanonicalCLI.run` through `extensions:`. An extension
-provides `commands`, `groups`, and `root_help`; command definitions select a
-reader, callable formatter, optional JSON projector, applicable flag definitions,
+provides `commands`, `groups`, and `root_help`; each command is a
+`Planka::CLI::Command`, which owns its defaults and selects a reader, callable formatter, optional JSON projector, applicable flag definitions,
 local flag validator, and optional `prepare` callback. Declared aliases belong to
 the catalog rather than shared grammar. Commands
 declaring `mutation: true` return a core `MutationResult`; Output projects its data

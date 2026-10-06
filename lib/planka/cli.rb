@@ -62,8 +62,6 @@ module Planka
 
     def board_id(explicit) = explicit || ENV.fetch("PLANKA_BOARD_ID")
 
-    POSITION_GAP = 65_536
-
     # A list given as a numeric id is used as is; otherwise it is a name resolved
     # within the given board, which rejects an unknown or ambiguous name.
     def resolve_list(client, list, board)
@@ -75,8 +73,7 @@ module Planka
     # A position after every card currently in the list, so new work lands below
     # the existing queue.
     def append_position(client, list_id)
-      cards = Array(client.list_cards(list_id)["items"])
-      (cards.map { |card| card["position"].to_f }.max || 0) + POSITION_GAP
+      Position.after(Array(client.list_cards(list_id)["items"]))
     end
 
     # Parses options, reporting a bad flag on stderr with the command's help

@@ -6,8 +6,6 @@ module Planka
   module CLI
     # Owns canonical presentation and status; it never terminates the process.
     class Output
-      NETWORK_ERRORS = [SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError].freeze
-
       def initialize(stdout:, stderr:)
         @stdout, @stderr = stdout, stderr
       end
@@ -24,15 +22,14 @@ module Planka
           meta["complete"] = data.complete
           data = data.data
         end
-        if command[:mutation]
+        if command.mutation?
           meta["changed"] = data.changed
           data = data.data
         end
         if invocation.output == "json"
-          data = command[:projector].call(data) if command[:projector]
-          @stdout.puts JSON.generate({ "data" => data, "meta" => meta, "error" => nil })
+          @stdout.puts JSON.generate({ "data" => command.project(data), "meta" => meta, "error" => nil })
         else
-          @stdout.puts command.fetch(:formatter).call(data)
+          @stdout.puts command.format(data)
           @stdout.puts "Results truncated; use a larger --limit or omit it." if meta["complete"] == false
         end
         0
@@ -44,8 +41,8 @@ module Planka
         format = invocation&.output || failure.output || "human"
         @stderr.puts "#{program}: #{failure.message}"
         if format == "json"
-          meta = invocation&.command&.dig(:mutation) ? { "changed" => false }.merge(failure.meta) : failure.meta
-          if invocation&.command&.dig(:collection_read) && invocation.reference.nil?
+          meta = invocation&.command&.mutation? ? { "changed" => false }.merge(failure.meta) : failure.meta
+          if invocation&.command&.collection_read? && invocation.reference.nil?
             meta = { "complete" => false }.merge(meta)
           end
           details = { "code" => failure.code, "message" => failure.message }
@@ -56,7 +53,7 @@ module Planka
       end
 
       def cleanup_failure(invocation)
-        result = invocation.command[:mutation] ? "operation result" : "read result"
+        result = invocation.command.mutation? ? "operation result" : "read result"
         @stderr.puts "#{invocation.program}: session cleanup failed; the #{result} is unchanged"
       end
 
@@ -85,7 +82,7 @@ module Planka
           Failure.new(code: code, message: "API request failed (HTTP #{error.status}); verify the resource and access permissions")
         when Planka::Error
           Failure.new(code: "api_error", message: "Could not read complete resource details; verify server availability and API compatibility")
-        when *NETWORK_ERRORS
+        when *Planka::Client::NETWORK_ERRORS
           Failure.new(code: "network_error", message: "Could not reach Planka; check the instance URL and network")
         else
           # Programming mistakes must not masquerade as malformed server data.

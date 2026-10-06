@@ -16,25 +16,19 @@ module Planka
         end
 
         def board_ids = @client.board_ids
-        def me
-          user = @client.me
-          unless user.is_a?(Hash) && user["id"].is_a?(String) && !user["id"].empty?
-            raise InvalidResponse, "Invalid signed-in user"
-          end
-          user
-        end
+        def me = Records.user!(@client.me)
         def comments(id) = @comments.comments(id)
 
         def board(id)
           included = @client.board(id)
           Boards::Snapshot.validate!(included)
           lists = included.fetch("lists")
-          unless lists.all? { |list| id?(list["id"]) && %w[active closed].include?(list["type"]) }
+          unless lists.all? { |list| Records.id?(list["id"]) && %w[active closed].include?(list["type"]) }
             raise InvalidResponse, "Invalid claim-status lists"
           end
           list_ids = lists.map { |list| list["id"] }
           cards = included.fetch("cards")
-          unless cards.all? { |card| id?(card["id"]) && card["name"].is_a?(String) && list_ids.include?(card["listId"]) }
+          unless cards.all? { |card| Records.id?(card["id"]) && card["name"].is_a?(String) && list_ids.include?(card["listId"]) }
             raise InvalidResponse, "Invalid claim-status cards"
           end
           card_ids = cards.map { |card| card["id"] }
@@ -43,21 +37,9 @@ module Planka
             unless card_ids.include?(membership["cardId"]) && membership["userId"].is_a?(String) && !membership["userId"].empty?
               raise InvalidResponse, "Invalid claim-status memberships"
             end
-            timestamp!(membership["createdAt"])
+            raise InvalidResponse, "Invalid claim-status timestamp" unless Records.timestamp?(membership["createdAt"])
           end
           included
-        end
-
-        private
-
-        def id?(value) = value.is_a?(String) && value.match?(/\A\d+\z/)
-
-        def timestamp!(value)
-          raise InvalidResponse, "Invalid claim-status timestamp" unless value.is_a?(String)
-
-          Time.iso8601(value)
-        rescue ArgumentError
-          raise InvalidResponse, "Invalid claim-status timestamp"
         end
       end
     end

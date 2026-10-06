@@ -8,11 +8,7 @@ module Planka
         def self.read(client, id) = new(client, id)
 
         def initialize(client, id)
-          user = client.me
-          unless user.is_a?(Hash) && user["id"].is_a?(String) && !user["id"].empty?
-            raise InvalidResponse, "Invalid signed-in user"
-          end
-          @id, @user_id = id, user.fetch("id")
+          @id, @user_id = id, Records.user!(client.me).fetch("id")
           load(client)
         end
 
@@ -21,7 +17,7 @@ module Planka
 
         def created_membership(response)
           member = response["item"]
-          unless member.is_a?(Hash) && id?(member["id"]) && member["cardId"] == @id && member["userId"] == @user_id
+          unless member.is_a?(Hash) && Records.id?(member["id"]) && member["cardId"] == @id && member["userId"] == @user_id
             raise InvalidResponse, "Invalid created card membership"
           end
           member
@@ -52,7 +48,7 @@ module Planka
         end
 
         def validate_lists!(lists)
-          unless lists.is_a?(Array) && lists.all? { |list| list.is_a?(Hash) && id?(list["id"]) &&
+          unless lists.is_a?(Array) && lists.all? { |list| list.is_a?(Hash) && Records.id?(list["id"]) &&
               list["boardId"] == @card["boardId"] && list["name"].is_a?(String) } &&
               lists.map { |list| list["id"] }.uniq.size == lists.size && lists.any? { |list| list["id"] == @card["listId"] }
             raise InvalidResponse, "Invalid claim scope records"
@@ -60,21 +56,19 @@ module Planka
         end
 
         def validate_memberships!(memberships)
-          unless memberships.is_a?(Array) && memberships.all? { |member| member.is_a?(Hash) && id?(member["cardId"]) &&
-              (member["id"].nil? || id?(member["id"])) && member["userId"].is_a?(String) && !member["userId"].empty? }
+          unless memberships.is_a?(Array) && memberships.all? { |member| member.is_a?(Hash) && Records.id?(member["cardId"]) &&
+              (member["id"].nil? || Records.id?(member["id"])) && member["userId"].is_a?(String) && !member["userId"].empty? }
             raise InvalidResponse, "Invalid claim scope records"
           end
         end
 
         def validate_card!(card)
-          unless card.is_a?(Hash) && card["id"] == @id && id?(card["boardId"]) && id?(card["listId"]) &&
+          unless card.is_a?(Hash) && card["id"] == @id && Records.id?(card["boardId"]) && Records.id?(card["listId"]) &&
               card["name"].is_a?(String) && card["position"].is_a?(Numeric) && card["position"].finite? && card["position"] >= 0
             raise InvalidResponse, "Invalid claim card"
           end
           card
         end
-
-        def id?(value) = value.is_a?(String) && value.match?(/\A\d+\z/)
       end
     end
   end

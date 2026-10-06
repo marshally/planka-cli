@@ -35,8 +35,7 @@ module Planka
         def result = MutationResult.new(data: @data, changed: @changed)
 
         def failure(error)
-          uncertain = !@pending_step.nil? && !error.is_a?(Client::HTTPError) &&
-            !Client::UNSENT.any? { |type| error.is_a?(type) }
+          uncertain = !@pending_step.nil? && !Client.unapplied?(error)
           if uncertain
             @data[@pending_step == :membership ? "memberAdded" : "moved"] = nil
             @data["claimed"] = nil if @pending_step == :membership

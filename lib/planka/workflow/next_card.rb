@@ -65,6 +65,11 @@ module Planka
       end
 
       Pick = Data.define(:card, :spec, :nn, :blockers) do
+        def as_json
+          { "card" => card.ref, "specs" => spec.map(&:ref), "number" => nn,
+            "blockers" => blockers.map(&:as_json), "parent" => Blocker.parent_branch(blockers) }
+        end
+
         def to_s
           [
             "card: #{card}",
@@ -78,6 +83,11 @@ module Planka
       end
 
       Waiting = Data.define(:cards) do
+        def as_json
+          { "card" => nil,
+            "waiting" => cards.map { |card| card.ref.merge("claimed" => card.claimed?, "blockedBy" => card.open_blockers.map(&:ref)) } }
+        end
+
         def to_s = [ "none:", *cards.map { |card| "- #{card}: #{holds(card)}" } ].join("\n")
 
         private
@@ -101,6 +111,8 @@ module Planka
       end
 
       FrontierReport = Data.define(:maps, :frontier) do
+        def as_json = { "card" => frontier.first&.ref, "maps" => maps.map(&:ref), "frontier" => frontier.map(&:ref) }
+
         def to_s
           [
             "card: #{frontier.first || "none"}",

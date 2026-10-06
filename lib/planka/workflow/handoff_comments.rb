@@ -1,5 +1,3 @@
-require "time"
-
 module Planka
   module Workflow
     # Validated comment records for canonical handoff inspection.
@@ -14,16 +12,10 @@ module Planka
           record["text"].is_a?(String) && record["createdAt"].is_a?(String) }
           raise InvalidResponse, "Invalid handoff comments"
         end
-        records.each { |record| timestamp!(record["createdAt"]) }
+        unless records.all? { |record| Records.timestamp?(record["createdAt"]) }
+          raise InvalidResponse, "Invalid handoff comment timestamp"
+        end
         records
-      end
-
-      private
-
-      def timestamp!(value)
-        Time.iso8601(value)
-      rescue ArgumentError
-        raise InvalidResponse, "Invalid handoff comment timestamp"
       end
     end
   end

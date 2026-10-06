@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+Applied a POODR design review to the library. Planka positions, network-error
+classification and response-record checks each have one owner (`Planka::Position`,
+`Planka::Client`, `Planka::Records`). Canonical commands are `CLI::Command`
+values. Next-card reports answer `as_json`. Each `Planka::Card` carries its own
+related records; `Board#label_names`, `#task_list_names`, `#tasks`, `#tasks_in`,
+`#members`, `#memberships`, `#list_type` and `#base_url` are removed in favor of
+the card's methods. `PullRequest` is a plain value; `PullRequest.find` moved to
+`PullRequestLookup::Legacy`, and `Workflow::Format.next_card`, `card_ref` and
+`blocker_ref` are removed. Command behavior, output and legacy contracts are
+unchanged.
+
 Added card-scoped `get members`, `get member USER`, `add member USER`, and
 `remove member USER`, with singular/plural aliases, offline help, scoped exact
 names, minimal identity/assignment results, name filtering, and complete/limited
