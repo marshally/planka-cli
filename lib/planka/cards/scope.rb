@@ -4,11 +4,12 @@ module Planka
     # name within an asserted board. Returns the card response and its board.
     module Scope
       def self.read(client, card_id:, board_id:)
-        named_board = client.board(board_id) unless Records.id?(card_id)
-        card_id = resolve_name(card_id, named_board, board_id) if named_board
-        card = verified_card(client, card_id, board_id)
+        card, named_board = locate(client, card_id, board_id)
         [card, named_board || client.board(self.board_id(card))]
       end
+
+      # The verified card alone, for commands that need nothing from its board.
+      def self.card(client, card_id:, board_id:) = locate(client, card_id, board_id).first
 
       def self.card_id(card) = card.fetch("item").fetch("id")
       def self.board_id(card) = card.fetch("item").fetch("boardId")
@@ -23,6 +24,12 @@ module Planka
         Reference.resolve(cards, name, resource: "card").fetch("id")
       end
 
+      def self.locate(client, card_id, board_id)
+        named_board = client.board(board_id) unless Records.id?(card_id)
+        card_id = resolve_name(card_id, named_board, board_id) if named_board
+        [verified_card(client, card_id, board_id), named_board]
+      end
+
       # The card exists as requested and, when --board was given, belongs to it.
       def self.verified_card(client, card_id, board_id)
         card = client.card(card_id)
@@ -33,7 +40,7 @@ module Planka
         raise ReferenceError, "Card does not belong to --board" if board_id && board_id != item["boardId"]
         card
       end
-      private_class_method :resolve_name, :verified_card
+      private_class_method :locate, :resolve_name, :verified_card
     end
   end
 end

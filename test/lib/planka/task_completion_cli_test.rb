@@ -49,4 +49,20 @@ class Planka::TaskCompletionCLITest < Planka::LabelRelationshipCLITest
     assert_equal false, doc.dig("meta", "changed")
     assert_equal({ "id" => "700", "name" => "Verify", "taskListId" => "600", "isCompleted" => false, "cardId" => CARD }, doc["data"])
   end
+
+  def test_tasks_use_the_shared_card_scope_help_and_output
+    @server.task_lists << { "id" => "600", "cardId" => CARD, "name" => "Any tasks", "position" => 1 }
+    @server.tasks << { "id" => "700", "taskListId" => "600", "name" => "Verify", "isCompleted" => false, "linkedCardId" => nil, "position" => 1 }
+    name = @server.find_card(CARD).fetch("name")
+    out, err, status = planka("update", "task", "Verify", "--card", name, "--board", @server.board_id, "--completed")
+    assert status.success?, err
+    assert_equal "Verify (700) on card #{CARD}\ncompleted: true\n", out
+    out, err, status = planka("update", "task", "Verify", "--card", name, "--completed", "-o", "json")
+    assert_equal 2, status.exitstatus, err
+    assert_equal "Card names require --board or PLANKA_BOARD_ID", JSON.parse(out).dig("error", "message")
+    out, err, status = planka("update", "--help")
+    assert status.success?, err
+    assert_includes out, "usage: planka update <resource> REF --card CARD [flags]"
+    assert_match(/^  task TASK --card CARD  /, out)
+  end
 end

@@ -1,36 +1,48 @@
-require 'planka'
-require 'planka/cli/command'
-require 'planka/cli/failure'
+require "planka"
+require "planka/cli/command"
+
 module Planka
   module CLI
     module Resources
       module Cards
         module Tasks
-          HELP = <<~HELP
-            usage: planka update task TASK --card CARD --completed|--no-completed [-o human|json]
-            TASK is an ID or exact name within the card. Ambiguous names report IDs.
-            CARD is a numeric ID or same-instance card URL. No default board required.
-            Requires connection credentials. Sets only completion; already satisfied is a no-op.
-            Linked tasks are refused; blocker completion belongs to Planka.
-            JSON data: id,name,taskListId,cardId,isCompleted; meta.changed true/false/null.
-            Lost/malformed write response requires readback-task; do not blindly retry.
+          ROOT_HELP = <<~HELP.gsub(/^/, "  ")
+            update task TASK --card CARD --[no-]completed  Set one ordinary task's completion
           HELP
-          def self.prepare(_env, instance:, flags:)
-            raise Failure.new(code: 'invalid_input', status: 2, message: 'Exactly one --card is required') unless flags[:card]
-            raise Failure.new(code: 'invalid_input', status: 2, message: 'Exactly one --completed or --no-completed is required') unless flags[:completed]
-            { card: instance.resolve(flags.fetch(:card).first, resource: 'card', collection: 'cards'), completed: flags.fetch(:completed).first }
+          UPDATE_HELP = <<~HELP
+            usage: planka update task TASK --card CARD [--board BOARD] --completed|--no-completed [-o human|json]
+            Set only completion; an already satisfied task is a no-op. Linked tasks are refused (linked_task).
+            TASK is an ID or exact task name on the card.
+            CARD is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID.
+            Explicit card IDs/URLs ignore the default board; --board asserts the actual parent.
+            Ambiguous names report candidate IDs. BOARD is an ID or same-instance URL.
+            Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+            Success exits 0, local input 2, operational failures 1.
+            JSON uses data/meta/error with id, name, taskListId, cardId, and isCompleted; meta.changed is true/false/null.
+            A lost/malformed write response gives readback-task recovery. No workflow convention is applied.
+          HELP
+
+          def self.prepare(env, instance:, flags:)
+            scope = Cards.prepare_scope(env, instance: instance, flags: flags)
+            unless flags[:completed]
+              raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --completed or --no-completed is required")
+            end
+            scope.merge(completed: flags.fetch(:completed).first)
           end
 
+          def self.format(data) = "#{data['name']} (#{data['id']}) on card #{data['cardId']}\ncompleted: #{data['isCompleted']}"
+
+          GROUP_HELP = { "update" => "  task TASK --card CARD  Set one ordinary task's completion\n" }.freeze
+
           COMMANDS = {
-            ['update', 'task'] => Command.new(names: true, mutation: true, resource: 'task', collection: 'tasks', reader: Planka::Cards::Tasks,
-              flags: { '--card CARD' => :card, '--[no-]completed' => :completed },
-              validate_flags: ->(flags) { 'Exactly one --card and one completion flag required' if (flags[:card] && flags[:card].size != 1) || (flags[:completed] && flags[:completed].size != 1) },
-              prepare: method(:prepare),
-              help: HELP, formatter: ->(data) { "Task #{data['id']}: completed=#{data['isCompleted']}" })
+            ["update", "task"] => Command.new(aliases: [["update", "tasks"]], names: true, mutation: true,
+              resource: "task", collection: "tasks", flags: { "--card CARD" => :card, "--board BOARD" => :board, "--[no-]completed" => :completed },
+              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare),
+              help: UPDATE_HELP, reader: Planka::Cards::Tasks, formatter: method(:format)),
           }.freeze
+
           def self.commands = COMMANDS
-          def self.groups = { 'update' => HELP }
-          def self.root_help = "  update task TASK --card CARD --[no-]completed  Set ordinary task completion\n"
+          def self.root_help = ROOT_HELP
         end
       end
     end

@@ -1,14 +1,13 @@
 module Planka
   module Cards
-    # Completes one native ordinary task, independently of workflow criteria.
+    # Observes a card's tasks, then sets one ordinary task's verified completion.
     class Tasks
       OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
 
-      def self.read(client, reference, card:, completed:, base_url:)
-        response = client.card(card)
-        unless response['item'].is_a?(Hash) && response['item']['id'] == card && response['included'].is_a?(Hash)
-          raise InvalidResponse, 'Invalid task card'
-        end
+      def self.read(client, reference, card_id:, completed:, base_url:, board_id: nil)
+        response = Scope.card(client, card_id: card_id, board_id: board_id)
+        card = Scope.card_id(response)
+        raise InvalidResponse, 'Invalid task card' unless response['included'].is_a?(Hash)
         included = response.fetch('included')
         lists, tasks = included.values_at('taskLists', 'tasks')
         unless lists.is_a?(Array) && lists.all? { |list| list.is_a?(Hash) && list['cardId'] == card && list['id'].is_a?(String) } && tasks.is_a?(Array) && tasks.all? { |task| task.is_a?(Hash) && task['id'].is_a?(String) && task['name'].is_a?(String) && [true, false].include?(task['isCompleted']) && lists.any? { |list| list['id'] == task['taskListId'] } }
