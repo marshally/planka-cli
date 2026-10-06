@@ -14,7 +14,7 @@ class CardTasksCLITest < Minitest::Test
 
   def planka(*args, env: {})
     settings = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com",
-      "PLANKA_AGENT_PASSWORD" => "fixture", "PLANKA_BOARD_ID" => nil }
+                 "PLANKA_AGENT_PASSWORD" => "fixture", "PLANKA_BOARD_ID" => nil }
     Open3.capture3(settings.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
   end
 
@@ -101,7 +101,7 @@ class CardTasksCLITest < Minitest::Test
 
   def test_card_and_completion_flags_are_required_before_any_request
     [[["update", "task", "700", "--completed"], "Exactly one --card is required"],
-      [["update", "task", "700", "--card", CARD], "Exactly one --completed or --no-completed is required"]].each do |args, message|
+     [["update", "task", "700", "--card", CARD], "Exactly one --completed or --no-completed is required"]].each do |args, message|
       out, err, status = planka(*args, "-o", "json")
       assert_equal 2, status.exitstatus, err
       assert_equal({ "code" => "invalid_input", "message" => message }, JSON.parse(out)["error"])
