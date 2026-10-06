@@ -394,8 +394,9 @@ planka workflow claim-status --help
 
 This read-only inspection uses the signed-in user's claims across all accessible
 boards. It reports the first open claimed card without a PR handoff, following
-legacy `loop-lock` rules. It does not acquire a lock, change resources, or query
-GitHub. An empty board scope or no eligible card is a successful `free` result.
+legacy `loop-lock` rules, except that a card labelled `quarantine` never holds
+the claim (legacy `loop-lock` still reports it). It does not acquire a lock,
+change resources, or query GitHub. An empty board scope or no eligible card is a successful `free` result.
 
 The three connection/credential variables are required. There is no positional
 target or `--board` flag; `PLANKA_BOARD_ID` does not restrict this operation.

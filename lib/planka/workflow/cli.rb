@@ -54,6 +54,7 @@ module Planka
         usage: planka workflow claim-status [--output human|json]
         Read-only: inspects the signed-in user's claims across all accessible boards.
         Returns the first open claimed card without a PR handoff, or free.
+        Cards labelled quarantine never hold the claim; legacy loop-lock still reports them.
         This does not acquire a lock and makes no GitHub requests.
         Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
         No target or board setting is required; PLANKA_BOARD_ID does not restrict scope.

@@ -1043,6 +1043,14 @@ class Planka::PublishingCLITest < Minitest::Test
     refute_match(/TypeError|NoMethodError/, err)
   end
 
+  def test_quarantined_claims_are_free_for_claim_status_but_held_for_legacy_loop_lock
+    @server.memberships << { "cardId" => PARENT, "userId" => "user-bot", "createdAt" => "2026-10-01T00:00:00Z" }
+    @server.labels << { "id" => "300000000000000099", "name" => "quarantine", "boardId" => FakePlanka::BOARD_ID }
+    @server.card_labels << { "cardId" => PARENT, "labelId" => "300000000000000099" }
+    assert_equal({ "held" => false, "card" => nil }, ok_json("workflow", "claim-status")["data"])
+    assert_equal true, ok_json("loop-lock")["held"]
+  end
+
   def test_workflow_claim_status_preserves_held_and_latest_handoff_rules
     @server.memberships << { "cardId" => PARENT, "userId" => "user-bot", "createdAt" => "2026-10-01T00:00:00Z" }
     data = ok_json("workflow", "claim-status")["data"]

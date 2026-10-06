@@ -270,7 +270,9 @@ It then reuses `LoopLock` selection: first claimed open card in board/card
 response order whose latest parsed `Branch:` handoff has no `PR:` URL. Comments
 are read only for candidate open cards claimed by this user, until one qualifies.
 A newer branch-only handoff supersedes an older PR handoff under the existing
-rule. Closed cards and claims by other users do not hold this gate. There are
+rule. Closed cards, quarantined cards (labelled `quarantine`) and claims by
+other users do not hold this gate; legacy `loop-lock` keeps its original rule
+and still reports a quarantined claim. There are
 no GitHub requests, resource writes, or lock acquisition.
 
 [ClaimStatus](../lib/planka/workflow/claim_status.rb) supplies validated reads to

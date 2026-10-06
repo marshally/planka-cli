@@ -5,6 +5,8 @@ module Planka
     # other half, an open agent-loop PR, is GitHub's to answer.
     #
     # comments answers #comments(card_id) with Planka's comment records.
+    # exclude_quarantine skips quarantined claims; canonical claim-status sets
+    # it and legacy loop-lock keeps its original rule.
     module LoopLock
       def self.report(client, base_url:, exclude_quarantine: false)
         boards = client.board_ids.map { |id| Board.new(Planka::Board.new(client.board(id), base_url: base_url)) }
