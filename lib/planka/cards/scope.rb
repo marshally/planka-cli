@@ -17,6 +17,9 @@ module Planka
         [card, board || client.board(item["boardId"])]
       end
 
+      def self.card_id(card) = card.fetch("item").fetch("id")
+      def self.board_id(card) = card.fetch("item").fetch("boardId")
+
       def self.resolve_name(name, board, board_id)
         cards = board["cards"]
         unless cards.is_a?(Array) && cards.all? { |record| record.is_a?(Hash) && Records.id?(record["id"]) &&

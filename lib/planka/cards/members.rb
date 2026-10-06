@@ -8,16 +8,14 @@ module Planka
         def read(client, reference = nil, card_id:, base_url:, board_id: nil, name: nil, limit: nil, operation: nil)
           data = []
           card, board = Scope.read(client, card_id: card_id, board_id: board_id)
-          card_id = card.fetch("item").fetch("id")
           users = identities(board)
-          user = resolve_user(reference, users, board, card.fetch("item").fetch("boardId")) if reference
-          hydrate_members!(data, card, users, card_id)
+          user = resolve_user(reference, users, board, Scope.board_id(card)) if reference
+          hydrate_members!(data, card, users, Scope.card_id(card))
           return collection(data, name: name, limit: limit) unless reference
 
-          member = data.find { |record| record["id"] == user["id"] }
-          return mutate(client, operation, user, card_id, member) if operation
-          raise ReferenceError.new("User is not assigned to this card", code: "not_found", status: 1) unless member
-          member
+          member = assignment(data, user)
+          return mutate(client, operation, user, Scope.card_id(card), member) if operation
+          assigned!(member)
         rescue *OPERATION_ERRORS => error
           raise if reference || error.is_a?(ReferenceError)
           raise CollectionFailure.new(data: collection(data, name: name, limit: limit).data)
@@ -59,6 +57,13 @@ module Planka
             end
             data << member_data(user, card_id, record)
           end
+        end
+
+        def assignment(data, user) = data.find { |record| record["id"] == user["id"] }
+
+        def assigned!(member)
+          raise ReferenceError.new("User is not assigned to this card", code: "not_found", status: 1) unless member
+          member
         end
 
         def validate_membership!(record, card_id:, user_id: nil, membership_id: nil)
