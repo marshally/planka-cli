@@ -32,8 +32,7 @@ module Planka
         unless @show_help
           validate_required_arguments!
           parse_reference!
-          message = @command.input_error(@reference, @flag_values)
-          invalid!(message) if message
+          validate_inputs!
         end
         build_invocation
       rescue OptionParser::ParseError
@@ -64,6 +63,11 @@ module Planka
         if @command && (message = @command.flag_error(@flag_values))
           invalid!(message)
         end
+      end
+
+      def validate_inputs!
+        message = @command.input_error(@reference, @flag_values)
+        invalid!(message) if message
       end
 
       def argument_count
