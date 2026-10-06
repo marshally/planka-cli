@@ -44,15 +44,26 @@ module Planka
         end
 
         def mutate(client, card, id, present, data)
-          response = present ? client.add_card_label(card, id) : client.remove_card_label(card, id)
+          confirm_write!(write(client, card, id, present), card, id)
+          MutationResult.new(data: data, changed: true)
+        rescue *OPERATION_ERRORS => error
+          raise write_failure(error, card, present, data)
+        end
+
+        def write(client, card, id, present)
+          present ? client.add_card_label(card, id) : client.remove_card_label(card, id)
+        end
+
+        def confirm_write!(response, card, id)
           item = response["item"]
           unless item.is_a?(Hash) && item["cardId"] == card && item["labelId"] == id
             raise InvalidResponse, "Invalid relationship write response"
           end
-          MutationResult.new(data: data, changed: true)
-        rescue *OPERATION_ERRORS => error
+        end
+
+        def write_failure(error, card, present, data)
           uncertain = !Client.unapplied?(error)
-          raise MutationFailure.new(data: data.merge("present" => uncertain ? nil : !present),
+          MutationFailure.new(data: data.merge("present" => uncertain ? nil : !present),
             changed: uncertain ? nil : false, uncertain: uncertain,
             recovery: { "action" => "readback-card-labels", "resources" => [{ "type" => "card", "id" => card }] })
         end

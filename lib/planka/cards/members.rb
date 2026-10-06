@@ -94,18 +94,25 @@ module Planka
           end
 
           begin
-            response = assigned ? client.add_card_member(card_id, user["id"]) : client.remove_card_member(card_id, user["id"])
-            record = response["item"]
+            record = write(client, assigned, card_id, user["id"])["item"]
             validate_membership!(record, card_id: card_id, user_id: user["id"], membership_id: member&.fetch("membershipId"))
             result = assigned ? member_data(user, card_id, record) : known
             MutationResult.new(data: result.merge("assigned" => assigned), changed: true)
           rescue *OPERATION_ERRORS => error
-            uncertain = !Client.unapplied?(error)
-            raise MutationFailure.new(data: known.merge("assigned" => uncertain ? nil : !member.nil?),
-              changed: uncertain ? nil : false, uncertain: uncertain,
-              recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => card_id },
-                { "type" => "user", "id" => user["id"] }] })
+            raise write_failure(error, known, member, card_id, user)
           end
+        end
+
+        def write(client, assigned, card_id, user_id)
+          assigned ? client.add_card_member(card_id, user_id) : client.remove_card_member(card_id, user_id)
+        end
+
+        def write_failure(error, known, member, card_id, user)
+          uncertain = !Client.unapplied?(error)
+          MutationFailure.new(data: known.merge("assigned" => uncertain ? nil : !member.nil?),
+            changed: uncertain ? nil : false, uncertain: uncertain,
+            recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => card_id },
+              { "type" => "user", "id" => user["id"] }] })
         end
       end
     end
