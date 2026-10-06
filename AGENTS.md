@@ -22,6 +22,20 @@ slice in [the implementation handoff](docs/CLI_REDESIGN_IMPLEMENTATION.md).
 For workflow changes or loading/extraction decisions, read
 [the workflow module guide](docs/WORKFLOW_MODULE.md).
 
+### Approved TDD seams
+
+The user has given standing approval for these seams in this repository:
+
+- CLI subprocesses against local HTTP fixtures, observing public human/JSON
+  output, exit status, HTTP resource effects, session cleanup, and recovery.
+- Installed-gem checks outside the checkout, observing packaged commands and
+  affected legacy flat/direct executable parity.
+
+For TDD within these seams, state the selected seam and behaviors in the work
+plan and proceed; this recorded approval satisfies the TDD skill's requirement
+to confirm seams with the user. Ask for approval only when introducing a seam
+outside this list. Tests exercise public behavior through these boundaries.
+
 ## Dependency versions and documentation
 
 Before using or changing dependency behavior, read `Gemfile.lock` for the exact
