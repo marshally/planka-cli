@@ -31,8 +31,8 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     assert status.success?, err
     assert_empty err
     assert_equal({ "data" => { "card" => nil, "waiting" => [] }, "meta" => {}, "error" => nil }, JSON.parse(out))
-    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/boards/#{BOARD}"],
-                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |method, path, _| [method, path] }
+    assert_equal([["POST", "/api/access-tokens"], ["GET", "/api/boards/#{BOARD}"],
+                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |method, path, _| [method, path] })
   end
 
   def test_priority_pick_preserves_legacy_human_and_json_reports
@@ -73,7 +73,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     out, err, status = planka("workflow", "next", "-o", "json")
     assert status.success?, err
     waiting = JSON.parse(out).dig("data", "waiting")
-    assert_equal [[quarantined, true, false]], waiting.map { |card| [card["id"], card["quarantined"], card["claimed"]] }
+    assert_equal([[quarantined, true, false]], waiting.map { |card| [card["id"], card["quarantined"], card["claimed"]] })
     legacy, err, status = planka("next-card", "--output", "json")
     assert status.success?, err
     assert_equal JSON.parse(out).fetch("data"), JSON.parse(legacy)
@@ -156,7 +156,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
       -> { @server.tasks.first["taskListId"] = "999" },
     ]
     mutations.each_with_index do |mutate, index|
-      restored = Marshal.load(baseline)
+      restored = Marshal.load(baseline) # rubocop:disable Security/MarshalLoad -- baseline is dumped from these in-memory fixtures above.
       collections.zip(restored).each { |collection, original| collection.replace(original) }
       mutate.call
       @server.inject("GET", %r{boards/#{BOARD}$}, { "included" =>
@@ -258,7 +258,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     assert status.success?, err
     assert_equal first, JSON.parse(out).dig("data", "card", "id")
     assert_equal 1, JSON.parse(out).dig("data", "number")
-    assert_equal [FakePlanka::PARENT_CARD], JSON.parse(out).dig("data", "specs").map { |card| card["id"] }
+    assert_equal([FakePlanka::PARENT_CARD], JSON.parse(out).dig("data", "specs").map { |card| card["id"] })
     legacy, err, status = planka("next-card", "feature:search", "--output", "json")
     assert status.success?, err
     assert_equal JSON.parse(legacy), JSON.parse(out)["data"]
@@ -268,17 +268,17 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     assert status.success?, err
     assert_nil JSON.parse(out).dig("data", "card")
     waiting = JSON.parse(out).dig("data", "waiting")
-    assert_equal [first, second], waiting.map { |card| card["id"] }
+    assert_equal([first, second], waiting.map { |card| card["id"] })
     assert_equal true, waiting.first["claimed"]
-    assert_equal [first], waiting.last["blockedBy"].map { |card| card["id"] }
+    assert_equal([first], waiting.last["blockedBy"].map { |card| card["id"] })
     @server.tasks.clear
     label("effort:search", first, second, FakePlanka::PARENT_CARD)
     label("wayfinder:map", FakePlanka::PARENT_CARD)
     out, err, status = planka("workflow", "next", "--label", "effort:search", "-o", "json")
     assert status.success?, err
     assert_equal second, JSON.parse(out).dig("data", "card", "id")
-    assert_equal [second], JSON.parse(out).dig("data", "frontier").map { |card| card["id"] }
-    assert_equal [FakePlanka::PARENT_CARD], JSON.parse(out).dig("data", "maps").map { |card| card["id"] }
+    assert_equal([second], JSON.parse(out).dig("data", "frontier").map { |card| card["id"] })
+    assert_equal([FakePlanka::PARENT_CARD], JSON.parse(out).dig("data", "maps").map { |card| card["id"] })
     legacy, err, status = planka("next-card", "effort:search", "--output", "json")
     assert status.success?, err
     assert_equal JSON.parse(legacy), JSON.parse(out)["data"]

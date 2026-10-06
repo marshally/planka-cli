@@ -193,7 +193,7 @@ class Planka::CLITest < Minitest::Test
       assert_empty err
       assert_includes out, "next"
     end
-    out, err, status = run_cli("workflow", "next", "--help")
+    out, _, _ = run_cli("workflow", "next", "--help")
     %w[PLANKA_BOARD_ID --board --label feature: effort: gh read-only].each { |text| assert_includes out, text }
     assert_includes out, "AND"
     assert_includes out, "does not claim"
@@ -233,7 +233,7 @@ class Planka::CLITest < Minitest::Test
       assert_empty err
       assert_includes out, "guide"
     end
-    out, err, status = run_cli("workflow", "guide", "--help")
+    out, _, _ = run_cli("workflow", "guide", "--help")
     assert_includes out, "no credentials or network"
     assert_includes out, "instructions"
     assert_includes out, "-o, --output"
