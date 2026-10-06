@@ -10,16 +10,13 @@ module Planka
         implemented commands and `planka --version` reports the version.
 
         ## Connection and output
-        API commands require PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, and
-        PLANKA_AGENT_PASSWORD from the caller's environment. Canonical card/board
-        reads require an explicit numeric ID or same-instance URL. Guide, help,
-        and version work offline. Keep credential values out of reports.
+        API commands require caller-supplied PLANKA_BASE_URL, PLANKA_AGENT_EMAIL,
+        and PLANKA_AGENT_PASSWORD. Canonical card/board reads require an ID or
+        same-instance URL. Guide, help, and version work offline. Keep credentials private.
 
-        Add `-o json` for canonical results: one document with data, meta, and
-        error. Inspect the exit status before consuming stdout: 0 is success,
-        2 is invalid input, and 1 is another failure. Diagnostics go to stderr.
-        Commands below marked legacy retain their bare JSON and existing exits;
-        they are deprecated and retained indefinitely, without runtime warnings.
+        Add `-o json` for data/meta/error. Check exit status: 0 success,
+        2 invalid input, 1 other failure. Diagnostics go to stderr. Deprecated legacy commands
+        retain bare JSON and existing exits indefinitely, without runtime warnings.
 
         ## Find and work a ticket
         1. `planka describe board BOARD -o json`: inspect lists, cards, and tasks.
@@ -52,13 +49,9 @@ module Planka
         and `planka remove member USER --card CARD`. Add/remove preserve placement
         and skip satisfied assignments; read back unknown outcomes.
 
-        Labels use `planka get labels --board BOARD`, `planka get label LABEL --board BOARD`,
-        `planka create label --board BOARD --name NAME --color COLOR`,
-        `planka update label LABEL --board BOARD --name NAME`, and
-        `planka delete label LABEL --board BOARD`. Board scope or PLANKA_BOARD_ID
-        is required even for label IDs. Create always creates; unknown writes
-        require board/label readback before retrying. Attach/detach existing labels
-        with `planka add label LABEL --card CARD` / `planka remove label LABEL --card CARD`.
+        Labels support canonical get/create/update/delete with --board BOARD or
+        PLANKA_BOARD_ID, and add/remove with --card CARD. Create always creates.
+        Use `planka create label --help` for fields and recovery.
 
         Publishing still uses legacy commands. Specs have no
         Acceptance criteria list; tickets have one. Share feature:SLUG labels.
