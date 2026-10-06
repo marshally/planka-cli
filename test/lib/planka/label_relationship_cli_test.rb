@@ -15,13 +15,29 @@ class Planka::LabelRelationshipCLITest < Minitest::Test
     env = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com", "PLANKA_AGENT_PASSWORD" => "fixture" }
     Open3.capture3(env, RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
   end
-  def test_an_uncertain_add_is_not_retried
-    @server.inject("POST", %r{card-labels$}, :apply_then_drop)
+  def test_unknown_writes_require_readback_without_retry
+    [ [ "add", "POST", %r{card-labels$} ], [ "remove", "DELETE", %r{card-labels/} ] ].each do |verb, method, path|
+      planka("add", "label", "enhancement", "--card", CARD) if verb == "remove"
+      @server.inject(method, path, :apply_then_drop)
+      out, err, status = planka(verb, "label", "enhancement", "--card", CARD, "-o", "json")
+      doc = JSON.parse(out)
+      assert_equal 1, status.exitstatus, err
+      assert_equal "unknown_outcome", doc.dig("error", "code")
+      assert_nil doc.dig("meta", "changed")
+      assert_nil doc.dig("data", "present")
+      assert_equal "readback-card-labels", doc.dig("error", "recovery", "action")
+      assert_equal 1, @server.counts(method, path)
+    end
+  end
+
+  def test_a_rejected_write_reports_the_unchanged_relationship
+    @server.inject("POST", %r{card-labels$}, 403)
     out, err, status = planka("add", "label", "enhancement", "--card", CARD, "-o", "json")
+    doc = JSON.parse(out)
     assert_equal 1, status.exitstatus, err
-    assert_equal "unknown_outcome", JSON.parse(out).dig("error", "code")
-    assert_nil JSON.parse(out).dig("meta", "changed")
-    assert_equal 1, @server.counts("POST", %r{card-labels$})
+    assert_equal "authorization_error", doc.dig("error", "code")
+    assert_equal false, doc.dig("meta", "changed")
+    assert_equal({ "cardId" => CARD, "labelId" => FakePlanka::LABEL_ENHANCEMENT, "present" => false }, doc["data"])
   end
 
   def test_an_unknown_label_is_a_not_found_reference

@@ -2,6 +2,8 @@ module Planka
   module Cards
     # One association; the label resolves among the card's own board labels.
     class Labels
+      OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
+
       def self.read(client, label, card:, present:, base_url:)
         response = client.card(card)
         item, included = response.values_at("item", "included")
@@ -26,8 +28,10 @@ module Planka
           raise InvalidResponse, "Invalid relationship write response"
         end
         MutationResult.new(data: data, changed: true)
-      rescue Client::UnknownOutcome, InvalidResponse
-        raise MutationFailure.new(data: data, changed: nil, uncertain: true,
+      rescue *OPERATION_ERRORS => error
+        uncertain = !Client.unapplied?(error)
+        raise MutationFailure.new(data: data.merge("present" => uncertain ? nil : !present),
+          changed: uncertain ? nil : false, uncertain: uncertain,
           recovery: { "action" => "readback-card-labels", "resources" => [{ "type" => "card", "id" => card }] })
       end
 
