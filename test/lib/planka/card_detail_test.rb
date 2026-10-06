@@ -9,8 +9,8 @@ class Planka::CardDetailTest < Minitest::Test
       {
         "item" => { "id" => "c1", "name" => "Card", "description" => "Body", "type" => "project", "boardId" => "B", "listId" => "L1", "position" => 65_536 },
         "included" => {
-          "cardLabels" => [ { "cardId" => "c1", "labelId" => "lab" } ],
-          "cardMemberships" => [ { "cardId" => "c1", "userId" => "u1" } ],
+          "cardLabels" => [{ "cardId" => "c1", "labelId" => "lab" }],
+          "cardMemberships" => [{ "cardId" => "c1", "userId" => "u1" }],
           "taskLists" => [
             { "id" => "tl2", "cardId" => "c1", "name" => "Blocked by", "position" => 131_072 },
             { "id" => "tl1", "cardId" => "c1", "name" => "Acceptance criteria", "position" => 65_536 },
@@ -25,13 +25,13 @@ class Planka::CardDetailTest < Minitest::Test
 
     def board(_id)
       {
-        "lists" => [ { "id" => "L1", "name" => "ready-for-agent", "type" => "active" } ],
-        "labels" => [ { "id" => "lab", "name" => "enhancement" } ],
-        "cards" => [], "cardLabels" => [], "taskLists" => [], "tasks" => [], "cardMemberships" => [],
+        "lists" => [{ "id" => "L1", "name" => "ready-for-agent", "type" => "active" }],
+        "labels" => [{ "id" => "lab", "name" => "enhancement" }],
+        "cards" => [], "cardLabels" => [], "taskLists" => [], "tasks" => [], "cardMemberships" => []
       }
     end
 
-    def comments(_id) = [ { "id" => "cm", "text" => "hello", "userId" => "u2", "createdAt" => "2026-01-01T00:00:00.000Z" } ]
+    def comments(_id) = [{ "id" => "cm", "text" => "hello", "userId" => "u2", "createdAt" => "2026-01-01T00:00:00.000Z" }]
   end
 
   def detail = Planka::Cards::Detail.new(FakeClient.new, base_url: "https://planka.test///").for("c1")
@@ -47,21 +47,21 @@ class Planka::CardDetailTest < Minitest::Test
   def test_resolves_label_names_and_members
     doc = detail
 
-    assert_equal [ { "id" => "lab", "name" => "enhancement" } ], doc["labels"]
-    assert_equal [ "u1" ], doc["members"]
+    assert_equal [{ "id" => "lab", "name" => "enhancement" }], doc["labels"]
+    assert_equal ["u1"], doc["members"]
   end
 
   def test_orders_task_lists_by_position_with_their_tasks
     lists = detail["taskLists"]
 
-    assert_equal [ "Acceptance criteria", "Blocked by" ], lists.map { |l| l["name"] }
-    assert_equal [ "a criterion" ], lists.first["tasks"].map { |t| t["name"] }
+    assert_equal ["Acceptance criteria", "Blocked by"], lists.map { |l| l["name"] }
+    assert_equal ["a criterion"], lists.first["tasks"].map { |t| t["name"] }
   end
 
   def test_reports_linked_blockers_and_comments
     doc = detail
 
-    assert_equal [ { "cardId" => "blk", "taskId" => "b1", "completed" => true } ], doc["blockers"]
-    assert_equal [ "hello" ], doc["comments"].map { |c| c["text"] }
+    assert_equal [{ "cardId" => "blk", "taskId" => "b1", "completed" => true }], doc["blockers"]
+    assert_equal ["hello"], doc["comments"].map { |c| c["text"] }
   end
 end

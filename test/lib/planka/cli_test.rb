@@ -10,14 +10,14 @@ class Planka::CLITest < Minitest::Test
 
   ROOT = File.expand_path("../../..", __dir__)
   COMMANDS = %w[prime link next-card branch-name claim comment unticked spec-sweep loop-lock
-    snapshot show create-list create-spec create-ticket update-card move-card labels
-    create-label apply-label create-task-list rename-task-list].freeze
+                snapshot show create-list create-spec create-ticket update-card move-card labels
+                create-label apply-label create-task-list rename-task-list].freeze
 
   def run_cli(*args, env: {}, executable: "planka")
     Open3.capture3({ "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil,
-      "PLANKA_AGENT_PASSWORD" => nil, "PLANKA_BOARD_ID" => nil,
-      "PLANKA_BRANCH_PREFIX" => nil }.merge(env),
-      RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args, chdir: Dir.tmpdir)
+                     "PLANKA_AGENT_PASSWORD" => nil, "PLANKA_BOARD_ID" => nil,
+                     "PLANKA_BRANCH_PREFIX" => nil }.merge(env),
+                   RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args, chdir: Dir.tmpdir)
   end
 
   def test_nested_help_lists_only_implemented_canonical_commands
@@ -35,7 +35,7 @@ class Planka::CLITest < Minitest::Test
   end
 
   def test_board_description_help_is_available_without_credentials
-    [ ["--help"], ["describe", "--help"], ["describe", "board", "--help"] ].each do |args|
+    [["--help"], ["describe", "--help"], ["describe", "board", "--help"]].each do |args|
       out, err, status = run_cli(*args)
       assert status.success?, err
       assert_empty err
@@ -177,8 +177,6 @@ class Planka::CLITest < Minitest::Test
     assert_equal out, short_out
   end
 
-
-
   def test_leaf_help_lists_scope_flags_only_for_commands_that_accept_them
     [["describe", "board"], ["describe", "card"], ["workflow", "guide"], ["workflow", "pending-criteria"]].each do |args|
       out, err, status = run_cli(*args, "--help")
@@ -254,9 +252,10 @@ class Planka::CLITest < Minitest::Test
     assert_empty err
     ["http://127.0.0.1:#{server.addr[1]}", "invalid-private-url"].each do |base|
       out, err, status = run_cli("workflow", "guide", env: {
-        "PLANKA_BASE_URL" => base, "PLANKA_AGENT_EMAIL" => "private-guide@example.invalid",
-        "PLANKA_AGENT_PASSWORD" => "private-guide-password", "PLANKA_BOARD_ID" => "private-board",
-        "PLANKA_BRANCH_PREFIX" => "x" * 60 })
+                                   "PLANKA_BASE_URL" => base, "PLANKA_AGENT_EMAIL" => "private-guide@example.invalid",
+                                   "PLANKA_AGENT_PASSWORD" => "private-guide-password", "PLANKA_BOARD_ID" => "private-board",
+                                   "PLANKA_BRANCH_PREFIX" => "x" * 60
+                                 })
       assert status.success?, err
       assert_empty err
       assert_equal expected, out
@@ -271,7 +270,7 @@ class Planka::CLITest < Minitest::Test
     human, err, status = run_cli("workflow", "guide")
     assert status.success?, err
     [["-o", "json", "workflow", "guide"], ["workflow", "-o", "json", "guide"],
-      ["workflow", "guide", "--output=json"], ["workflow", "guide", "-ojson"]].each do |args|
+     ["workflow", "guide", "--output=json"], ["workflow", "guide", "-ojson"]].each do |args|
       out, err, status = run_cli(*args)
       assert status.success?, err
       assert_empty err
@@ -284,7 +283,7 @@ class Planka::CLITest < Minitest::Test
 
   def test_workflow_guide_rejects_targets_and_unsupported_flags_with_canonical_errors
     [["extra"], ["extra", "--help"], ["--board", "123"], ["--limit", "1"],
-      ["--unknown"], ["--output", "yaml"], ["--output", "human"]].each do |suffix|
+     ["--unknown"], ["--output", "yaml"], ["--output", "human"]].each do |suffix|
       out, err, status = run_cli("-o", "json", "workflow", "guide", *suffix)
       assert_equal 2, status.exitstatus, err
       document = JSON.parse(out)
@@ -338,11 +337,11 @@ class Planka::CLITest < Minitest::Test
     expected, err, status = run_cli("prime", "--output", "json")
     assert status.success?, err
     out, err, status = run_cli("--output", "json", executable: "planka-prime", env: {
-      "PLANKA_BASE_URL" => "http://127.0.0.1:1",
-      "PLANKA_AGENT_EMAIL" => "private-agent@example.invalid",
-      "PLANKA_AGENT_PASSWORD" => "private-prime-test-password",
-      "PLANKA_BOARD_ID" => "private-board-id",
-    })
+                                 "PLANKA_BASE_URL" => "http://127.0.0.1:1",
+                                 "PLANKA_AGENT_EMAIL" => "private-agent@example.invalid",
+                                 "PLANKA_AGENT_PASSWORD" => "private-prime-test-password",
+                                 "PLANKA_BOARD_ID" => "private-board-id",
+                               })
     assert status.success?, err
     assert_empty err
     assert_equal expected, out
@@ -380,8 +379,8 @@ class Planka::CLITest < Minitest::Test
 
   def test_card_urls_use_the_board_instance_and_strip_trailing_slashes
     custom = Planka::Board.new(payload, base_url: "https://other.example/planka///")
-    assert_equal "https://other.example/planka/cards/#{card_id('Contract edits')}",
-      custom.card(card_id("Contract edits")).url
+    assert_equal "https://other.example/planka/cards/#{card_id("Contract edits")}",
+                 custom.card(card_id("Contract edits")).url
   end
 
   def test_branch_prefix_is_optional_and_configurable
@@ -399,7 +398,7 @@ class Planka::CLITest < Minitest::Test
     requests = []
     add_label("effort:extract", card_id("Contract edits"))
     worker = Thread.new do
-      responses = [ { "item" => "test-token" }, { "included" => payload }, {} ]
+      responses = [{ "item" => "test-token" }, { "included" => payload }, {}]
       responses.each do |response|
         socket = server.accept
         line = socket.gets
@@ -417,14 +416,15 @@ class Planka::CLITest < Minitest::Test
     end
     # An effort query needs no GitHub or per-card comment calls.
     out, err, status = run_cli("next-card", "effort:extract", env: {
-      "PLANKA_BASE_URL" => base, "PLANKA_BOARD_ID" => "custom-board",
-      "PLANKA_AGENT_EMAIL" => "bot@example.com", "PLANKA_AGENT_PASSWORD" => "test-password" })
+                                 "PLANKA_BASE_URL" => base, "PLANKA_BOARD_ID" => "custom-board",
+                                 "PLANKA_AGENT_EMAIL" => "bot@example.com", "PLANKA_AGENT_PASSWORD" => "test-password"
+                               })
     assert worker.join(5), "HTTP worker did not finish"
     worker.value
     assert status.success?, err
-    assert_includes out, "#{base}/cards/#{card_id('Contract edits')}"
-    assert_equal [ ["POST", "/api/access-tokens"], ["GET", "/api/boards/custom-board"],
-      ["DELETE", "/api/access-tokens/me"] ], requests.map(&:first)
+    assert_includes out, "#{base}/cards/#{card_id("Contract edits")}"
+    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/boards/custom-board"],
+                  ["DELETE", "/api/access-tokens/me"]], requests.map(&:first)
     assert_equal "Bearer test-token", requests[1][1]
     assert_equal "bot@example.com", JSON.parse(requests[0][2]).fetch("emailOrUsername")
   ensure

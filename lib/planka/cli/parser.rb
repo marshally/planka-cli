@@ -49,14 +49,14 @@ module Planka
         unless @args.empty? || (@catalog.groups.key?(@args.first) && (@args.size == 1 || @command))
           invalid!("unknown command; see planka --help")
         end
-        @program = "planka #{path.join(' ')}" if @command
+        @program = "planka #{path.join(" ")}" if @command
       end
 
       def validate_flags!
         allowed = @command ? @command.flag_keys : []
         invalid!("Unsupported flags; see #{@program} --help") unless (@flag_values.keys - allowed).empty?
         if @command&.optional_reference? && @args.size > 2 &&
-            !(@flag_values.keys & @command.collection_flags).empty?
+           !(@flag_values.keys & @command.collection_flags).empty?
           invalid!("Collection filters and limits require an omitted reference")
         end
         if @command && (message = @command.flag_error(@flag_values))
@@ -87,6 +87,7 @@ module Planka
         if @command.names? && !@reference.strip.empty? && !@reference.match?(%r{\A(?:https?://|/|\.\./)})
           return
         end
+
         unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.collection}/\d+/?\z})
           resource = @command.resource
           invalid!("Expected a numeric #{resource} ID or supported #{resource} URL")
@@ -96,7 +97,7 @@ module Planka
       def build_invocation
         help_text = "#{@catalog.help_text(@args, @command)}\n#{parser_for([@command].compact).help}" if @show_help
         Invocation.new(program: @program, output: @output, command: @command,
-          reference: @reference, flags: @flag_values, help_text: help_text)
+                       reference: @reference, flags: @flag_values, help_text: help_text)
       end
 
       def parser_for(commands)

@@ -20,6 +20,7 @@ module Planka
         # or exact name within --board BOARD or PLANKA_BOARD_ID.
         def self.prepare_scope(env, instance:, flags:)
           raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --card is required") unless flags[:card]
+
           card = instance.resolve(flags.fetch(:card).first, resource: "card", collection: "cards", names: true)
           { card_id: card, board_id: scope_board(env, instance, card, flags[:board]&.first) }
         end
@@ -28,6 +29,7 @@ module Planka
         # PLANKA_BOARD_ID; IDs and URLs need no board.
         def self.scope_board(env, instance, card, explicit)
           return instance.resolve(explicit, resource: "board", collection: "boards") if explicit
+
           default_board(env, instance) unless Records.id?(card)
         end
 
@@ -36,6 +38,7 @@ module Planka
           if board.nil? || board.empty?
             raise Failure.new(code: "invalid_input", status: 2, message: "Card names require --board or PLANKA_BOARD_ID")
           end
+
           instance.resolve(board, resource: "board", collection: "boards")
         rescue Instance::InvalidReference
           raise Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a board ID or same-instance URL")
@@ -55,12 +58,12 @@ module Planka
             "Labels: #{Array(detail["labels"]).map { |label| label["name"] }.join(", ").then { |names| names.empty? ? "none" : names }}",
           ]
           description = detail["description"]
-          lines.concat([ "", "Description:", description ]) if description && !description.empty?
+          lines.concat(["", "Description:", description]) if description && !description.empty?
           members = Array(detail["members"])
-          lines.concat([ "", "Members:", *members.map { |member| "- #{member}" } ]) unless members.empty?
+          lines.concat(["", "Members:", *members.map { |member| "- #{member}" }]) unless members.empty?
           task_lists = Array(detail["taskLists"])
           unless task_lists.empty?
-            lines.concat([ "", "Tasks:" ])
+            lines.concat(["", "Tasks:"])
             task_lists.each do |list|
               lines << "#{list["name"]}:"
               lines.concat(Array(list["tasks"]).map { |task| "  [#{task["isCompleted"] ? "x" : " "}] #{task["name"]}" })
@@ -68,11 +71,11 @@ module Planka
           end
           blockers = Array(detail["blockers"])
           unless blockers.empty?
-            lines.concat([ "", "Blockers:", *blockers.map { |blocker| "- #{blocker["cardId"]} (#{blocker["completed"] ? "closed" : "open"})" } ])
+            lines.concat(["", "Blockers:", *blockers.map { |blocker| "- #{blocker["cardId"]} (#{blocker["completed"] ? "closed" : "open"})" }])
           end
           comments = Array(detail["comments"])
           unless comments.empty?
-            lines.concat([ "", "Comments:", *comments.map { |comment| "- #{comment["text"]}" } ])
+            lines.concat(["", "Comments:", *comments.map { |comment| "- #{comment["text"]}" }])
           end
           lines.join("\n")
         end

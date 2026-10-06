@@ -15,9 +15,10 @@ module Planka
 
         json = JSON.parse(out)
         unless json.is_a?(Hash) && %w[OPEN CLOSED MERGED].include?(json["state"]) &&
-            json["headRefName"].is_a?(String) && !json["headRefName"].empty?
+               json["headRefName"].is_a?(String) && !json["headRefName"].empty?
           raise InvalidResponse, "Invalid GitHub pull request records"
         end
+
         PullRequest.new(state: json.fetch("state"), head: json.fetch("headRefName"))
       rescue JSON::ParserError, KeyError
         raise InvalidResponse, "Invalid GitHub pull request response"

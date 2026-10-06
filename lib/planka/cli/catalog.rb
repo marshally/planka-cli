@@ -14,7 +14,7 @@ module Planka
           command.aliases.map { |alias_path| [alias_path, path] }
         }.to_h
         @root_help = [*catalogs.map(&:root_help), "Legacy commands (deprecated, retained indefinitely):\n",
-          "\ncommands: #{legacy_commands.join(', ')}\n\nRun planka <command> --help for command usage and options."].join
+                      "\ncommands: #{legacy_commands.join(", ")}\n\nRun planka <command> --help for command usage and options."].join
       end
 
       def resolve(path)
@@ -25,6 +25,7 @@ module Planka
       def help_text(args, command)
         return @root_help if args.empty?
         return @groups.fetch(args.first) if args.size == 1
+
         command.help
       end
     end

@@ -3,17 +3,17 @@ require_relative "planka_test_helper"
 class Planka::SnapshotTest < Minitest::Test
   def included
     {
-      "lists" => [ { "id" => "L1", "name" => "ready-for-agent", "type" => "active" } ],
+      "lists" => [{ "id" => "L1", "name" => "ready-for-agent", "type" => "active" }],
       "cards" => [
         { "id" => "c2", "listId" => "L1", "position" => 131_072, "description" => "second" },
         { "id" => "c1", "listId" => "L1", "position" => 65_536, "description" => "first" },
         { "id" => "c3", "listId" => "L2", "position" => 196_608, "description" => "other list" },
       ],
-      "labels" => [ { "id" => "lab", "name" => "enhancement" } ],
-      "cardLabels" => [ { "cardId" => "c1", "labelId" => "lab" } ],
-      "taskLists" => [ { "id" => "tl", "cardId" => "c1", "name" => "Acceptance criteria" } ],
-      "tasks" => [ { "id" => "t", "taskListId" => "tl", "linkedCardId" => nil, "isCompleted" => false } ],
-      "cardMemberships" => [ { "cardId" => "c1", "userId" => "u" } ],
+      "labels" => [{ "id" => "lab", "name" => "enhancement" }],
+      "cardLabels" => [{ "cardId" => "c1", "labelId" => "lab" }],
+      "taskLists" => [{ "id" => "tl", "cardId" => "c1", "name" => "Acceptance criteria" }],
+      "tasks" => [{ "id" => "t", "taskListId" => "tl", "linkedCardId" => nil, "isCompleted" => false }],
+      "cardMemberships" => [{ "cardId" => "c1", "userId" => "u" }],
     }
   end
 
@@ -25,7 +25,7 @@ class Planka::SnapshotTest < Minitest::Test
     assert_equal Planka::Boards::Snapshot::RECORD_TYPES.sort, doc.keys.sort
     assert_equal "enhancement", doc["labels"].first["name"]
     assert_equal false, doc["tasks"].first["isCompleted"]
-    assert_equal [ "cardId", "userId" ], doc["cardMemberships"].first.keys
+    assert_equal ["cardId", "userId"], doc["cardMemberships"].first.keys
   end
 
   def test_cards_are_ordered_by_position_and_gain_a_url

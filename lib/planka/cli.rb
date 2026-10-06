@@ -21,7 +21,7 @@ module Planka
 
     def resource_result(action, kind, record)
       name = record["name"] || record["id"]
-      details = [ record["url"], ("ID: #{record["id"]}" if record["id"] && name != record["id"]) ].compact
+      details = [record["url"], ("ID: #{record["id"]}" if record["id"] && name != record["id"])].compact
       "#{action} #{kind}: #{name}#{details.empty? ? "" : " (#{details.join(", ")})"}"
     end
 
@@ -96,7 +96,7 @@ module Planka
     rescue Planka::Client::UnknownOutcome => e
       reconcile = "read the board back before retrying; the change may already have applied"
       emit({ "completed" => false, "error" => e.message, "reconcile" => reconcile },
-        output:, human: "Outcome unknown: #{e.message}\n#{reconcile}")
+           output:, human: "Outcome unknown: #{e.message}\n#{reconcile}")
       warn "#{program}: #{e.message}"
       exit 1
     rescue Planka::Error, KeyError, Errno::ENOENT, JSON::ParserError, SystemCallError => e

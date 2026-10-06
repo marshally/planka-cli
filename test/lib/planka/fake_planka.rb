@@ -34,7 +34,7 @@ class FakePlanka
     @thread = Thread.new { serve }
   end
 
-  def base_url = "#{@tls_failure_after ? 'https' : 'http'}://127.0.0.1:#{@server.addr[1]}"
+  def base_url = "#{@tls_failure_after ? "https" : "http"}://127.0.0.1:#{@server.addr[1]}"
   def trusted_certificate = @trusted_context.cert.to_pem
   def board_id = BOARD_ID
 
@@ -103,15 +103,15 @@ class FakePlanka
         list(LIST_PROGRESS, "in-progress", "active"),
         list(LIST_DONE, "done", "closed"),
       ],
-      labels: [ label(LABEL_ENHANCEMENT, "enhancement", "berry-red") ],
-      cards: [ card(PARENT_CARD, "Spec: Work-next refinement", LIST_READY, "Original description.") ],
+      labels: [label(LABEL_ENHANCEMENT, "enhancement", "berry-red")],
+      cards: [card(PARENT_CARD, "Spec: Work-next refinement", LIST_READY, "Original description.")],
       cardLabels: [],
       taskLists: [],
       tasks: [],
       cardMemberships: [],
       users: [],
       boardMemberships: [],
-      comments: [ { "id" => "500000000000000001", "cardId" => PARENT_CARD, "text" => "Parent context note.", "userId" => "user-human", "createdAt" => "2026-09-01T00:00:00.000Z" } ],
+      comments: [{ "id" => "500000000000000001", "cardId" => PARENT_CARD, "text" => "Parent context note.", "userId" => "user-human", "createdAt" => "2026-09-01T00:00:00.000Z" }],
     }
   end
 
@@ -156,7 +156,7 @@ class FakePlanka
   end
 
   def dispatch(socket, method, path, body)
-    @requests << [ method, path, body ]
+    @requests << [method, path, body]
     case (fault = take_fault(method, path))
     when Hash then return write(socket, 200, fault)
     when Integer then return write(socket, fault, { "message" => "private upstream body" })
@@ -242,20 +242,20 @@ class FakePlanka
       label_id = label_ref.delete_prefix("labelId:")
       @state[:cardLabels].reject! { |entry| entry["cardId"] == id && entry["labelId"] == label_id }
       [200, { "item" => { "cardId" => id, "labelId" => label_id } }]
-    in [ "POST", [ "api", "cards", id, "card-labels" ] ] then [ 200, { "item" => make_card_label(id, data) } ]
-    in [ "POST", [ "api", "cards", id, "card-memberships" ] ] then [ 200, { "item" => make_membership(id, data) } ]
-    in [ "DELETE", [ "api", "cards", id, "card-memberships", user ] ]
-      record = memberships.find { |member| member["cardId"] == id && "userId:#{member['userId']}" == user }
+    in ["POST", ["api", "cards", id, "card-labels"]] then [200, { "item" => make_card_label(id, data) }]
+    in ["POST", ["api", "cards", id, "card-memberships"]] then [200, { "item" => make_membership(id, data) }]
+    in ["DELETE", ["api", "cards", id, "card-memberships", user]]
+      record = memberships.find { |member| member["cardId"] == id && "userId:#{member["userId"]}" == user }
       memberships.delete(record)
       [200, { "item" => record }]
-    in [ "POST", [ "api", "cards", id, "comments" ] ] then [ 200, { "item" => make_comment(id, data) } ]
-    in [ "POST", [ "api", "cards", id, "task-lists" ] ] then [ 200, { "item" => make_task_list(id, data) } ]
-    in [ "PATCH", [ "api", "task-lists", id ] ] then [ 200, { "item" => patch_task_list(id, data) } ]
-    in [ "POST", [ "api", "task-lists", id, "tasks" ] ] then [ 200, { "item" => make_task(id, data) } ]
-    else [ 404, { "message" => "no route for #{method} #{path}" } ]
+    in ["POST", ["api", "cards", id, "comments"]] then [200, { "item" => make_comment(id, data) }]
+    in ["POST", ["api", "cards", id, "task-lists"]] then [200, { "item" => make_task_list(id, data) }]
+    in ["PATCH", ["api", "task-lists", id]] then [200, { "item" => patch_task_list(id, data) }]
+    in ["POST", ["api", "task-lists", id, "tasks"]] then [200, { "item" => make_task(id, data) }]
+    else [404, { "message" => "no route for #{method} #{path}" }]
     end
   rescue StandardError => e
-    [ 500, { "message" => e.message } ]
+    [500, { "message" => e.message }]
   end
 
   def board_payload(id)
@@ -270,7 +270,7 @@ class FakePlanka
       "taskLists" => task_lists, "tasks" => @state[:tasks].select { |task| task_list_ids.include?(task["taskListId"]) },
       "cardMemberships" => @state[:cardMemberships].select { |record| card_ids.include?(record["cardId"]) },
       "users" => users,
-      "boardMemberships" => board_memberships.select { |record| record["boardId"] == id },
+      "boardMemberships" => board_memberships.select { |record| record["boardId"] == id }
     }
     { "item" => { "id" => id, "name" => "Board" }, "included" => included }
   end

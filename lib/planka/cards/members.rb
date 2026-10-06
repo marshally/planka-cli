@@ -15,9 +15,11 @@ module Planka
 
           member = assignment(data, user)
           return mutate(client, operation, user, Scope.card_id(card), member) if operation
+
           assigned!(member)
         rescue *OPERATION_ERRORS => error
           raise if reference || error.is_a?(ReferenceError)
+
           raise CollectionFailure.new(data: collection(data, name: name, limit: limit).data)
         end
 
@@ -25,20 +27,26 @@ module Planka
 
         def identities(board)
           users = board["users"]
-          unless users.is_a?(Array) && users.all? { |user| user.is_a?(Hash) && Records.id?(user["id"]) &&
-              user["name"].is_a?(String) && (user["username"].nil? || user["username"].is_a?(String)) } &&
-              users.map { |user| user["id"] }.uniq.size == users.size
+          unless users.is_a?(Array) && users.all? { |user|
+            user.is_a?(Hash) && Records.id?(user["id"]) &&
+            user["name"].is_a?(String) && (user["username"].nil? || user["username"].is_a?(String))
+          } &&
+                 users.map { |user| user["id"] }.uniq.size == users.size
             raise InvalidResponse, "Invalid member identities"
           end
+
           users
         end
 
         def resolve_user(reference, users, board, board_id)
           members = board["boardMemberships"]
-          unless members.is_a?(Array) && members.all? { |member| member.is_a?(Hash) &&
-              member["boardId"] == board_id && Records.id?(member["userId"]) }
+          unless members.is_a?(Array) && members.all? { |member|
+            member.is_a?(Hash) &&
+            member["boardId"] == board_id && Records.id?(member["userId"])
+          }
             raise InvalidResponse, "Invalid board member scope"
           end
+
           scoped = users.select { |user| members.any? { |member| member["userId"] == user["id"] } }
           Reference.resolve(scoped, reference, resource: "user")
         end
@@ -46,8 +54,10 @@ module Planka
         def hydrate_members!(data, card, users, card_id)
           included = card["included"]
           raise InvalidResponse, "Invalid card relations" unless included.is_a?(Hash)
+
           records = included["cardMemberships"]
           raise InvalidResponse, "Invalid membership collection" unless records.is_a?(Array)
+
           records.each do |record|
             validate_membership!(record, card_id: card_id)
             user = users.find { |identity| identity["id"] == record["userId"] }
@@ -55,6 +65,7 @@ module Planka
             if data.any? { |member| member["id"] == user["id"] || member["membershipId"] == record["id"] }
               raise InvalidResponse, "Duplicate membership"
             end
+
             data << member_data(user, card_id, record)
           end
         end
@@ -63,21 +74,22 @@ module Planka
 
         def assigned!(member)
           raise ReferenceError.new("User is not assigned to this card", code: "not_found", status: 1) unless member
+
           member
         end
 
         def validate_membership!(record, card_id:, user_id: nil, membership_id: nil)
           unless record.is_a?(Hash) && Records.id?(record["id"]) && record["cardId"] == card_id && Records.id?(record["userId"]) &&
-              (!user_id || record["userId"] == user_id) && (!membership_id || record["id"] == membership_id) &&
-              %w[createdAt updatedAt].all? { |key| record[key].nil? || record[key].is_a?(String) }
+                 (!user_id || record["userId"] == user_id) && (!membership_id || record["id"] == membership_id) &&
+                 %w[createdAt updatedAt].all? { |key| record[key].nil? || record[key].is_a?(String) }
             raise InvalidResponse, "Invalid membership"
           end
         end
 
         def member_data(user, card_id, membership = nil)
           user.slice("id", "name").merge("username" => user["username"], "cardId" => card_id,
-            "membershipId" => membership&.fetch("id"), "createdAt" => membership&.[]("createdAt"),
-            "updatedAt" => membership&.[]("updatedAt"))
+                                         "membershipId" => membership&.fetch("id"), "createdAt" => membership&.[]("createdAt"),
+                                         "updatedAt" => membership&.[]("updatedAt"))
         end
 
         def collection(data, name:, limit:)
@@ -110,9 +122,9 @@ module Planka
         def write_failure(error, known, member, card_id, user)
           uncertain = !Client.unapplied?(error)
           MutationFailure.new(data: known.merge("assigned" => uncertain ? nil : !member.nil?),
-            changed: uncertain ? nil : false, uncertain: uncertain,
-            recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => card_id },
-              { "type" => "user", "id" => user["id"] }] })
+                              changed: uncertain ? nil : false, uncertain: uncertain,
+                              recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => card_id },
+                                                                                             { "type" => "user", "id" => user["id"] }] })
         end
       end
     end

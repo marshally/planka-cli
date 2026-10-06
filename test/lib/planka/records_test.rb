@@ -18,7 +18,7 @@ class Planka::RecordsTest < Minitest::Test
     user = { "id" => "7" }
 
     assert_same user, Planka::Records.user!(user)
-    [ nil, {}, { "id" => "" }, { "id" => 7 } ].each do |invalid|
+    [nil, {}, { "id" => "" }, { "id" => 7 }].each do |invalid|
       error = assert_raises(Planka::InvalidResponse) { Planka::Records.user!(invalid) }
       assert_equal "Invalid signed-in user", error.message
     end

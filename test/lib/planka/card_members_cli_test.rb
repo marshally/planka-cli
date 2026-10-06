@@ -20,7 +20,7 @@ class CardMembersCLITest < Minitest::Test
 
   def planka(*args, env: {}, executable: "planka")
     settings = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com",
-      "PLANKA_AGENT_PASSWORD" => "fake-password", "PLANKA_BOARD_ID" => nil }
+                 "PLANKA_AGENT_PASSWORD" => "fake-password", "PLANKA_BOARD_ID" => nil }
     Open3.capture3(settings.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args, chdir: Dir.tmpdir)
   end
 
@@ -86,7 +86,7 @@ class CardMembersCLITest < Minitest::Test
     assert_equal true, doc.dig("data", "assigned")
     assert_equal USER, doc.dig("data", "id")
     assert_equal [["POST", "/api/cards/#{CARD}/card-memberships", { "userId" => USER }]],
-      resource_writes.map { |method, path, body| [method, path, JSON.parse(body)] }
+                 resource_writes.map { |method, path, body| [method, path, JSON.parse(body)] }
     out, err, status = planka("add", "member", USER, "--card", CARD, "-o", "json")
     assert status.success?, err
     assert_equal false, JSON.parse(out).dig("meta", "changed")
@@ -144,7 +144,7 @@ class CardMembersCLITest < Minitest::Test
   def test_card_name_uses_known_board_scope_and_explicit_mismatches_fail_without_writes
     @server.memberships << membership
     out, err, status = planka("get", "member", "Ada", "--card", "Spec: Work-next refinement",
-      "--board", @server.board_id, "-o", "json")
+                              "--board", @server.board_id, "-o", "json")
     assert status.success?, err
     assert_equal expected_member, JSON.parse(out)["data"]
     out, err, status = planka("add", "member", USER, "--card", CARD, "--board", "999", "-o", "json")
@@ -187,7 +187,7 @@ class CardMembersCLITest < Minitest::Test
 
   def test_root_group_and_leaf_help_advertise_implemented_member_commands_offline
     [["--help"], ["get", "--help"], ["add", "--help"], ["remove", "--help"],
-      ["get", "members", "--help"], ["add", "member", "--help"], ["remove", "members", "--help"]].each do |args|
+     ["get", "members", "--help"], ["add", "member", "--help"], ["remove", "members", "--help"]].each do |args|
       out, err, status = planka(*args, env: { "PLANKA_AGENT_PASSWORD" => nil })
       assert status.success?, err
       assert_includes out, "member"
@@ -199,16 +199,16 @@ class CardMembersCLITest < Minitest::Test
 
   def test_invalid_inputs_and_configuration_fail_before_authentication
     [["get", "members", "--card", CARD, "--name", ""],
-      ["get", "members", "--card", CARD, "--limit", "0"],
-      ["get", "members", "--card", CARD, "--limit", "1.5"],
-      ["get", "member", USER, "--card", CARD, "--limit", "1"],
-      ["get", "members", "--card", CARD, "--name", "Ada", "--name", "Grace"],
-      ["get", "members", "--card", CARD, "--member", USER],
-      ["add", "member", USER], ["remove", "member", "--card", CARD],
-      ["add", "member", USER, "--card", CARD, "--card", "999"],
-      ["add", "member", "https://other.example/users/#{USER}", "--card", CARD],
-      ["get", "members", "--card", "https://other.example/cards/#{CARD}"],
-      ["add", "member", "Ada", "--card", "Spec: Work-next refinement"]].each do |args|
+     ["get", "members", "--card", CARD, "--limit", "0"],
+     ["get", "members", "--card", CARD, "--limit", "1.5"],
+     ["get", "member", USER, "--card", CARD, "--limit", "1"],
+     ["get", "members", "--card", CARD, "--name", "Ada", "--name", "Grace"],
+     ["get", "members", "--card", CARD, "--member", USER],
+     ["add", "member", USER], ["remove", "member", "--card", CARD],
+     ["add", "member", USER, "--card", CARD, "--card", "999"],
+     ["add", "member", "https://other.example/users/#{USER}", "--card", CARD],
+     ["get", "members", "--card", "https://other.example/cards/#{CARD}"],
+     ["add", "member", "Ada", "--card", "Spec: Work-next refinement"]].each do |args|
       out, err, status = planka(*args, "-o", "json")
       assert_equal 2, status.exitstatus, out + err
       assert_equal "invalid_input", JSON.parse(out).dig("error", "code")
@@ -264,8 +264,8 @@ class CardMembersCLITest < Minitest::Test
 
   def test_api_failures_keep_categories_and_collection_completeness
     [["POST", %r{access-tokens$}, 401, "authentication_error"],
-      ["GET", %r{/cards/#{CARD}$}, 404, "not_found"],
-      ["GET", %r{boards/.+$}, 403, "authorization_error"]].each do |method, path, code, category|
+     ["GET", %r{/cards/#{CARD}$}, 404, "not_found"],
+     ["GET", %r{boards/.+$}, 403, "authorization_error"]].each do |method, path, code, category|
       @server.inject(method, path, code)
       out, err, status = planka("get", "members", "--card", CARD, "-o", "json")
       assert_equal 1, status.exitstatus, err

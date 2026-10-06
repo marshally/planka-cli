@@ -11,12 +11,14 @@ class Planka::LabelRelationshipCLITest < Minitest::Test
   CARD = FakePlanka::PARENT_CARD
   def setup = @server = FakePlanka.new
   def teardown = @server.stop
+
   def planka(*args)
     env = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com", "PLANKA_AGENT_PASSWORD" => "fixture" }
     Open3.capture3(env, RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
   end
+
   def test_unknown_writes_require_readback_without_retry
-    [ [ "add", "POST", %r{card-labels$} ], [ "remove", "DELETE", %r{card-labels/} ] ].each do |verb, method, path|
+    [["add", "POST", %r{card-labels$}], ["remove", "DELETE", %r{card-labels/}]].each do |verb, method, path|
       planka("add", "label", "enhancement", "--card", CARD) if verb == "remove"
       @server.inject(method, path, :apply_then_drop)
       out, err, status = planka(verb, "label", "enhancement", "--card", CARD, "-o", "json")
@@ -113,7 +115,7 @@ class Planka::LabelRelationshipCLITest < Minitest::Test
   def test_leaf_help_needs_no_credentials_or_network
     [["add", "label", "--help"], ["remove", "labels", "--help"]].each do |args|
       out, err, status = Open3.capture3({ "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil, "PLANKA_AGENT_PASSWORD" => nil },
-        RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
+                                        RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
       assert status.success?, err
       assert_includes out, "usage: planka #{args.first} label LABEL --card CARD [--board BOARD] [-o human|json]"
     end

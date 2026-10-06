@@ -10,6 +10,7 @@ module Planka
       unless Records.id?(board_id)
         raise InvalidResponse, "Invalid card board reference"
       end
+
       included = client.board(board_id)
       Boards::Snapshot.validate!(included)
       included
@@ -18,8 +19,8 @@ module Planka
     def initialize(included, base_url: ENV.fetch("PLANKA_BASE_URL"))
       @base_url = base_url.sub(%r{/+\z}, "")
       @included = included
-      @lists = included.fetch("lists").to_h { |list| [ list["id"], list ] }
-      @labels = included.fetch("labels").to_h { |label| [ label["id"], label["name"] ] }
+      @lists = included.fetch("lists").to_h { |list| [list["id"], list] }
+      @labels = included.fetch("labels").to_h { |label| [label["id"], label["name"]] }
       @cards = build_cards(included)
     end
 
@@ -61,10 +62,10 @@ module Planka
       included.fetch("cards").to_h do |attrs|
         id = attrs["id"]
         card = Card.new(attrs, url: "#{@base_url}/cards/#{id}", list: @lists[attrs["listId"]],
-          label_names: labels.fetch(id, []).filter_map { |cl| @labels[cl["labelId"]] },
-          task_lists: task_lists.fetch(id, []).map { |task_list| Card::TaskList.new(name: task_list["name"], tasks: tasks.fetch(task_list["id"], [])) },
-          memberships: memberships.fetch(id, []))
-        [ id, card ]
+                               label_names: labels.fetch(id, []).filter_map { |cl| @labels[cl["labelId"]] },
+                               task_lists: task_lists.fetch(id, []).map { |task_list| Card::TaskList.new(name: task_list["name"], tasks: tasks.fetch(task_list["id"], [])) },
+                               memberships: memberships.fetch(id, []))
+        [id, card]
       end
     end
   end

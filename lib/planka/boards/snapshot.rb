@@ -18,6 +18,7 @@ module Planka
         }
           raise InvalidResponse, "Invalid board snapshot collections"
         end
+
         Array(included["cards"]).each do |card|
           position = card["position"]
           unless position.nil? || position.is_a?(Numeric) || position.is_a?(String)
@@ -33,7 +34,7 @@ module Planka
       end
 
       def to_h
-        RECORD_TYPES.to_h { |type| [ type, records(type) ] }.merge("cards" => cards)
+        RECORD_TYPES.to_h { |type| [type, records(type)] }.merge("cards" => cards)
       end
 
       # Cards in one list, in position order, each carrying its url.
@@ -41,7 +42,7 @@ module Planka
 
       def cards
         records("cards").sort_by { |card| card["position"].to_f }
-          .map { |card| card.merge("url" => "#{@base_url}/cards/#{card["id"]}") }
+                        .map { |card| card.merge("url" => "#{@base_url}/cards/#{card["id"]}") }
       end
 
       private

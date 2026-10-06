@@ -21,6 +21,7 @@ module Planka
 
         def cards_labelled(name)
           return [] unless @board.cards.any? { |card| card.labelled?(name) }
+
           matching(@board.cards_labelled(name))
         end
 

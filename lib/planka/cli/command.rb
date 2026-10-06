@@ -3,14 +3,14 @@ module Planka
     # One canonical command definition. Optional behavior defaults live here, so
     # parsing, preparation and output ask the command instead of re-applying them.
     Command = Data.define(:help, :reader, :formatter, :resource, :collection, :aliases, :flags,
-      :reference, :optional_reference, :names, :session, :mutation, :collection_read, :collection_flags,
-      :prepare, :validate_flags, :projector) do
+                          :reference, :optional_reference, :names, :session, :mutation, :collection_read, :collection_flags,
+                          :prepare, :validate_flags, :projector) do
       def initialize(aliases: [], flags: {}, reference: true, optional_reference: false, names: false,
-          session: true, mutation: false, collection_read: false, collection_flags: [],
-          resource: nil, collection: nil, prepare: nil, validate_flags: nil, projector: nil, **required)
+                     session: true, mutation: false, collection_read: false, collection_flags: [],
+                     resource: nil, collection: nil, prepare: nil, validate_flags: nil, projector: nil, **required)
         super(aliases: aliases.map { |path| path.dup.freeze }.freeze, flags: flags.dup.freeze,
-          collection_flags: collection_flags.dup.freeze, reference:, optional_reference:, names:, session:,
-          mutation:, collection_read:, resource:, collection:, prepare:, validate_flags:, projector:, **required)
+              collection_flags: collection_flags.dup.freeze, reference:, optional_reference:, names:, session:,
+              mutation:, collection_read:, resource:, collection:, prepare:, validate_flags:, projector:, **required)
       end
 
       def reference? = reference

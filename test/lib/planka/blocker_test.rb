@@ -45,7 +45,7 @@ class Planka::BlockerTest < Minitest::Test
 
   def test_describes_itself_for_the_report
     assert_equal "- 5 (https://planka.example/cards/1): branch plan-3/05, PR https://github.com/x/y/pull/5 (open)",
-      blocker("5", branch: "plan-3/05", state: "OPEN").to_s
+                 blocker("5", branch: "plan-3/05", state: "OPEN").to_s
     assert_equal "- 5 (https://planka.example/cards/1): no Branch: comment", blocker("5").to_s
   end
 end

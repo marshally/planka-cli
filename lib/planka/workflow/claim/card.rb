@@ -26,6 +26,7 @@ module Planka
 
         def ensure_membership(scope)
           return if scope.claimed?
+
           @progress.add_member do
             scope.created_membership(@client.add_card_member(@id, scope.user_id))
           end
@@ -33,6 +34,7 @@ module Planka
 
         def ensure_in_progress(scope)
           return if scope.in_progress?
+
           @progress.move do
             scope.moved_card(@client.move_card(@id, scope.in_progress_list_id, position: Position::MOVE_DEFAULT, idempotent: false))
           end

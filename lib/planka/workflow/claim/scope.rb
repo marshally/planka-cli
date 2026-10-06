@@ -20,6 +20,7 @@ module Planka
           unless member.is_a?(Hash) && Records.id?(member["id"]) && member["cardId"] == @id && member["userId"] == @user_id
             raise InvalidResponse, "Invalid created card membership"
           end
+
           member
         end
 
@@ -28,6 +29,7 @@ module Planka
           unless moved["listId"] == @in_progress_list_id && moved["boardId"] == @card.fetch("boardId")
             raise InvalidResponse, "Invalid moved card list"
           end
+
           moved
         end
 
@@ -43,6 +45,7 @@ module Planka
           unless progress.size == 1
             raise DependencyUnavailable, "Expected exactly one in-progress list on the card's board; correct the list names before claiming"
           end
+
           @in_progress_list_id = progress.first.fetch("id")
           @membership = memberships.find { |record| record["cardId"] == @id && record["userId"] == @user_id }
         end
@@ -57,17 +60,20 @@ module Planka
         end
 
         def validate_memberships!(memberships)
-          unless memberships.is_a?(Array) && memberships.all? { |member| member.is_a?(Hash) && Records.id?(member["cardId"]) &&
-              (member["id"].nil? || Records.id?(member["id"])) && member["userId"].is_a?(String) && !member["userId"].empty? }
+          unless memberships.is_a?(Array) && memberships.all? { |member|
+            member.is_a?(Hash) && Records.id?(member["cardId"]) &&
+            (member["id"].nil? || Records.id?(member["id"])) && member["userId"].is_a?(String) && !member["userId"].empty?
+          }
             raise InvalidResponse, "Invalid claim scope records"
           end
         end
 
         def validate_card!(card)
           unless card.is_a?(Hash) && card["id"] == @id && Records.id?(card["boardId"]) && Records.id?(card["listId"]) &&
-              card["name"].is_a?(String) && card["position"].is_a?(Numeric) && card["position"].finite? && card["position"] >= 0
+                 card["name"].is_a?(String) && card["position"].is_a?(Numeric) && card["position"].finite? && card["position"] >= 0
             raise InvalidResponse, "Invalid claim card"
           end
+
           card
         end
       end

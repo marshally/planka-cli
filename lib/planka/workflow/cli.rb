@@ -104,11 +104,13 @@ module Planka
         if board.to_s.strip.empty?
           raise Planka::CLI::Failure.new(code: "configuration_error", message: "Missing required environment: PLANKA_BOARD_ID (or supply --board BOARD)")
         end
+
         { board_id: instance.resolve(board, resource: "board", collection: "boards"), labels: flags.fetch(:labels, []).uniq }
       rescue Planka::CLI::Instance::InvalidReference => error
         if flags.fetch(:board, []).empty?
           raise Planka::CLI::Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a numeric board ID or same-instance board URL")
         end
+
         raise Planka::CLI::Failure.new(code: "invalid_input", status: 2, message: error.message)
       end
 
@@ -116,7 +118,7 @@ module Planka
         boards = flags.fetch(:board, [])
         labels = flags.fetch(:labels, []).uniq
         if boards.uniq.size > 1 || boards.any? { |value| value.strip.empty? } || labels.any? { |value| value.strip.empty? } ||
-            labels.count { |label| label.start_with?("feature:", "effort:") } > 1
+           labels.count { |label| label.start_with?("feature:", "effort:") } > 1
           "Use one board and at most one feature: or effort: mode label; labels must be nonempty"
         end
       end

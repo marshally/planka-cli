@@ -12,8 +12,8 @@ module Planka
 
         def start(scope)
           @data = { "card" => project_card(scope.card), "userId" => scope.user_id,
-            "inProgressListId" => scope.in_progress_list_id, "membershipId" => scope.membership && scope.membership["id"],
-            "claimed" => scope.claimed?, "memberAdded" => false, "moved" => false }
+                    "inProgressListId" => scope.in_progress_list_id, "membershipId" => scope.membership && scope.membership["id"],
+                    "claimed" => scope.claimed?, "memberAdded" => false, "moved" => false }
         end
 
         # The block must return a validated write response before confirmation.
@@ -41,8 +41,8 @@ module Planka
             @data["claimed"] = nil if @pending_step == :membership
           end
           MutationFailure.new(data: @data, changed: @changed ? true : (uncertain ? nil : false),
-            uncertain: uncertain, recovery: { "action" => "readback-claim",
-              "resources" => [{ "type" => "card", "id" => @id }] })
+                              uncertain: uncertain, recovery: { "action" => "readback-claim",
+                                                                "resources" => [{ "type" => "card", "id" => @id }] })
         end
 
         private
