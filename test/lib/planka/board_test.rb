@@ -29,7 +29,7 @@ class Planka::BoardTest < Minitest::Test
     card = board.card(card_id("Create a workspace"))
 
     refute card.takeable?
-    assert_equal ["Contract edits"], card.open_blockers.map { |b| b.name[0, 14] }
+    assert_equal(["Contract edits"], card.open_blockers.map { |b| b.name[0, 14] })
   end
 
   def test_closing_the_blocker_makes_the_ticket_takeable

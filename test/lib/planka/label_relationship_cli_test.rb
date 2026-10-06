@@ -71,7 +71,7 @@ class Planka::LabelRelationshipCLITest < Minitest::Test
     out, err, status = planka("add", "label", "enhancement", "--card", name, "--board", @server.board_id, "-o", "json")
     assert status.success?, err
     assert_equal CARD, JSON.parse(out).dig("data", "cardId")
-    out, err, status = planka("add", "label", "enhancement", "--card", name, "-o", "json")
+    out, _, status = planka("add", "label", "enhancement", "--card", name, "-o", "json")
     assert_equal 2, status.exitstatus
     assert_equal "Card names require --board or PLANKA_BOARD_ID", JSON.parse(out).dig("error", "message")
   end

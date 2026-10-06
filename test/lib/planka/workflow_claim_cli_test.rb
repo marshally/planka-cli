@@ -42,9 +42,9 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
                    "userId" => "user-bot", "inProgressListId" => FakePlanka::LIST_PROGRESS,
                    "membershipId" => "1900000000000000001", "claimed" => true, "memberAdded" => true, "moved" => true }, doc["data"])
     writes = @server.requests.select { |method, path, _| method == "PATCH" || path.end_with?("card-memberships") }
-    assert_equal [["POST", "/api/cards/#{CARD}/card-memberships", { "userId" => "user-bot" }],
+    assert_equal([["POST", "/api/cards/#{CARD}/card-memberships", { "userId" => "user-bot" }],
                   ["PATCH", "/api/cards/#{CARD}", { "listId" => FakePlanka::LIST_PROGRESS, "position" => 65_535 }]],
-                 writes.map { |method, path, body| [method, path, JSON.parse(body)] }
+                 writes.map { |method, path, body| [method, path, JSON.parse(body)] })
     read, read_err, read_status = planka("describe", "card", CARD, "-o", "json")
     assert read_status.success?, read_err
     assert_includes read, FakePlanka::LIST_PROGRESS
@@ -122,7 +122,7 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
 
   def test_unknown_membership_is_not_retried_and_readback_allows_safe_completion
     @server.inject("POST", %r{card-memberships$}, :apply_then_drop)
-    out, err, status = planka("workflow", "claim", CARD, "-o", "json")
+    out, _, status = planka("workflow", "claim", CARD, "-o", "json")
     assert_equal 1, status.exitstatus
     doc = JSON.parse(out)
     assert_equal "unknown_outcome", doc.dig("error", "code")
@@ -142,14 +142,14 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
 
   def test_unknown_move_keeps_known_membership_and_readback_can_confirm_the_move
     @server.inject("PATCH", %r{/cards/#{CARD}$}, :apply_then_drop)
-    out, err, status = planka("workflow", "claim", CARD, "-o", "json")
+    out, _, status = planka("workflow", "claim", CARD, "-o", "json")
     assert_equal 1, status.exitstatus
     doc = JSON.parse(out)
     assert_equal "unknown_outcome", doc.dig("error", "code")
     assert_equal true, doc.dig("meta", "changed")
     assert_equal true, doc.dig("data", "memberAdded")
     assert_nil doc.dig("data", "moved")
-    assert_equal 1, resource_writes.count { |method, _, _| method == "PATCH" }
+    assert_equal(1, resource_writes.count { |method, _, _| method == "PATCH" })
     read, err, status = planka("describe", "card", CARD, "-o", "json")
     assert status.success?, err
     assert_equal FakePlanka::LIST_PROGRESS, JSON.parse(read).dig("data", "listId")
@@ -181,7 +181,7 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
     assert_includes err, "exactly one in-progress list"
     @server.add_list("in-progress")
     @server.add_list("in-progress")
-    out, err, status = planka("workflow", "claim", CARD, "-o", "json")
+    _, _, status = planka("workflow", "claim", CARD, "-o", "json")
     assert_equal 1, status.exitstatus
     assert_empty resource_writes
   end

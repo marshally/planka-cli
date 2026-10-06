@@ -63,11 +63,11 @@ class CardMembersCLITest < Minitest::Test
     @server.memberships.concat([membership, membership(other, "800000000000000002")])
     out, err, status = planka("get", "members", "--card", CARD, "--name", "Grace", "--limit", "1", "-o", "json")
     assert status.success?, err
-    assert_equal [other], JSON.parse(out)["data"].map { |member| member["id"] }
+    assert_equal([other], JSON.parse(out)["data"].map { |member| member["id"] })
     assert_equal true, JSON.parse(out).dig("meta", "complete")
     out, err, status = planka("get", "member", "--card", CARD, "--limit", "1", "-o", "json")
     assert status.success?, err
-    assert_equal [USER], JSON.parse(out)["data"].map { |member| member["id"] }
+    assert_equal([USER], JSON.parse(out)["data"].map { |member| member["id"] })
     assert_equal false, JSON.parse(out).dig("meta", "complete")
     out, err, status = planka("get", "members", "--card", CARD, "--limit", "1")
     assert status.success?, err
@@ -85,8 +85,8 @@ class CardMembersCLITest < Minitest::Test
     assert_equal true, doc.dig("meta", "changed")
     assert_equal true, doc.dig("data", "assigned")
     assert_equal USER, doc.dig("data", "id")
-    assert_equal [["POST", "/api/cards/#{CARD}/card-memberships", { "userId" => USER }]],
-                 resource_writes.map { |method, path, body| [method, path, JSON.parse(body)] }
+    assert_equal([["POST", "/api/cards/#{CARD}/card-memberships", { "userId" => USER }]],
+                 resource_writes.map { |method, path, body| [method, path, JSON.parse(body)] })
     out, err, status = planka("add", "member", USER, "--card", CARD, "-o", "json")
     assert status.success?, err
     assert_equal false, JSON.parse(out).dig("meta", "changed")
@@ -181,7 +181,7 @@ class CardMembersCLITest < Minitest::Test
     @server.users << { "id" => "602", "name" => "Grace", "username" => nil }
     out, err, status = planka("get", "members", "--card", CARD, "--limit", "1", "-o", "json")
     assert_equal 1, status.exitstatus, err
-    assert_equal ["602"], JSON.parse(out)["data"].map { |member| member["id"] }
+    assert_equal(["602"], JSON.parse(out)["data"].map { |member| member["id"] })
     assert_equal false, JSON.parse(out).dig("meta", "complete")
   end
 
@@ -247,7 +247,7 @@ class CardMembersCLITest < Minitest::Test
     assert_equal "not_found", JSON.parse(out).dig("error", "code")
     @server.users << { "id" => "602", "name" => "Ada", "username" => nil }
     @server.board_memberships << { "id" => "702", "boardId" => @server.board_id, "userId" => "602" }
-    out, err, status = planka("add", "member", "Ada", "--card", CARD, "-o", "json")
+    _, err, status = planka("add", "member", "Ada", "--card", CARD, "-o", "json")
     assert_equal 2, status.exitstatus, err
     assert_includes err, USER
     assert_includes err, "602"
@@ -255,7 +255,7 @@ class CardMembersCLITest < Minitest::Test
     assert_equal 1, status.exitstatus, err
     assert_equal "not_found", JSON.parse(out).dig("error", "code")
     @server.cards << @server.find_card(CARD).merge("id" => "403")
-    out, err, status = planka("get", "members", "--card", "Spec: Work-next refinement", "--board", @server.board_id, "-o", "json")
+    _, err, status = planka("get", "members", "--card", "Spec: Work-next refinement", "--board", @server.board_id, "-o", "json")
     assert_equal 2, status.exitstatus, err
     assert_includes err, CARD
     assert_includes err, "403"

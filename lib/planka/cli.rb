@@ -99,7 +99,7 @@ module Planka
            output:, human: "Outcome unknown: #{e.message}\n#{reconcile}")
       warn "#{program}: #{e.message}"
       exit 1
-    rescue Planka::Error, KeyError, Errno::ENOENT, JSON::ParserError, SystemCallError => e
+    rescue Planka::Error, KeyError, JSON::ParserError, SystemCallError => e
       warn "#{program}: #{e.message}"
       exit 1
     end

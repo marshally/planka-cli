@@ -1,0 +1,83 @@
+plugins:
+  - rubocop-minitest
+
+# Choose mechanical checks explicitly; design review belongs to CODING_STANDARDS.md.
+AllCops:
+  TargetRubyVersion: 3.2
+  DisabledByDefault: true
+  NewCops: disable
+  Include:
+    - 'lib/**/*.rb'
+    - 'test/**/*.rb'
+    - 'exe/*'
+    - '*.gemspec'
+    - 'Gemfile'
+  Exclude:
+    - 'pkg/**/*'
+    - 'vendor/**/*'
+    - '.bundle/**/*'
+
+Lint:
+  Enabled: true
+
+Security:
+  Enabled: true
+
+Layout:
+  Enabled: true
+
+# Length alone is not a design finding. Keep long CLI messages and fixtures intact.
+Layout/LineLength:
+  Enabled: false
+
+Metrics:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+Style/HashSyntax:
+  Enabled: true
+  EnforcedShorthandSyntax: either
+
+Style/TrailingCommaInArrayLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+# Select assertion correctness checks; retain exact booleans and multiple
+# assertions when they express a CLI/HTTP interaction contract.
+Minitest:
+  Enabled: false
+
+Minitest/AssertNil:
+  Enabled: true
+
+Minitest/LiteralAsActualArgument:
+  Enabled: true
+
+Minitest/DuplicateTestRun:
+  Enabled: true
+
+Minitest/NonPublicTestMethod:
+  Enabled: true
+
+Minitest/UnreachableAssertion:
+  Enabled: true
+
+Minitest/UnspecifiedException:
+  Enabled: true
+
+Minitest/UselessAssertion:
+  Enabled: true

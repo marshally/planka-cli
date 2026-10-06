@@ -5,7 +5,7 @@ module Planka
       OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
 
       class << self
-        def read(client, reference = nil, card_id:, base_url:, board_id: nil, name: nil, limit: nil, operation: nil)
+        def read(client, reference = nil, card_id:, base_url:, board_id: nil, name: nil, limit: nil, operation: nil) # rubocop:disable Lint/UnusedMethodArgument -- base_url is part of the shared prepared-reader contract.
           data = []
           card, board = Scope.read(client, card_id: card_id, board_id: board_id)
           users = identities(board)

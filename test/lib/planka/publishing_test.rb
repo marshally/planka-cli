@@ -59,9 +59,9 @@ class Planka::PublishingTest < Minitest::Test
     assert_equal [:create_card, :create_task_list, :create_task, :create_task], client.writes.map(&:first)
     assert_equal "Acceptance criteria", client.writes[1][2][:name]
     assert_equal true, client.writes[1][2][:showOnFrontOfCard]
-    assert_equal [65_536, 131_072], client.writes.last(2).map { |w| w[2][:position] }
-    assert_equal ["a", "b"], result["tasks"].map { |t| t["name"] }
-    assert_equal [false, false], result["tasks"].map { |t| t["reused"] }
+    assert_equal([65_536, 131_072], client.writes.last(2).map { |w| w[2][:position] })
+    assert_equal(["a", "b"], result["tasks"].map { |t| t["name"] })
+    assert_equal([false, false], result["tasks"].map { |t| t["reused"] })
     assert result["completed"]
   end
 
@@ -74,8 +74,8 @@ class Planka::PublishingTest < Minitest::Test
     result = publishing(client).resume_ticket(card_id: "card-new", criteria: ["a", "b"])
 
     assert_equal [[:create_task, "ac", { name: "b", position: 131_072 }]], client.writes
-    assert_equal ["a", "b"], result["tasks"].map { |t| t["name"] }
-    assert_equal [true, false], result["tasks"].map { |t| t["reused"] }
+    assert_equal(["a", "b"], result["tasks"].map { |t| t["name"] })
+    assert_equal([true, false], result["tasks"].map { |t| t["reused"] })
     assert result["completed"]
   end
 
@@ -108,7 +108,7 @@ class Planka::PublishingTest < Minitest::Test
 
     assert_equal "card-new", error.state.dig("card", "id")
     assert_equal "list-new", error.state.dig("taskList", "id")
-    assert_equal ["a"], error.state["tasks"].map { |t| t["name"] }
+    assert_equal(["a"], error.state["tasks"].map { |t| t["name"] })
     refute error.state["completed"]
   end
 end

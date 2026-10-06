@@ -54,14 +54,14 @@ class Planka::CardDetailTest < Minitest::Test
   def test_orders_task_lists_by_position_with_their_tasks
     lists = detail["taskLists"]
 
-    assert_equal ["Acceptance criteria", "Blocked by"], lists.map { |l| l["name"] }
-    assert_equal ["a criterion"], lists.first["tasks"].map { |t| t["name"] }
+    assert_equal(["Acceptance criteria", "Blocked by"], lists.map { |l| l["name"] })
+    assert_equal(["a criterion"], lists.first["tasks"].map { |t| t["name"] })
   end
 
   def test_reports_linked_blockers_and_comments
     doc = detail
 
     assert_equal [{ "cardId" => "blk", "taskId" => "b1", "completed" => true }], doc["blockers"]
-    assert_equal ["hello"], doc["comments"].map { |c| c["text"] }
+    assert_equal(["hello"], doc["comments"].map { |c| c["text"] })
   end
 end

@@ -88,7 +88,7 @@ class FakePlanka
     factory.subject_certificate = factory.issuer_certificate = cert
     cert.add_extension(factory.create_extension("basicConstraints", "CA:TRUE", true))
     cert.add_extension(factory.create_extension("subjectAltName", "IP:127.0.0.1"))
-    cert.sign(key, OpenSSL::Digest::SHA256.new)
+    cert.sign(key, OpenSSL::Digest.new("SHA256"))
     context = OpenSSL::SSL::SSLContext.new
     context.cert = cert
     context.key = key

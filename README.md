@@ -650,7 +650,24 @@ conventions are in [AGENTS.md](AGENTS.md). Settled project terminology is in the
 [domain glossary](CONTEXT.md).
 
 `make test` runs the captured-board tests and local HTTP command tests.
-`make build` builds the gem; `make ci` runs both. CI covers Ruby 3.2, 3.4 and 4.0.
+`make build` builds the gem; `bundle exec make lint` runs RuboCop;
+`bundle exec make ci` runs lint, tests, and the build. CI covers Ruby 3.2, 3.4 and 4.0.
+
+RuboCop targets Ruby 3.2 and checks `lib`, `test`, the extensionless `exe/*`
+commands, `Gemfile`, and the gemspec. `.rubocop.yml` enables lint/security, layout,
+and selected style and Minitest checks. It uses double-quoted strings and trailing
+commas in multiline array/hash literals. Metrics, line-length limits, and mandatory
+class documentation are disabled; responsibility, dependency, and abstraction
+judgments remain part of review against `CODING_STANDARDS.md`. Exact boolean
+assertions and multiple assertions per integration test remain allowed.
+
+Use `bundle exec rubocop -a` for safe autocorrections, then review the diff and
+run `bundle exec make ci`. `-A` also applies unsafe corrections and should not
+be used as routine formatting. New cops are disabled until reviewed; update the
+RuboCop and Minitest-extension version bounds in `Gemfile` deliberately. The
+repository continues to ignore `Gemfile.lock`; local dependency resolutions stay
+in the development checkout. Keep any suppression limited to the relevant code
+and explain the contract or trusted input that justifies it.
 The tests do not contact a live Planka instance. API endpoints and payload shapes
 are inherited from Lucenta, including its captured Community board fixture;
 compatibility with other Planka releases has not been established.

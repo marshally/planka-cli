@@ -31,12 +31,12 @@ class Planka::SnapshotTest < Minitest::Test
   def test_cards_are_ordered_by_position_and_gain_a_url
     cards = snapshot.to_h["cards"]
 
-    assert_equal %w[c1 c2 c3], cards.map { |c| c["id"] }
+    assert_equal(%w[c1 c2 c3], cards.map { |c| c["id"] })
     assert_equal "https://planka.test/cards/c1", cards.first["url"]
     assert_equal "first", cards.first["description"], "descriptions are retained"
   end
 
   def test_cards_in_filters_to_one_list_in_order
-    assert_equal %w[c1 c2], snapshot.cards_in("L1").map { |c| c["id"] }
+    assert_equal(%w[c1 c2], snapshot.cards_in("L1").map { |c| c["id"] })
   end
 end

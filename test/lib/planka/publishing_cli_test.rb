@@ -73,12 +73,12 @@ class Planka::PublishingCLITest < Minitest::Test
     data = document["data"]
     assert_equal board, data["boardId"]
     assert_equal %w[boardId cardLabels cardMemberships cards labels lists taskLists tasks], data.keys.sort
-    assert_equal [PARENT], data["cards"].map { |card| card["id"] }
+    assert_equal([PARENT], data["cards"].map { |card| card["id"] })
     assert_equal "#{@server.base_url}/cards/#{PARENT}", data["cards"].first["url"]
-    assert_equal %w[ready-for-agent in-progress done], data["lists"].map { |list| list["name"] }
+    assert_equal(%w[ready-for-agent in-progress done], data["lists"].map { |list| list["name"] })
     assert_empty data["tasks"]
-    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/boards/#{board}"],
-                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |m, p, _| [m, p] }
+    assert_equal([["POST", "/api/access-tokens"], ["GET", "/api/boards/#{board}"],
+                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |m, p, _| [m, p] })
     assert_equal ok_json("snapshot", "--board", board), data
     direct, direct_err, direct_status = planka_executable("snapshot", "--board", board, "--output", "json")
     assert direct_status.success?, direct_err
@@ -174,10 +174,10 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_equal PARENT, document["data"]["id"]
     assert_equal "Original description.", document["data"]["description"]
     assert_equal "ready-for-agent", document["data"]["listName"]
-    assert_equal ["Parent context note."], document["data"]["comments"].map { |c| c["text"] }
-    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
+    assert_equal(["Parent context note."], document["data"]["comments"].map { |c| c["text"] })
+    assert_equal([["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
                   ["GET", "/api/boards/#{FakePlanka::BOARD_ID}"], ["GET", "/api/cards/#{PARENT}/comments"],
-                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |m, p, _| [m, p] }
+                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |m, p, _| [m, p] })
     assert_equal ok_json("show", PARENT), document["data"]
     direct, direct_err, direct_status = planka_executable("show", PARENT, "--output", "json")
     assert direct_status.success?, direct_err
@@ -361,7 +361,7 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_nil JSON.parse(out)["data"]
     refute_includes err, "TypeError"
     refute_includes err, "canonical_cli.rb"
-    assert_equal [["POST", "/api/access-tokens"]], @server.requests.map { |m, p, _| [m, p] }
+    assert_equal([["POST", "/api/access-tokens"]], @server.requests.map { |m, p, _| [m, p] })
   end
 
   def test_canonical_commands_reject_invalid_session_tokens_before_resource_reads
@@ -371,7 +371,7 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_equal "api_error", JSON.parse(out).dig("error", "code")
     assert_nil JSON.parse(out)["data"]
     refute_includes out + err, "private upstream body"
-    assert_equal [["POST", "/api/access-tokens"]], @server.requests.map { |m, p, _| [m, p] }
+    assert_equal([["POST", "/api/access-tokens"]], @server.requests.map { |m, p, _| [m, p] })
   end
 
   def test_card_related_board_payload_failures_are_reported_as_invalid_responses
@@ -404,7 +404,7 @@ class Planka::PublishingCLITest < Minitest::Test
     parent = ok_json("show", PARENT)
     assert_equal "Original description.", parent["description"]
     assert_equal "ready-for-agent", parent["listName"]
-    assert_equal ["Parent context note."], parent["comments"].map { |c| c["text"] }
+    assert_equal(["Parent context note."], parent["comments"].map { |c| c["text"] })
     assert_empty parent["taskLists"], "a spec has no acceptance criteria"
 
     # 2. Create a feature label (reusing enhancement) and attach both to the parent.
@@ -428,7 +428,7 @@ class Planka::PublishingCLITest < Minitest::Test
                  "--criteria-file", file("c2.json", JSON.generate(criteria)))
     [t1, t2].each do |ticket|
       assert_equal "Acceptance criteria", ticket["taskList"]["name"]
-      assert_equal criteria, ticket["tasks"].map { |t| t["name"] }
+      assert_equal(criteria, ticket["tasks"].map { |t| t["name"] })
       assert ticket["completed"]
     end
     t1_id = t1["card"]["id"]
@@ -459,11 +459,11 @@ class Planka::PublishingCLITest < Minitest::Test
 
     t1_detail = ok_json("show", t1_id)
     assert_equal 1, t1_detail["taskLists"].size, "exactly one list, no leftover Tasks"
-    assert_equal criteria, t1_detail["taskLists"].first["tasks"].map { |t| t["name"] }
+    assert_equal(criteria, t1_detail["taskLists"].first["tasks"].map { |t| t["name"] })
     assert_equal %w[enhancement feature:work-next].sort, t1_detail["labels"].map { |l| l["name"] }.sort
 
     t2_detail = ok_json("show", t2_id)
-    assert_equal [t1_id], t2_detail["blockers"].map { |b| b["cardId"] }
+    assert_equal([t1_id], t2_detail["blockers"].map { |b| b["cardId"] })
     refute t2_detail["blockers"].first["completed"]
 
     assert_includes ok_json("snapshot")["cards"].map { |c| c["id"] }, spec_id
@@ -500,7 +500,7 @@ class Planka::PublishingCLITest < Minitest::Test
 
     listing = ok_json("snapshot", "--list", "ready-for-agent")
     assert_equal FakePlanka::LIST_READY, listing["listId"]
-    assert_equal [PARENT], listing["cards"].map { |c| c["id"] }
+    assert_equal([PARENT], listing["cards"].map { |c| c["id"] })
   end
 
   def test_show_is_human_readable_by_default_and_json_when_requested
@@ -526,7 +526,7 @@ class Planka::PublishingCLITest < Minitest::Test
 
     doc = JSON.parse(ok("snapshot", "--output", "json"))
     assert_equal FakePlanka::BOARD_ID, doc["boardId"]
-    assert_equal [PARENT], doc["cards"].map { |card| card["id"] }
+    assert_equal([PARENT], doc["cards"].map { |card| card["id"] })
   end
 
   def test_labels_are_human_readable_by_default_and_json_when_requested
@@ -536,7 +536,7 @@ class Planka::PublishingCLITest < Minitest::Test
     refute out.start_with?("{")
 
     doc = JSON.parse(ok("labels", "--output", "json"))
-    assert_equal ["enhancement"], doc["labels"].map { |label| label["name"] }
+    assert_equal(["enhancement"], doc["labels"].map { |label| label["name"] })
   end
 
   def test_create_list_reports_human_success_and_json_when_requested
@@ -648,9 +648,9 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_empty err
     expected = { "cardId" => PARENT, "branch" => "card/spec-work-next-refinement" }
     assert_equal({ "data" => expected, "meta" => {}, "error" => nil }, JSON.parse(out))
-    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
+    assert_equal([["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
                   ["GET", "/api/boards/#{FakePlanka::BOARD_ID}"], ["DELETE", "/api/access-tokens/me"]],
-                 @server.requests.drop(start).map { |method, path, _| [method, path] }
+                 @server.requests.drop(start).map { |method, path, _| [method, path] })
     assert_equal expected, ok_json("branch-name", PARENT)
     direct, direct_err, direct_status = planka_executable("branch-name", PARENT, "--output", "json")
     assert direct_status.success?, direct_err
@@ -760,8 +760,8 @@ class Planka::PublishingCLITest < Minitest::Test
       assert_equal code, JSON.parse(out).dig("error", "code")
       assert_nil JSON.parse(out)["data"]
       refute_includes out + err, "private upstream body"
-      assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
-                    ["DELETE", "/api/access-tokens/me"]], @server.requests.drop(start).map { |method, path, _| [method, path] }
+      assert_equal([["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
+                    ["DELETE", "/api/access-tokens/me"]], @server.requests.drop(start).map { |method, path, _| [method, path] })
     end
     @server.inject("DELETE", %r{access-tokens/me$}, 403)
     out, err, status = planka("workflow", "branch-name", PARENT, "-o", "json")
@@ -797,9 +797,9 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_empty err
     expected = { "cardId" => id, "criteria" => ["Second pending", "First pending"] }
     assert_equal({ "data" => expected, "meta" => {}, "error" => nil }, JSON.parse(out))
-    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{id}"],
+    assert_equal([["POST", "/api/access-tokens"], ["GET", "/api/cards/#{id}"],
                   ["GET", "/api/boards/#{FakePlanka::BOARD_ID}"], ["DELETE", "/api/access-tokens/me"]],
-                 @server.requests.drop(start).map { |method, path, _| [method, path] }
+                 @server.requests.drop(start).map { |method, path, _| [method, path] })
     assert_equal expected, ok_json("unticked", id)
     direct, direct_err, direct_status = planka_executable("unticked", id, "--output", "json")
     assert direct_status.success?, direct_err
@@ -835,8 +835,8 @@ class Planka::PublishingCLITest < Minitest::Test
       assert_nil JSON.parse(out)["data"]
       refute_includes out + err, "not-an-id"
       refute_includes out + err, "../cards/123"
-      assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
-                    ["DELETE", "/api/access-tokens/me"]], @server.requests.drop(start).map { |method, path, _| [method, path] }
+      assert_equal([["POST", "/api/access-tokens"], ["GET", "/api/cards/#{PARENT}"],
+                    ["DELETE", "/api/access-tokens/me"]], @server.requests.drop(start).map { |method, path, _| [method, path] })
     end
   end
 
@@ -960,9 +960,9 @@ class Planka::PublishingCLITest < Minitest::Test
     assert status.success?, err
     assert_empty err
     assert_equal({ "data" => { "held" => false, "card" => nil }, "meta" => {}, "error" => nil }, JSON.parse(out))
-    assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/projects"],
+    assert_equal([["POST", "/api/access-tokens"], ["GET", "/api/projects"],
                   ["GET", "/api/boards/#{@server.board_id}"], ["GET", "/api/users/me"],
-                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |method, path, _| [method, path] }
+                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |method, path, _| [method, path] })
     assert_equal "free\n", ok("workflow", "claim-status")
     assert_equal "free\n", ok("loop-lock")
   end
@@ -1032,7 +1032,7 @@ class Planka::PublishingCLITest < Minitest::Test
   def test_workflow_claim_status_does_not_report_free_for_invalid_membership_or_list_records
     membership = { "cardId" => PARENT, "userId" => 42, "createdAt" => "2026-10-01T00:00:00Z" }
     @server.memberships << membership
-    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    out, _, status = planka("workflow", "claim-status", "-o", "json")
     assert_equal 1, status.exitstatus
     assert_equal "api_error", JSON.parse(out).dig("error", "code")
     membership["userId"] = "user-bot"
@@ -1062,7 +1062,7 @@ class Planka::PublishingCLITest < Minitest::Test
     legacy = ok("loop-lock")
     assert_equal legacy.gsub(/^age: -?\d+$/, "age: seconds"), human.gsub(/^age: -?\d+$/, "age: seconds")
     legacy_data = ok_json("loop-lock")
-    assert_equal data.reject { |key, _| key == "ageSeconds" }, legacy_data.reject { |key, _| key == "ageSeconds" }
+    assert_equal(data.reject { |key, _| key == "ageSeconds" }, legacy_data.reject { |key, _| key == "ageSeconds" })
     @server.comments << { "cardId" => PARENT, "text" => "Branch: topic\nPR: https://github.com/example/repo/pull/1", "createdAt" => "2026-10-02T00:00:00Z" }
     assert_equal({ "held" => false, "card" => nil }, ok_json("workflow", "claim-status")["data"])
     @server.comments << { "cardId" => PARENT, "text" => "Branch: newer-topic", "createdAt" => "2026-10-03T00:00:00Z" }
@@ -1070,7 +1070,7 @@ class Planka::PublishingCLITest < Minitest::Test
     @server.find_card(PARENT)["listId"] = FakePlanka::LIST_DONE
     assert_equal false, ok_json("workflow", "claim-status").dig("data", "held")
     assert_equal 0, @server.counts("GET", %r{/api/cards/[^/]+\z})
-    assert @server.requests.all? { |method, path, _| method == "GET" || path.start_with?("/api/access-tokens") }
+    assert(@server.requests.all? { |method, path, _| method == "GET" || path.start_with?("/api/access-tokens") })
   end
 
   def test_workflow_claim_status_reads_other_boards_despite_a_configured_board
@@ -1082,7 +1082,7 @@ class Planka::PublishingCLITest < Minitest::Test
     @server.memberships << { "cardId" => card_id, "userId" => "user-bot", "createdAt" => "2026-10-01T00:00:00Z" }
     data = ok_json("workflow", "claim-status")["data"]
     assert_equal card_id, data.dig("card", "id")
-    assert_equal ["/api/boards/#{@server.board_id}", "/api/boards/#{board_id}"], @server.requests.filter_map { |method, path, _| path if method == "GET" && path.start_with?("/api/boards/") }
+    assert_equal(["/api/boards/#{@server.board_id}", "/api/boards/#{board_id}"], @server.requests.filter_map { |method, path, _| path if method == "GET" && path.start_with?("/api/boards/") })
     assert_equal 0, @server.counts("GET", %r{/api/cards/#{PARENT}/comments\z})
     assert_equal 1, @server.counts("GET", %r{/api/cards/#{card_id}/comments\z})
   end
@@ -1297,7 +1297,7 @@ class Planka::PublishingCLITest < Minitest::Test
 
     resumed = ok_json("create-ticket", "--card", card_id, "--criteria-file", file("c.json", JSON.generate(criteria)))
     assert resumed["completed"]
-    assert_equal criteria, resumed["tasks"].map { |t| t["name"] }
+    assert_equal(criteria, resumed["tasks"].map { |t| t["name"] })
     list_id = resumed["taskList"]["id"]
     assert_equal 2, @server.tasks.count { |t| t["taskListId"] == list_id }, "no duplicate task was created"
   end
