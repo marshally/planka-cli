@@ -7,7 +7,7 @@ module Planka
       class << self
         def read(client, reference = nil, card_id:, base_url:, board_id: nil, name: nil, limit: nil, operation: nil)
           data = []
-          card, board = card_scope(client, card_id: card_id, board_id: board_id)
+          card, board = Scope.read(client, card_id: card_id, board_id: board_id)
           card_id = card.fetch("item").fetch("id")
           users = identities(board)
           user = resolve_user(reference, users, board, card.fetch("item").fetch("boardId")) if reference
@@ -24,30 +24,6 @@ module Planka
         end
 
         private
-
-        def card_scope(client, card_id:, board_id:)
-          unless Records.id?(card_id)
-            board = client.board(board_id)
-            card_id = resolve_card_name(card_id, board, board_id)
-          end
-          card = client.card(card_id)
-          item = card["item"]
-          unless item.is_a?(Hash) && item["id"] == card_id && Records.id?(item["boardId"])
-            raise InvalidResponse, "Invalid member card"
-          end
-          raise ReferenceError, "Card does not belong to --board" if board_id && board_id != item["boardId"]
-          [card, board || client.board(item["boardId"])]
-        end
-
-        def resolve_card_name(name, board, board_id)
-          cards = board["cards"]
-          unless cards.is_a?(Array) && cards.all? { |record| record.is_a?(Hash) && Records.id?(record["id"]) &&
-              record["boardId"] == board_id && record["name"].is_a?(String) } &&
-              cards.map { |record| record["id"] }.uniq.size == cards.size
-            raise InvalidResponse, "Invalid card name scope"
-          end
-          Reference.resolve(cards, name, resource: "card").fetch("id")
-        end
 
         def identities(board)
           users = board["users"]

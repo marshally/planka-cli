@@ -4,12 +4,12 @@ module Planka
     # parsing, preparation and output ask the command instead of re-applying them.
     Command = Data.define(:help, :reader, :formatter, :resource, :collection, :aliases, :flags,
       :reference, :optional_reference, :names, :session, :mutation, :collection_read, :collection_flags,
-      :required_flags, :prepare, :validate_flags, :projector) do
+      :prepare, :validate_flags, :projector) do
       def initialize(aliases: [], flags: {}, reference: true, optional_reference: false, names: false,
-          session: true, mutation: false, collection_read: false, collection_flags: [], required_flags: [],
+          session: true, mutation: false, collection_read: false, collection_flags: [],
           resource: nil, collection: nil, prepare: nil, validate_flags: nil, projector: nil, **required)
         super(aliases: aliases.map { |path| path.dup.freeze }.freeze, flags: flags.dup.freeze,
-          collection_flags: collection_flags.dup.freeze, required_flags: required_flags.dup.freeze, reference:, optional_reference:, names:, session:,
+          collection_flags: collection_flags.dup.freeze, reference:, optional_reference:, names:, session:,
           mutation:, collection_read:, resource:, collection:, prepare:, validate_flags:, projector:, **required)
       end
 
@@ -21,7 +21,6 @@ module Planka
       def mutation? = mutation
       def collection_read? = collection_read
       def flag_keys = flags.values
-      def missing_flags(values) = required_flags.reject { |key| values.key?(key) }
       def flag_error(values) = validate_flags&.call(values)
       def preparation(env, instance:, flags:) = prepare ? prepare.call(env, instance:, flags:) : {}
       def project(data) = projector ? projector.call(data) : data

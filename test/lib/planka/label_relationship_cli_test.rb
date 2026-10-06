@@ -63,4 +63,40 @@ class Planka::LabelRelationshipCLITest < Minitest::Test
     end
     assert_empty @server.card_labels
   end
+
+  def test_a_card_name_resolves_within_the_asserted_board
+    name = @server.find_card(CARD).fetch("name")
+    out, err, status = planka("add", "label", "enhancement", "--card", name, "--board", @server.board_id, "-o", "json")
+    assert status.success?, err
+    assert_equal CARD, JSON.parse(out).dig("data", "cardId")
+    out, err, status = planka("add", "label", "enhancement", "--card", name, "-o", "json")
+    assert_equal 2, status.exitstatus
+    assert_equal "Card names require --board or PLANKA_BOARD_ID", JSON.parse(out).dig("error", "message")
+  end
+
+  def test_card_scope_is_required_like_member_commands
+    out, err, status = planka("remove", "label", "enhancement", "-o", "json")
+    assert_equal 2, status.exitstatus, err
+    assert_equal({ "code" => "invalid_input", "message" => "Exactly one --card is required" }, JSON.parse(out)["error"])
+    assert_empty @server.requests
+  end
+
+  def test_human_output_reports_the_relationship
+    out, err, status = planka("add", "label", "enhancement", "--card", CARD)
+    assert status.success?, err
+    assert_equal "Label #{FakePlanka::LABEL_ENHANCEMENT} on card #{CARD}\npresent: true\n", out
+  end
+
+  def test_group_help_lists_label_and_member_relationships_offline
+    %w[add remove].each do |verb|
+      out, err, status = planka(verb, "--help")
+      assert status.success?, err
+      assert_includes out, "usage: planka #{verb} <resource> REF --card CARD [flags]"
+      assert_match(/^  label LABEL --card CARD  /, out)
+      assert_match(/^  member USER --card CARD  /, out)
+    end
+    out, = planka("--help")
+    assert_match(/^  add label LABEL --card CARD  /, out)
+    assert_empty @server.requests
+  end
 end

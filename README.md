@@ -612,7 +612,8 @@ before publishing the gem.
 ### Card labels
 
 `planka add label LABEL --card CARD` and `planka remove label LABEL --card CARD`
-accept a board label ID or exact name and a numeric card ID/same-instance URL.
+accept a board label ID or exact name. CARD is an ID, same-instance URL, or exact
+name with `--board BOARD` or `PLANKA_BOARD_ID`, as for card members.
 Both preserve other labels and succeed when already satisfied. JSON returns
 `data: {cardId, labelId, present}`, `meta.changed`, and `error`. A lost response
 returns `unknown_outcome` with `readback-card-labels`; inspect `describe card`

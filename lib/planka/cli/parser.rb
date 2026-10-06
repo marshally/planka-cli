@@ -73,8 +73,6 @@ module Planka
       end
 
       def validate_required_arguments!
-        missing = @command&.missing_flags(@flag_values)
-        invalid!("Missing required flags: #{missing.join(', ')}") if missing && !missing.empty?
         minimum = @command&.optional_reference? ? argument_count - 1 : argument_count
         unless @command && @args.size >= minimum
           invalid!("Expected a command and reference; see #{@program} --help")

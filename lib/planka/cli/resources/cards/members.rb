@@ -6,7 +6,7 @@ module Planka
     module Resources
       module Cards
         module Members
-          ROOT_HELP = <<~HELP
+          ROOT_HELP = <<~HELP.gsub(/^/, "  ")
               get members --card CARD  List assigned users (read-only)
               get member USER --card CARD  Read one assignment (read-only)
               add member USER --card CARD  Assign an existing board user
@@ -43,29 +43,8 @@ module Planka
           HELP
 
           def self.prepare(env, instance:, flags:)
-            raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --card is required") unless flags[:card]
-            card = instance.resolve(flags.fetch(:card).first, resource: "card", collection: "cards", names: true)
-            board = flags[:board]&.first
-            if !Records.id?(card) && !board
-              board = env["PLANKA_BOARD_ID"]
-              if board.nil? || board.empty?
-                raise Failure.new(code: "invalid_input", status: 2, message: "Card names require --board or PLANKA_BOARD_ID")
-              end
-              begin
-                board = instance.resolve(board, resource: "board", collection: "boards")
-              rescue Instance::InvalidReference
-                raise Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a board ID or same-instance URL")
-              end
-            end
-            board = instance.resolve(board, resource: "board", collection: "boards") if board
-            { card_id: card, board_id: board,
-              name: flags[:name]&.first, limit: flags[:limit]&.first&.to_i }
-          end
-
-          def self.validate(flags)
-            return "Conflicting scalar flags" if flags.values.any? { |values| values.uniq.size > 1 }
-            return "Flags must have nonempty values" if flags.values.any? { |values| values.first.strip.empty? }
-            return "--limit must be a positive integer" if flags[:limit] && !flags[:limit].first.match?(/\A[1-9]\d*\z/)
+            Cards.prepare_scope(env, instance: instance, flags: flags)
+              .merge(name: flags[:name]&.first, limit: flags[:limit]&.first&.to_i)
           end
 
           def self.prepare_add(env, instance:, flags:)
@@ -85,27 +64,30 @@ module Planka
             text
           end
 
-          GROUPS = { "get" => GET_HELP, "add" => ADD_HELP, "remove" => REMOVE_HELP }.freeze
+          GROUP_HELP = {
+            "get" => "  members --card CARD  List assigned users (read-only)\n  member USER --card CARD  Read one assignment (read-only)\n",
+            "add" => "  member USER --card CARD  Assign an existing board user\n",
+            "remove" => "  member USER --card CARD  Detach only this assignment\n",
+          }.freeze
 
           COMMANDS = {
             ["remove", "member"] => Command.new(aliases: [["remove", "members"]], names: true, mutation: true,
               resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-              validate_flags: method(:validate), prepare: method(:prepare_remove),
+              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_remove),
               help: REMOVE_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
             ["add", "member"] => Command.new(aliases: [["add", "members"]], names: true, mutation: true,
               resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-              validate_flags: method(:validate), prepare: method(:prepare_add),
+              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_add),
               help: ADD_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
             ["get", "member"] => Command.new(aliases: [["get", "members"]], optional_reference: true, names: true,
               collection_read: true,
               resource: "user", collection: "users",
               collection_flags: [:name, :limit],
-              flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit }, validate_flags: method(:validate), prepare: method(:prepare),
+              flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit }, validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare),
               help: GET_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS
-          def self.groups = GROUPS
           def self.root_help = ROOT_HELP
         end
       end

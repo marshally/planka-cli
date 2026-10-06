@@ -1,5 +1,6 @@
 require "planka"
 require "planka/cli/command"
+require "planka/cli/failure"
 
 module Planka
   module CLI
@@ -14,6 +15,33 @@ module Planka
           Defaults to human output. JSON uses data/meta/error; failures exit 1 or 2.
           Example: planka describe card 123 -o json
         HELP
+
+        # Card scope shared by card-scoped resource commands: --card is an ID, URL,
+        # or exact name within --board BOARD or PLANKA_BOARD_ID.
+        def self.prepare_scope(env, instance:, flags:)
+          raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --card is required") unless flags[:card]
+          card = instance.resolve(flags.fetch(:card).first, resource: "card", collection: "cards", names: true)
+          board = flags[:board]&.first
+          if !Records.id?(card) && !board
+            board = env["PLANKA_BOARD_ID"]
+            if board.nil? || board.empty?
+              raise Failure.new(code: "invalid_input", status: 2, message: "Card names require --board or PLANKA_BOARD_ID")
+            end
+            begin
+              board = instance.resolve(board, resource: "board", collection: "boards")
+            rescue Instance::InvalidReference
+              raise Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a board ID or same-instance URL")
+            end
+          end
+          board = instance.resolve(board, resource: "board", collection: "boards") if board
+          { card_id: card, board_id: board }
+        end
+
+        def self.validate_scope_flags(flags)
+          return "Conflicting scalar flags" if flags.values.any? { |values| values.uniq.size > 1 }
+          return "Flags must have nonempty values" if flags.values.any? { |values| values.first.strip.empty? }
+          return "--limit must be a positive integer" if flags[:limit] && !flags[:limit].first.match?(/\A[1-9]\d*\z/)
+        end
 
         def self.format(detail)
           lines = [
