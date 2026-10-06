@@ -10,7 +10,7 @@ module Planka
                      resource: nil, collection: nil, prepare: nil, validate_flags: nil, validate_inputs: nil, projector: nil, **required)
         super(aliases: aliases.map { |path| path.dup.freeze }.freeze, flags: flags.dup.freeze,
               collection_flags: collection_flags.dup.freeze, reference:, optional_reference:, names:, session:,
-              mutation:, collection_read:, resource:, collection:, prepare:, validate_flags:, validate_inputs:, projector:, **required)
+              mutation:, collection_read:, resource:, collection: collection.is_a?(Array) ? collection.dup.freeze : collection, prepare:, validate_flags:, validate_inputs:, projector:, **required)
       end
 
       def reference? = reference

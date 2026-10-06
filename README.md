@@ -320,7 +320,9 @@ TASK_LIST accept IDs, exact names in known parent scope, and same-instance
 resource references (`/tasks/ID`, `/api/tasks/ID`, `/task-lists/ID`, or
 `/api/task-lists/ID`). These reference paths identify resources; Community's
 browser UI has no task/task-list detail route. Task names require `--card` or,
-for reads, `--task-list`; task-list names require `--card`. Card names require
+for reads, `--task-list`. Task-list collection scopes use IDs/URLs; list names
+require `--card` for creation/individual reads and resolve within the source
+card on moves. Card names require
 `--board` or `PLANKA_BOARD_ID`. Explicit IDs ignore environment-default boards;
 `--board` asserts the parent. Unscoped task/task-list IDs are located through
 accessible board snapshots, which include finite-list cards in Community v2.2.1.

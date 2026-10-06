@@ -21,7 +21,7 @@ module Planka
 
       def list(reference) = Reference.resolve(@lists, reference, resource: "task list", scope: "the card")
 
-      def hydrate!(data, list_id: nil)
+      def hydrate!(data)
         @tasks.each do |task|
           self.class.validate!(task)
           raise InvalidResponse, "Invalid task parent" unless @lists.any? { |list| list["id"] == task["taskListId"] }
@@ -29,8 +29,17 @@ module Planka
 
           data << project(task)
         end
-        data.select! { |task| task["taskListId"] == list_id } if list_id
       end
+
+      def task(reference) = Reference.resolve(tasks, reference, resource: "task", scope: "the card")
+
+      def tasks
+        data = []
+        hydrate!(data)
+        data
+      end
+
+      def list_tasks(list_id) = tasks.select { |task| task["taskListId"] == list_id }
 
       def ordered(data)
         data.sort_by do |task|

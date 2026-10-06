@@ -14,7 +14,8 @@ module Planka
         COMMON_HELP = <<~HELP
           References are numeric IDs or exact names within a known parent scope; ambiguity reports candidate IDs.
           Same-instance resource URLs are accepted. IDs ignore environment-default boards; --board asserts the parent.
-          Task-list names require --card; card names require --board or PLANKA_BOARD_ID.
+          Task-list collections use IDs/URLs; list names need --card on create/individual reads and use the source card on moves.
+          Card names require --board or PLANKA_BOARD_ID.
           Unscoped IDs are discovered in accessible finite-list board snapshots; use --card for other known cards.
           Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD. Help is offline.
           JSON data/meta/error: task fields are id, cardId, taskListId, name, position, isCompleted,

@@ -5,8 +5,7 @@ module Planka
         card = Scope.load(client, reference: nil, card_id: card_id, task_list_id: task_list_id, board_id: board_id)
         snapshot = Snapshot.new(card)
         list = snapshot.list(task_list_id)
-        data = []
-        snapshot.hydrate!(data, list_id: list["id"])
+        data = snapshot.list_tasks(list["id"])
         attrs = attributes.dup
         attrs["position"] ||= Position.after(data)
         if linked_card

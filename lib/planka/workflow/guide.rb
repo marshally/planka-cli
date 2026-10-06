@@ -12,8 +12,8 @@ module Planka
         ## Connection and output
         API commands require PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, and
         PLANKA_AGENT_PASSWORD from the caller's environment. Canonical card/board
-        reads require an explicit numeric ID or same-instance URL. Guide, help,
-        and version work offline. Keep credential values out of reports.
+        reads require an explicit numeric ID or same-instance URL.
+        Help/guide/version are offline; keep credentials private.
 
         Add `-o json` for canonical results: one document with data, meta, and
         error. Inspect the exit status before consuming stdout: 0 is success,
@@ -26,13 +26,12 @@ module Planka
         2. `planka workflow next --board BOARD -o json`: select an unclaimed,
            unblocked, unquarantined ticket in ready-for-agent. Add `--label feature:SLUG` for
            ticket order or `--label effort:SLUG` for map/frontier; repeated labels
-           AND-match. Without --board, PLANKA_BOARD_ID supplies scope. No available
-           card is normal.
+           AND-match. Without --board, PLANKA_BOARD_ID supplies scope.
         3. `planka describe card CARD -o json`: inspect description, criteria,
            blockers, comments, and memberships before acting.
         4. `planka workflow claim-status -o json`: inspect your first open claim
-           without a latest PR handoff across all accessible boards. This neither
-           acquires a lock nor checks GitHub. When authorized to start,
+           without a latest PR handoff across accessible boards. No lock/GitHub check.
+           When authorized to start,
            `planka workflow claim CARD -o json` adds membership and moves
            the card to in-progress. Reclaiming an already-satisfied card is a no-op.
            On partial/unknown outcomes, inspect the card before retrying;
@@ -46,12 +45,8 @@ module Planka
         6. `planka comment CARD "TEXT" --output json` (legacy): record handoff
            with `Branch: BRANCH` and `PR: URL` on separate lines in TEXT.
 
-        Verify each criterion before marking its ordinary task complete:
-        `planka get tasks --card CARD --completed false -o json`, then
-        `planka update task TASK --card CARD --completed true -o json`.
-        Linked tasks follow their linked card; never complete them directly.
-        Native create/update/move/delete task commands are available without
-        workflow conventions. Use help for scopes, assignments, and recovery.
+        After verification, `planka update task TASK --card CARD --completed true`
+        completes ordinary criteria. Linked tasks follow their card.
 
         ## Publish and recover
         Card assignments use `planka get members --card CARD`,

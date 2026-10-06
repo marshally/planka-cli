@@ -4,9 +4,7 @@ module Planka
       def self.read(client, reference, base_url:, attributes:, assignee: nil, card_id: nil, board_id: nil) # rubocop:disable Lint/UnusedMethodArgument -- shared reader contract.
         card = Scope.load(client, reference: reference, card_id: card_id, task_list_id: nil, board_id: board_id)
         snapshot = Snapshot.new(card)
-        tasks = []
-        snapshot.hydrate!(tasks)
-        task = Reference.resolve(tasks, reference, resource: "task", scope: "the card")
+        task = snapshot.task(reference)
         attrs = attributes.dup
         if task["linkedCardId"] && (assignee || (attrs.keys - ["position"]).any?)
           raise ReferenceError.new("Linked tasks accept position updates only", code: "linked_task", status: 1)

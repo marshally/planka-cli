@@ -700,7 +700,8 @@ Pinned official Community **v2.2.1** evidence:
   requires editor membership, board-member assignees, same-card relocation, and
   allows only position/relocation for linked tasks. [Update helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/tasks/update-one.js)
   can reposition neighboring tasks; the CLI does not add cleanup/reordering writes.
-- [Delete helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/tasks/delete-one.js)
+- [Delete controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/tasks/delete.js)
+  requires board editor membership. The [delete helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/tasks/delete-one.js)
   deletes the target task and emits native events; it does not delete the linked card.
 - [Browser paths](https://github.com/plankanban/planka/blob/v2.2.1/client/src/constants/Paths.js)
   have card/board/project routes, without task/task-list detail routes.

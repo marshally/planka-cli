@@ -15,8 +15,8 @@ module Planka
       OPERATION_CATALOGS = [Cards::Members, Cards::Labels, Tasks].freeze
       OPERATION_USAGE = {
         "get" => "usage: planka get <resource> [REF] [flags]\n",
-        "add" => "usage: planka add <resource> REF [flags]\n",
-        "remove" => "usage: planka remove <resource> REF [flags]\n",
+        "add" => "usage: planka add <resource> REF --card CARD [flags]\n",
+        "remove" => "usage: planka remove <resource> REF --card CARD [flags]\n",
         "move" => "usage: planka move <resource> REF [flags]\n",
         "delete" => "usage: planka delete <resource> REF [flags]\n",
         "create" => "usage: planka create <resource> [flags]\n",
