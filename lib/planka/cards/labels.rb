@@ -1,6 +1,6 @@
 module Planka
   module Cards
-    # One association; resolution belongs to the card's own board.
+    # One association; the label resolves among the card's own board labels.
     class Labels
       def self.read(client, label, card:, present:, base_url:)
         response = client.card(card)
@@ -8,7 +8,7 @@ module Planka
         unless item.is_a?(Hash) && item["id"] == card && item["boardId"].is_a?(String) && included.is_a?(Hash)
           raise InvalidResponse, "Invalid label card"
         end
-        id = Planka::Labels.new(client).resolve(board_id: item["boardId"], label: label)
+        id = Reference.resolve(board_labels(client, item["boardId"]), label, resource: "label").fetch("id")
         applied = included["cardLabels"]
         unless applied.is_a?(Array) && applied.all? { |entry| entry.is_a?(Hash) && entry["cardId"] == card && entry["labelId"].is_a?(String) }
           raise InvalidResponse, "Invalid card label records"
@@ -30,7 +30,17 @@ module Planka
         raise MutationFailure.new(data: data, changed: nil, uncertain: true,
           recovery: { "action" => "readback-card-labels", "resources" => [{ "type" => "card", "id" => card }] })
       end
-      private_class_method :mutate
+
+      def self.board_labels(client, board_id)
+        labels = client.board(board_id)["labels"]
+        unless labels.is_a?(Array) && labels.all? { |record| record.is_a?(Hash) && Records.id?(record["id"]) &&
+            record["boardId"] == board_id && (record["name"].nil? || record["name"].is_a?(String)) } &&
+            labels.map { |record| record["id"] }.uniq.size == labels.size
+          raise InvalidResponse, "Invalid board labels"
+        end
+        labels
+      end
+      private_class_method :mutate, :board_labels
     end
   end
 end

@@ -46,7 +46,7 @@ module Planka
               cards.map { |record| record["id"] }.uniq.size == cards.size
             raise InvalidResponse, "Invalid card name scope"
           end
-          resolve(cards, name, resource: "card").fetch("id")
+          Reference.resolve(cards, name, resource: "card").fetch("id")
         end
 
         def identities(board)
@@ -66,16 +66,7 @@ module Planka
             raise InvalidResponse, "Invalid board member scope"
           end
           scoped = users.select { |user| members.any? { |member| member["userId"] == user["id"] } }
-          resolve(scoped, reference, resource: "user")
-        end
-
-        def resolve(records, reference, resource:)
-          matches = records.select { |record| Records.id?(reference) ? record["id"] == reference : record["name"] == reference }
-          raise ReferenceError.new("#{resource.capitalize} not found on the specified board", code: "not_found", status: 1) if matches.empty?
-          if matches.size > 1
-            raise ReferenceError, "Ambiguous #{resource} name; candidate IDs: #{matches.map { |record| record['id'] }.join(', ')}"
-          end
-          matches.first
+          Reference.resolve(scoped, reference, resource: "user")
         end
 
         def hydrate_members!(data, card, users, card_id)

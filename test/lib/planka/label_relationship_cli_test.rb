@@ -24,6 +24,21 @@ class Planka::LabelRelationshipCLITest < Minitest::Test
     assert_equal 1, @server.counts("POST", %r{card-labels$})
   end
 
+  def test_an_unknown_label_is_a_not_found_reference
+    out, err, status = planka("add", "label", "no-such-label", "--card", CARD, "-o", "json")
+    assert_equal 1, status.exitstatus, err
+    assert_equal({ "code" => "not_found", "message" => "Label not found on the specified board" }, JSON.parse(out)["error"])
+    assert_equal 0, @server.counts("POST", %r{card-labels$})
+  end
+
+  def test_an_ambiguous_label_name_lists_candidates_as_invalid_input
+    @server.add_label("enhancement")
+    out, err, status = planka("add", "label", "enhancement", "--card", CARD, "-o", "json")
+    assert_equal 2, status.exitstatus, err
+    assert_equal "invalid_input", JSON.parse(out).dig("error", "code")
+    assert_match(/\AAmbiguous label name; candidate IDs: \d+, \d+\z/, JSON.parse(out).dig("error", "message"))
+  end
+
   def test_add_and_remove_are_generic_idempotent_relationships
     %w[add add remove remove].zip([true, false, true, false]).each do |verb, changed|
       out, err, status = planka(verb, "label", "enhancement", "--card", CARD, "-o", "json")
