@@ -19,7 +19,7 @@ module Planka
         end
         included.fetch("tasks").each do |task|
           unless task["taskListId"].is_a?(String) && task["name"].is_a?(String) &&
-              [true, false].include?(task["isCompleted"])
+                 [true, false].include?(task["isCompleted"])
             raise InvalidResponse, "Invalid criteria task"
           end
         end

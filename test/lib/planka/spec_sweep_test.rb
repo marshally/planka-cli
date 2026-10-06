@@ -9,7 +9,7 @@ class Planka::SpecSweepTest < Minitest::Test
     move(card_id("Spec:"), "in-progress")
     close(*ticket_ids)
 
-    assert_equal [ card_id("Spec:") ], finished
+    assert_equal [card_id("Spec:")], finished
   end
 
   def test_one_open_ticket_keeps_it_open

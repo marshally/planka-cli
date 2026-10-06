@@ -67,14 +67,14 @@ module Planka
         when CollectionFailure
           primary = expected_failure(error.cause)
           Failure.new(code: primary.code, message: primary.message,
-            data: error.data, meta: { "complete" => false })
+                      data: error.data, meta: { "complete" => false })
         when MutationFailure
           primary = expected_failure(error.cause)
           code = error.uncertain ? "unknown_outcome" : (error.changed ? "partial_failure" : primary.code)
           message = error.uncertain ? "Mutation outcome is unknown" : primary.message
           message += "; earlier changes are preserved" if error.changed
           Failure.new(code: code, message: "#{message}; read back the affected resources before retrying",
-            data: error.data, meta: { "changed" => error.changed }, recovery: error.recovery)
+                      data: error.data, meta: { "changed" => error.changed }, recovery: error.recovery)
         when Planka::DependencyUnavailable
           Failure.new(code: "configuration_error", message: error.message)
         when Planka::Client::HTTPError

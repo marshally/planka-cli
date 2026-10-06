@@ -10,4 +10,4 @@ Planka::CLI.parse!(parser, "planka prime")
 abort parser.banner unless ARGV.empty?
 
 Planka::CLI.emit({ "instructions" => Planka::Workflow::Prime::INSTRUCTIONS },
-  output: options[:output], human: Planka::Workflow::Prime::INSTRUCTIONS)
+                 output: options[:output], human: Planka::Workflow::Prime::INSTRUCTIONS)

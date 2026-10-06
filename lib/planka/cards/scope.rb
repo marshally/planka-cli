@@ -16,11 +16,14 @@ module Planka
 
       def self.resolve_name(name, board, board_id)
         cards = board["cards"]
-        unless cards.is_a?(Array) && cards.all? { |record| record.is_a?(Hash) && Records.id?(record["id"]) &&
-            record["boardId"] == board_id && record["name"].is_a?(String) } &&
-            cards.map { |record| record["id"] }.uniq.size == cards.size
+        unless cards.is_a?(Array) && cards.all? { |record|
+          record.is_a?(Hash) && Records.id?(record["id"]) &&
+          record["boardId"] == board_id && record["name"].is_a?(String)
+        } &&
+               cards.map { |record| record["id"] }.uniq.size == cards.size
           raise InvalidResponse, "Invalid card name scope"
         end
+
         Reference.resolve(cards, name, resource: "card").fetch("id")
       end
 
@@ -38,6 +41,7 @@ module Planka
           raise InvalidResponse, "Invalid scoped card"
         end
         raise ReferenceError, "Card does not belong to --board" if board_id && board_id != item["boardId"]
+
         card
       end
       private_class_method :locate, :resolve_name, :verified_card

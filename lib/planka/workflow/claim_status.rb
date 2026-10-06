@@ -26,13 +26,16 @@ module Planka
           unless lists.all? { |list| Records.id?(list["id"]) && %w[active closed archive trash].include?(list["type"]) }
             raise InvalidResponse, "Invalid claim-status lists"
           end
+
           list_ids = lists.map { |list| list["id"] }
           cards = included.fetch("cards")
           unless cards.all? { |card| Records.id?(card["id"]) && card["name"].is_a?(String) && list_ids.include?(card["listId"]) }
             raise InvalidResponse, "Invalid claim-status cards"
           end
+
           card_ids = cards.map { |card| card["id"] }
           raise InvalidResponse, "Duplicate claim-status cards" unless card_ids.uniq.size == card_ids.size
+
           included.fetch("cardMemberships").each do |membership|
             unless card_ids.include?(membership["cardId"]) && membership["userId"].is_a?(String) && !membership["userId"].empty?
               raise InvalidResponse, "Invalid claim-status memberships"

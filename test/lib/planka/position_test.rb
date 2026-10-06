@@ -6,7 +6,7 @@ class Planka::PositionTest < Minitest::Test
   end
 
   def test_appends_one_gap_after_the_highest_position
-    records = [ { "position" => 65_536 }, { "position" => "196608" }, { "position" => 131_072 } ]
+    records = [{ "position" => 65_536 }, { "position" => "196608" }, { "position" => 131_072 }]
 
     assert_equal 262_144, Planka::Position.after(records)
   end

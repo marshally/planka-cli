@@ -77,7 +77,7 @@ module Planka
             *(format("nn: %02d", nn) if nn),
             "blockers:#{" none" if blockers.empty?}",
             *blockers,
-            "parent: #{Blocker.parent_branch(blockers)}"
+            "parent: #{Blocker.parent_branch(blockers)}",
           ].join("\n")
         end
       end
@@ -88,13 +88,13 @@ module Planka
             "waiting" => cards.map { |card| card.ref.merge("claimed" => card.claimed?, "quarantined" => card.quarantined?, "blockedBy" => card.open_blockers.map(&:ref)) } }
         end
 
-        def to_s = [ "none:", *cards.map { |card| "- #{card}: #{holds(card)}" } ].join("\n")
+        def to_s = ["none:", *cards.map { |card| "- #{card}: #{holds(card)}" }].join("\n")
 
         private
 
         def holds(card)
           blocked_by = card.open_blockers.map(&:name)
-          [ ("claimed" if card.claimed?), ("quarantined" if card.quarantined?), ("blocked by #{blocked_by.join(", ")}" if blocked_by.any?) ].compact.join("; ")
+          [("claimed" if card.claimed?), ("quarantined" if card.quarantined?), ("blocked by #{blocked_by.join(", ")}" if blocked_by.any?)].compact.join("; ")
         end
       end
 
@@ -118,7 +118,7 @@ module Planka
             "card: #{frontier.first || "none"}",
             "map: #{maps.empty? ? "none" : maps.join(", ")}",
             "frontier:#{" none" if frontier.empty?}",
-            *frontier.map { |card| "- #{card}" }
+            *frontier.map { |card| "- #{card}" },
           ].join("\n")
         end
       end

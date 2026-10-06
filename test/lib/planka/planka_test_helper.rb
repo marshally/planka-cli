@@ -28,7 +28,7 @@ module PlankaTestHelper
     labelled = payload["cardLabels"].map { |cl| cl["cardId"] }
     with_criteria = payload["taskLists"].select { |tl| tl["name"] == "Acceptance criteria" }.map { |tl| tl["cardId"] }
     payload["cards"].select { |c| labelled.include?(c["id"]) && with_criteria.include?(c["id"]) }
-      .sort_by { |c| c["createdAt"] }.map { |c| c["id"] }
+                    .sort_by { |c| c["createdAt"] }.map { |c| c["id"] }
   end
 
   # Moves the cards to done, completing the tasks linked to them as Planka does.
@@ -44,7 +44,7 @@ module PlankaTestHelper
 
   def add_label(name, *ids)
     label = payload["labels"].find { |l| l["name"] == name } ||
-      { "id" => "label-#{name}", "name" => name }.tap { |l| payload["labels"] << l }
+            { "id" => "label-#{name}", "name" => name }.tap { |l| payload["labels"] << l }
     ids.each { |id| payload["cardLabels"] << { "id" => "cl-#{name}-#{id}", "cardId" => id, "labelId" => label["id"] } }
   end
 

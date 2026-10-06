@@ -9,11 +9,11 @@ class Planka::LoopLockTest < Minitest::Test
     def comments(card_id) = by_card.fetch(card_id, [])
   end
 
-  def held(comments: {}) = Planka::Workflow::LoopLock.held(boards: [ board ], user_id: BOT, comments: Comments.new(comments))
+  def held(comments: {}) = Planka::Workflow::LoopLock.held(boards: [board], user_id: BOT, comments: Comments.new(comments))
 
   def claim_as_bot(id) = payload["cardMemberships"] << { "cardId" => id, "userId" => BOT }
 
-  def handoff = [ { "createdAt" => "2026-09-29T10:00:00Z", "text" => "Branch: b\nPR: https://github.com/x/y/pull/1" } ]
+  def handoff = [{ "createdAt" => "2026-09-29T10:00:00Z", "text" => "Branch: b\nPR: https://github.com/x/y/pull/1" }]
 
   def test_nothing_claimed_by_the_bot_is_free
     claim(card_id("Contract edits"))

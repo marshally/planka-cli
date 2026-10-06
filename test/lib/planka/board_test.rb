@@ -29,7 +29,7 @@ class Planka::BoardTest < Minitest::Test
     card = board.card(card_id("Create a workspace"))
 
     refute card.takeable?
-    assert_equal [ "Contract edits" ], card.open_blockers.map { |b| b.name[0, 14] }
+    assert_equal ["Contract edits"], card.open_blockers.map { |b| b.name[0, 14] }
   end
 
   def test_closing_the_blocker_makes_the_ticket_takeable
@@ -56,7 +56,7 @@ class Planka::BoardTest < Minitest::Test
     id = card_id("Adding members")
     close(card_id("Documents inside"))
 
-    assert_equal [ card_id("Documents inside") ], board.card(id).blockers.map(&:id)
+    assert_equal [card_id("Documents inside")], board.card(id).blockers.map(&:id)
     assert_empty board.card(id).open_blockers
   end
 
@@ -71,7 +71,7 @@ class Planka::BoardTest < Minitest::Test
 
   def test_a_card_renders_as_its_name_and_link
     assert_equal "Transferring ownership (https://planka.home.yountlabs.com/cards/#{card_id("Transferring")})",
-      board.card(card_id("Transferring")).to_s
+                 board.card(card_id("Transferring")).to_s
   end
 
   def test_unticked_criteria_are_the_open_tasks_in_the_acceptance_criteria_list

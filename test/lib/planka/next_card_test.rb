@@ -15,7 +15,7 @@ class Planka::NextCardTest < Minitest::Test
     Planka::Workflow::NextCard.for(label, board:, comments: Comments.new(comments), pull_requests: PullRequests.new(prs)).to_s
   end
 
-  def handoff(branch, pr) = [ { "createdAt" => "2026-09-24T10:00:00Z", "text" => "Branch: #{branch}\nPR: #{pr}" } ]
+  def handoff(branch, pr) = [{ "createdAt" => "2026-09-24T10:00:00Z", "text" => "Branch: #{branch}\nPR: #{pr}" }]
 
   def pr(state, head) = Planka::Workflow::PullRequest.new(state:, head:)
 
@@ -43,8 +43,8 @@ class Planka::NextCardTest < Minitest::Test
   def test_an_open_blocker_pr_stacks_on_its_branch
     close(card_id("Contract edits"))
     report = next_card("feature:workspaces",
-      comments: { card_id("Contract edits") => handoff("plan-3/01-contract-edits", "https://github.com/x/y/pull/8") },
-      prs: { "https://github.com/x/y/pull/8" => pr("OPEN", "plan-3/01-contract-edits") })
+                       comments: { card_id("Contract edits") => handoff("plan-3/01-contract-edits", "https://github.com/x/y/pull/8") },
+                       prs: { "https://github.com/x/y/pull/8" => pr("OPEN", "plan-3/01-contract-edits") })
 
     assert_equal <<~REPORT.chomp, report
       card: #{line("Create a workspace")}
@@ -59,8 +59,8 @@ class Planka::NextCardTest < Minitest::Test
   def test_a_merged_blocker_pr_stacks_on_main
     close(card_id("Contract edits"))
     report = next_card("feature:workspaces",
-      comments: { card_id("Contract edits") => handoff("plan-3/01-contract-edits", "https://github.com/x/y/pull/8") },
-      prs: { "https://github.com/x/y/pull/8" => pr("MERGED", "plan-3/01-contract-edits") })
+                       comments: { card_id("Contract edits") => handoff("plan-3/01-contract-edits", "https://github.com/x/y/pull/8") },
+                       prs: { "https://github.com/x/y/pull/8" => pr("MERGED", "plan-3/01-contract-edits") })
 
     assert_equal "parent: main", report.lines.last
   end
@@ -74,8 +74,8 @@ class Planka::NextCardTest < Minitest::Test
   def test_ticket_order_follows_creation_not_position
     close(*ticket_ids.first(5))
     report = next_card("feature:workspaces",
-      comments: { card_id("Documents inside") => handoff("plan-3/05-documents", "https://github.com/x/y/pull/12") },
-      prs: { "https://github.com/x/y/pull/12" => pr("OPEN", "plan-3/05-documents") })
+                       comments: { card_id("Documents inside") => handoff("plan-3/05-documents", "https://github.com/x/y/pull/12") },
+                       prs: { "https://github.com/x/y/pull/12" => pr("OPEN", "plan-3/05-documents") })
 
     assert_match(/^card: Adding members/, report)
     assert_match(/^nn: 06$/, report)
@@ -141,7 +141,7 @@ class Planka::NextCardTest < Minitest::Test
   end
 
   def test_an_effort_label_prints_the_frontier_in_position_order
-    map, *children = [ card_id("Spec:"), *ticket_ids.first(4) ]
+    map, *children = [card_id("Spec:"), *ticket_ids.first(4)]
     add_label("effort:search", map, *children)
     add_label("wayfinder:map", map)
     move(map, "in-progress")

@@ -11,6 +11,7 @@ module Planka
           applied = applied?(card, label_id)
           data = { "cardId" => Scope.card_id(card), "labelId" => label_id, "present" => present }
           return MutationResult.new(data: data, changed: false) if applied == present
+
           mutate(client, Scope.card_id(card), label_id, present, data)
         end
 
@@ -25,21 +26,28 @@ module Planka
         def applied_labels(card)
           included = card["included"]
           raise InvalidResponse, "Invalid card relations" unless included.is_a?(Hash)
+
           applied = included["cardLabels"]
-          unless applied.is_a?(Array) && applied.all? { |entry| entry.is_a?(Hash) &&
-              entry["cardId"] == Scope.card_id(card) && entry["labelId"].is_a?(String) }
+          unless applied.is_a?(Array) && applied.all? { |entry|
+            entry.is_a?(Hash) &&
+            entry["cardId"] == Scope.card_id(card) && entry["labelId"].is_a?(String)
+          }
             raise InvalidResponse, "Invalid card label records"
           end
+
           applied
         end
 
         def board_labels(board, board_id)
           labels = board["labels"]
-          unless labels.is_a?(Array) && labels.all? { |record| record.is_a?(Hash) && Records.id?(record["id"]) &&
-              record["boardId"] == board_id && (record["name"].nil? || record["name"].is_a?(String)) } &&
-              labels.map { |record| record["id"] }.uniq.size == labels.size
+          unless labels.is_a?(Array) && labels.all? { |record|
+            record.is_a?(Hash) && Records.id?(record["id"]) &&
+            record["boardId"] == board_id && (record["name"].nil? || record["name"].is_a?(String))
+          } &&
+                 labels.map { |record| record["id"] }.uniq.size == labels.size
             raise InvalidResponse, "Invalid board labels"
           end
+
           labels
         end
 
@@ -64,8 +72,8 @@ module Planka
         def write_failure(error, card, present, data)
           uncertain = !Client.unapplied?(error)
           MutationFailure.new(data: data.merge("present" => uncertain ? nil : !present),
-            changed: uncertain ? nil : false, uncertain: uncertain,
-            recovery: { "action" => "readback-card-labels", "resources" => [{ "type" => "card", "id" => card }] })
+                              changed: uncertain ? nil : false, uncertain: uncertain,
+                              recovery: { "action" => "readback-card-labels", "resources" => [{ "type" => "card", "id" => card }] })
         end
       end
     end

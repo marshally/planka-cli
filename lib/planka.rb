@@ -17,7 +17,6 @@ module Planka
     end
   end
 
-
   # A card id, given as an id or a card URL.
   def self.card_id(arg)
     arg[/(\d+)\/?\z/, 1] or raise Error, "not a card id or URL: #{arg}"

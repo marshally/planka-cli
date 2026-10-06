@@ -11,6 +11,7 @@ module Planka
       output = CLI::Output.new(stdout: stdout, stderr: stderr)
       invocation = CLI::Parser.parse(args, legacy_commands: legacy_commands, extensions: extensions)
       return output.help(invocation) if invocation.help?
+
       prepared = CLI::PreparedCommand.build(invocation, env: env)
       return output.success(invocation, prepared.execute) unless prepared.requires_session?
 

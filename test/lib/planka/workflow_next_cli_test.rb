@@ -20,20 +20,21 @@ class Planka::WorkflowNextCLITest < Minitest::Test
 
   def planka(*args, env: {})
     settings = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com",
-      "PLANKA_AGENT_PASSWORD" => "fake-next-password", "PLANKA_BOARD_ID" => BOARD,
-      "PLANKA_BRANCH_PREFIX" => nil }
+                 "PLANKA_AGENT_PASSWORD" => "fake-next-password", "PLANKA_BOARD_ID" => BOARD,
+                 "PLANKA_BRANCH_PREFIX" => nil }
     Open3.capture3(settings.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
   end
 
   def test_empty_queue_is_canonical_success_and_only_reads_the_explicit_board
     out, err, status = planka("workflow", "next", "--board", BOARD, "-o", "json",
-      env: { "PLANKA_BOARD_ID" => "999999" })
+                              env: { "PLANKA_BOARD_ID" => "999999" })
     assert status.success?, err
     assert_empty err
     assert_equal({ "data" => { "card" => nil, "waiting" => [] }, "meta" => {}, "error" => nil }, JSON.parse(out))
     assert_equal [["POST", "/api/access-tokens"], ["GET", "/api/boards/#{BOARD}"],
-      ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |method, path, _| [method, path] }
+                  ["DELETE", "/api/access-tokens/me"]], @server.requests.map { |method, path, _| [method, path] }
   end
+
   def test_priority_pick_preserves_legacy_human_and_json_reports
     id = "400000000000000002"
     @server.cards << @server.cards.first.merge("id" => id, "name" => "Implement search", "position" => 1)
@@ -41,8 +42,8 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     out, err, status = planka("workflow", "next", "-o", "json")
     assert status.success?, err
     data = JSON.parse(out).fetch("data")
-    assert_equal({"card" => {"id" => id, "name" => "Implement search", "url" => "#{@server.base_url}/cards/#{id}"},
-      "specs" => [], "number" => nil, "blockers" => [], "parent" => "main"}, data)
+    assert_equal({ "card" => { "id" => id, "name" => "Implement search", "url" => "#{@server.base_url}/cards/#{id}" },
+                   "specs" => [], "number" => nil, "blockers" => [], "parent" => "main" }, data)
     legacy, err, status = planka("next-card", "--output", "json")
     assert status.success?, err
     assert_equal JSON.parse(legacy), data
@@ -92,7 +93,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     assert_equal 1, JSON.parse(out).dig("data", "number")
     out, err, status = planka("workflow", "next", "--label", "feature:missing", "-o", "json")
     assert status.success?, err
-    assert_equal({"card" => nil, "waiting" => []}, JSON.parse(out).fetch("data"))
+    assert_equal({ "card" => nil, "waiting" => [] }, JSON.parse(out).fetch("data"))
     out, err, status = planka("workflow", "next", "--label", "enhancement", "-o", "json")
     assert status.success?, err
     assert_equal second, JSON.parse(out).dig("data", "card", "id")
@@ -122,7 +123,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
   def test_invalid_task_completion_cannot_make_a_blocked_ticket_takeable
     id = ticket("400000000000000002", "Blocked")
     @server.tasks << { "id" => "700000000000000001", "taskListId" => "6#{id}", "name" => "Depends",
-      "linkedCardId" => FakePlanka::PARENT_CARD, "isCompleted" => "private-invalid-boolean" }
+                       "linkedCardId" => FakePlanka::PARENT_CARD, "isCompleted" => "private-invalid-boolean" }
     out, err, status = planka("workflow", "next", "-o", "json")
     assert_equal 1, status.exitstatus
     assert_equal "api_error", JSON.parse(out).dig("error", "code")
@@ -135,7 +136,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     label("feature:search", id)
     @server.memberships << { "cardId" => id, "userId" => "user-bot" }
     @server.tasks << { "id" => "700000000000000001", "taskListId" => "6#{id}", "name" => "Depends",
-      "linkedCardId" => FakePlanka::PARENT_CARD, "isCompleted" => true }
+                       "linkedCardId" => FakePlanka::PARENT_CARD, "isCompleted" => true }
     collections = [@server.cards, @server.lists, @server.labels, @server.card_labels, @server.task_lists, @server.tasks, @server.memberships]
     baseline = Marshal.dump(collections)
     mutations = [
@@ -152,7 +153,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
       -> { @server.card_labels.first["labelId"] = "999" },
       -> { @server.task_lists.first["name"] = 42 },
       -> { @server.tasks.first["linkedCardId"] = "999" },
-      -> { @server.tasks.first["taskListId"] = "999" }
+      -> { @server.tasks.first["taskListId"] = "999" },
     ]
     mutations.each_with_index do |mutate, index|
       restored = Marshal.load(baseline)
@@ -171,8 +172,8 @@ class Planka::WorkflowNextCLITest < Minitest::Test
 
   def test_invalid_scope_and_labels_are_canonical_errors_before_authentication
     [["--board", ""], ["--board", "123", "--board", "456"], ["--label", ""],
-      ["--label", "feature:a", "--label", "effort:b"], ["--label", "feature:a", "--label", "feature:b"],
-      ["--board", "https://other.example/boards/123"], ["--board", "../users/me"], ["extra"], ["--limit", "1"]].each do |suffix|
+     ["--label", "feature:a", "--label", "effort:b"], ["--label", "feature:a", "--label", "feature:b"],
+     ["--board", "https://other.example/boards/123"], ["--board", "../users/me"], ["extra"], ["--limit", "1"]].each do |suffix|
       out, err, status = planka("-o", "json", "workflow", "next", *suffix)
       assert_equal 2, status.exitstatus, "#{suffix}: #{out} #{err}"
       assert_equal "invalid_input", JSON.parse(out).dig("error", "code")
@@ -185,7 +186,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
   def blocked_ticket
     id = ticket("400000000000000002", "Stacked ticket")
     @server.tasks << { "id" => "700000000000000001", "taskListId" => "6#{id}", "name" => "Depends",
-      "linkedCardId" => FakePlanka::PARENT_CARD, "isCompleted" => true }
+                       "linkedCardId" => FakePlanka::PARENT_CARD, "isCompleted" => true }
     id
   end
 
@@ -211,21 +212,21 @@ class Planka::WorkflowNextCLITest < Minitest::Test
       SCRIPT
       File.chmod(0755, File.join(dir, "gh"))
       calls = File.join(dir, "calls.jsonl")
-      settings = { "PATH" => "#{dir}:#{ENV.fetch('PATH')}", "NEXT_GH_OUTPUT" => output,
-        "NEXT_GH_EXIT" => exit_code, "NEXT_GH_CALLS" => calls }
+      settings = { "PATH" => "#{dir}:#{ENV.fetch("PATH")}", "NEXT_GH_OUTPUT" => output,
+                   "NEXT_GH_EXIT" => exit_code, "NEXT_GH_CALLS" => calls }
       yield settings, calls
     end
   end
 
   def add_handoff(text)
     @server.comments << { "id" => "500000000000000002", "cardId" => FakePlanka::PARENT_CARD,
-      "text" => text, "createdAt" => "2026-10-04T10:00:00Z" }
+                          "text" => text, "createdAt" => "2026-10-04T10:00:00Z" }
   end
 
   def test_malformed_github_results_are_sanitized_instead_of_guessing_a_parent
     blocked_ticket
     add_handoff("Branch: recorded/branch\nPR: https://github.com/example/repo/pull/1")
-    with_gh(output: 'private-invalid-json') do |settings, calls|
+    with_gh(output: "private-invalid-json") do |settings, calls|
       out, err, status = planka("workflow", "next", "-o", "json", env: settings)
       assert_equal 1, status.exitstatus
       assert_equal "api_error", JSON.parse(out).dig("error", "code")
@@ -238,7 +239,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
   def test_github_response_shape_and_states_are_validated
     blocked_ticket
     add_handoff("Branch: recorded/branch\nPR: https://github.com/example/repo/pull/1")
-    ['{"state":"private-invalid-state","headRefName":"branch"}', '{"state":"OPEN","headRefName":42}', '[]'].each do |response|
+    ['{"state":"private-invalid-state","headRefName":"branch"}', '{"state":"OPEN","headRefName":42}', "[]"].each do |response|
       with_gh(output: response) do |settings, _calls|
         out, err, status = planka("workflow", "next", "-o", "json", env: settings)
         assert_equal 1, status.exitstatus
@@ -287,8 +288,8 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     id = blocked_ticket
     label("feature:search", id)
     add_handoff("Branch: recorded/branch\nPR: https://github.com/example/repo/pull/1")
-    [{"state" => "OPEN", "headRefName" => "feature/stack"}, {"state" => "MERGED", "headRefName" => "feature/stack"},
-      {"state" => "CLOSED", "headRefName" => "feature/stack"}].each do |pr|
+    [{ "state" => "OPEN", "headRefName" => "feature/stack" }, { "state" => "MERGED", "headRefName" => "feature/stack" },
+     { "state" => "CLOSED", "headRefName" => "feature/stack" }].each do |pr|
       with_gh(output: JSON.generate(pr)) do |settings, calls|
         out, err, status = planka("workflow", "next", "--label", "feature:search", "-o", "json", env: settings)
         assert status.success?, err
@@ -324,7 +325,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     blocked_ticket
     add_handoff("Branch: recorded/branch\nPR: https://github.com/example/repo/pull/1")
     Dir.mktmpdir do |empty_path|
-      out, err, status = planka("workflow", "next", "-o", "json", env: {"PATH" => empty_path})
+      out, err, status = planka("workflow", "next", "-o", "json", env: { "PATH" => empty_path })
       assert_equal 1, status.exitstatus
       assert_equal "configuration_error", JSON.parse(out).dig("error", "code")
       assert_includes err, "gh"
@@ -335,13 +336,13 @@ class Planka::WorkflowNextCLITest < Minitest::Test
 
   def test_scope_defaults_urls_connection_settings_flags_and_errors_precede_network
     out, err, status = planka("-o", "json", "workflow", "--board", "#{@server.base_url}/boards/#{BOARD}/", "next",
-      env: { "PLANKA_BOARD_ID" => nil, "PLANKA_BRANCH_PREFIX" => "x" * 60 })
+                              env: { "PLANKA_BOARD_ID" => nil, "PLANKA_BRANCH_PREFIX" => "x" * 60 })
     assert status.success?, err
     assert_nil JSON.parse(out).dig("data", "card")
     @server.requests.clear
     %w[PLANKA_BASE_URL PLANKA_AGENT_EMAIL PLANKA_AGENT_PASSWORD PLANKA_BOARD_ID].each do |key|
       [nil, ""].each do |value|
-        out, err, status = planka("workflow", "next", "-o", "json", env: {key => value})
+        out, err, status = planka("workflow", "next", "-o", "json", env: { key => value })
         assert_equal 1, status.exitstatus
         assert_equal "configuration_error", JSON.parse(out).dig("error", "code")
         assert_includes err, key
@@ -368,7 +369,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     @server.inject("DELETE", %r{access-tokens/me$}, 403)
     out, err, status = planka("workflow", "next", "-o", "json")
     assert status.success?, err
-    assert_equal({"card" => nil, "waiting" => []}, JSON.parse(out)["data"])
+    assert_equal({ "card" => nil, "waiting" => [] }, JSON.parse(out)["data"])
     assert_nil JSON.parse(out)["error"]
     assert_includes err, "planka workflow next: session cleanup failed"
   end
@@ -381,7 +382,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     add_handoff("Branch: one")
     other = "400000000000000003"
     @server.cards << @server.cards.first.merge("id" => other, "name" => "Other blocker")
-    @server.comments << {"cardId" => other, "text" => "Branch: two", "createdAt" => "2026-10-04T10:00:00Z"}
+    @server.comments << { "cardId" => other, "text" => "Branch: two", "createdAt" => "2026-10-04T10:00:00Z" }
     @server.tasks << @server.tasks.first.merge("id" => "700000000000000002", "linkedCardId" => other)
     out, err, status = planka("workflow", "next", "-o", "json")
     assert status.success?, err
@@ -389,7 +390,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
   end
 
   def test_invalid_default_board_is_configuration_error_without_network
-    out, err, status = planka("workflow", "next", "-o", "json", env: {"PLANKA_BOARD_ID" => "private-invalid-board"})
+    out, err, status = planka("workflow", "next", "-o", "json", env: { "PLANKA_BOARD_ID" => "private-invalid-board" })
     assert_equal 1, status.exitstatus
     assert_equal "configuration_error", JSON.parse(out).dig("error", "code")
     assert_includes err, "PLANKA_BOARD_ID"
@@ -407,5 +408,4 @@ class Planka::WorkflowNextCLITest < Minitest::Test
     assert_nil JSON.parse(out)["data"]
     refute_includes out, "AMBIGUOUS"
   end
-
 end

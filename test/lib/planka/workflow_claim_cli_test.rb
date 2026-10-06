@@ -15,7 +15,7 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
 
   def planka(*args, env: {}, executable: "planka")
     settings = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com",
-      "PLANKA_AGENT_PASSWORD" => "fake-claim-password", "PLANKA_BOARD_ID" => nil }
+                 "PLANKA_AGENT_PASSWORD" => "fake-claim-password", "PLANKA_BOARD_ID" => nil }
     Open3.capture3(settings.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args, chdir: Dir.tmpdir)
   end
 
@@ -38,13 +38,13 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
     assert_equal({ "changed" => true }, doc["meta"])
     assert_nil doc["error"]
     assert_equal({ "card" => { "id" => CARD, "name" => "Spec: Work-next refinement",
-      "listId" => FakePlanka::LIST_PROGRESS, "position" => 65_535, "url" => "#{@server.base_url}/cards/#{CARD}" },
-      "userId" => "user-bot", "inProgressListId" => FakePlanka::LIST_PROGRESS,
-      "membershipId" => "1900000000000000001", "claimed" => true, "memberAdded" => true, "moved" => true }, doc["data"])
+                               "listId" => FakePlanka::LIST_PROGRESS, "position" => 65_535, "url" => "#{@server.base_url}/cards/#{CARD}" },
+                   "userId" => "user-bot", "inProgressListId" => FakePlanka::LIST_PROGRESS,
+                   "membershipId" => "1900000000000000001", "claimed" => true, "memberAdded" => true, "moved" => true }, doc["data"])
     writes = @server.requests.select { |method, path, _| method == "PATCH" || path.end_with?("card-memberships") }
     assert_equal [["POST", "/api/cards/#{CARD}/card-memberships", { "userId" => "user-bot" }],
-      ["PATCH", "/api/cards/#{CARD}", { "listId" => FakePlanka::LIST_PROGRESS, "position" => 65_535 }]],
-      writes.map { |method, path, body| [method, path, JSON.parse(body)] }
+                  ["PATCH", "/api/cards/#{CARD}", { "listId" => FakePlanka::LIST_PROGRESS, "position" => 65_535 }]],
+                 writes.map { |method, path, body| [method, path, JSON.parse(body)] }
     read, read_err, read_status = planka("describe", "card", CARD, "-o", "json")
     assert read_status.success?, read_err
     assert_includes read, FakePlanka::LIST_PROGRESS
@@ -54,7 +54,8 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
 
   def test_a_move_response_from_another_board_preserves_membership_and_reports_unknown_move
     @server.inject("PATCH", %r{/cards/#{CARD}$}, { "item" => @server.find_card(CARD).merge(
-      "listId" => FakePlanka::LIST_PROGRESS, "boardId" => "999") })
+      "listId" => FakePlanka::LIST_PROGRESS, "boardId" => "999"
+    ) })
     out, err, status = planka("workflow", "claim", CARD, "-o", "json")
     assert_equal 1, status.exitstatus, err
     doc = JSON.parse(out)
@@ -187,7 +188,7 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
 
   def test_malformed_reads_fail_before_writes_and_malformed_writes_report_uncertainty
     [["GET", %r{users/me$}, :malformed_user], ["GET", %r{users/me$}, {}], ["GET", %r{/cards/#{CARD}$}, :malformed_card],
-      ["GET", %r{boards/.+$}, :malformed_board]].each do |method, path, payload|
+     ["GET", %r{boards/.+$}, :malformed_board]].each do |method, path, payload|
       @server.inject(method, path, payload)
       out, err, status = planka("workflow", "claim", CARD, "-o", "json")
       assert_equal 1, status.exitstatus, out + err
@@ -211,7 +212,7 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
       assert_includes out, "claim CARD"
     end
     [[[], {}], [[CARD, "extra"], {}], [[CARD, "--board", "123"], {}],
-      [["https://other.example/cards/#{CARD}"], {}], [["../users/me"], {}]].each do |args, env|
+     [["https://other.example/cards/#{CARD}"], {}], [["../users/me"], {}]].each do |args, env|
       out, err, status = planka("-o", "json", "workflow", "claim", *args, env: env)
       assert_equal 2, status.exitstatus, out + err
       assert_equal "invalid_input", JSON.parse(out).dig("error", "code")
@@ -256,9 +257,9 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
 
   def test_authentication_and_read_errors_preserve_categories_without_effects
     [["POST", %r{access-tokens$}, 401, "authentication_error"],
-      ["GET", %r{/cards/#{CARD}$}, 404, "not_found"],
-      ["GET", %r{boards/.+$}, 403, "authorization_error"],
-      ["GET", %r{users/me$}, 422, "api_error"]].each do |method, path, http_status, code|
+     ["GET", %r{/cards/#{CARD}$}, 404, "not_found"],
+     ["GET", %r{boards/.+$}, 403, "authorization_error"],
+     ["GET", %r{users/me$}, 422, "api_error"]].each do |method, path, http_status, code|
       @server.inject(method, path, http_status)
       out, err, status = planka("workflow", "claim", CARD, "-o", "json")
       assert_equal 1, status.exitstatus

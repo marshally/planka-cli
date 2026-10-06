@@ -16,7 +16,7 @@ module Planka
         HELP
 
         def self.format(snapshot)
-          lines = [ "Board #{snapshot.fetch("boardId")}" ]
+          lines = ["Board #{snapshot.fetch("boardId")}"]
           lists = Array(snapshot["lists"])
           cards = Array(snapshot["cards"])
           if lists.empty? && snapshot["listId"]
@@ -26,7 +26,7 @@ module Planka
             lists.each do |list|
               lines << "#{list["name"]} (#{list["type"]}):"
               in_list = cards.select { |card| card["listId"] == list["id"] }
-              lines.concat(in_list.empty? ? [ "  none" ] : in_list.map { |card| "  - #{card["name"]} (#{card["url"]})" })
+              lines.concat(in_list.empty? ? ["  none"] : in_list.map { |card| "  - #{card["name"]} (#{card["url"]})" })
             end
           end
           lines.join("\n")

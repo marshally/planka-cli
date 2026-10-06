@@ -33,13 +33,13 @@ class Planka::HandoffTest < Minitest::Test
     comments = [
       { "createdAt" => "2026-09-24T10:00:00Z", "text" => "Branch: old\nPR: https://github.com/x/y/pull/1" },
       { "createdAt" => "2026-09-25T10:00:00Z", "text" => "Branch: new\nPR: https://github.com/x/y/pull/2" },
-      { "createdAt" => "2026-09-26T10:00:00Z", "text" => "Moved to done." }
+      { "createdAt" => "2026-09-26T10:00:00Z", "text" => "Moved to done." },
     ]
 
     assert_equal "new", Planka::Workflow::Handoff.latest(comments).branch
   end
 
   def test_latest_is_nil_without_a_handoff_comment
-    assert_nil Planka::Workflow::Handoff.latest([ { "createdAt" => "2026-09-24T10:00:00Z", "text" => "Claimed." } ])
+    assert_nil Planka::Workflow::Handoff.latest([{ "createdAt" => "2026-09-24T10:00:00Z", "text" => "Claimed." }])
   end
 end

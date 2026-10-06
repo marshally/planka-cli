@@ -7,10 +7,10 @@ module Planka
       module Cards
         module Members
           ROOT_HELP = <<~HELP.gsub(/^/, "  ")
-              get members --card CARD  List assigned users (read-only)
-              get member USER --card CARD  Read one assignment (read-only)
-              add member USER --card CARD  Assign an existing board user
-              remove member USER --card CARD  Detach only this assignment
+            get members --card CARD  List assigned users (read-only)
+            get member USER --card CARD  Read one assignment (read-only)
+            add member USER --card CARD  Assign an existing board user
+            remove member USER --card CARD  Detach only this assignment
           HELP
           COMMON_HELP = <<~HELP
             USER is an ID, same-instance /users/ID URL, or exact display name on the card's board.
@@ -44,7 +44,7 @@ module Planka
 
           def self.prepare(env, instance:, flags:)
             Cards.prepare_scope(env, instance: instance, flags: flags)
-              .merge(name: flags[:name]&.first, limit: flags[:limit]&.first&.to_i)
+                 .merge(name: flags[:name]&.first, limit: flags[:limit]&.first&.to_i)
           end
 
           def self.prepare_add(env, instance:, flags:)
@@ -57,10 +57,11 @@ module Planka
 
           def self.format(data)
             if data.is_a?(Hash) && data.key?("assigned")
-              return "#{data['name']} (#{data['id']}) on card #{data['cardId']}\nassigned: #{data['assigned']}"
+              return "#{data["name"]} (#{data["id"]}) on card #{data["cardId"]}\nassigned: #{data["assigned"]}"
             end
+
             data = [data] if data.is_a?(Hash)
-            text = data.empty? ? "No card members." : data.map { |member| "#{member['name']} (#{member['id']}) on card #{member['cardId']}" }.join("\n")
+            text = data.empty? ? "No card members." : data.map { |member| "#{member["name"]} (#{member["id"]}) on card #{member["cardId"]}" }.join("\n")
             text
           end
 
@@ -72,19 +73,19 @@ module Planka
 
           COMMANDS = {
             ["remove", "member"] => Command.new(aliases: [["remove", "members"]], names: true, mutation: true,
-              resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_remove),
-              help: REMOVE_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
+                                                resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
+                                                validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_remove),
+                                                help: REMOVE_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
             ["add", "member"] => Command.new(aliases: [["add", "members"]], names: true, mutation: true,
-              resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_add),
-              help: ADD_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
+                                             resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
+                                             validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_add),
+                                             help: ADD_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
             ["get", "member"] => Command.new(aliases: [["get", "members"]], optional_reference: true, names: true,
-              collection_read: true,
-              resource: "user", collection: "users",
-              collection_flags: [:name, :limit],
-              flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit }, validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare),
-              help: GET_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
+                                             collection_read: true,
+                                             resource: "user", collection: "users",
+                                             collection_flags: [:name, :limit],
+                                             flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit }, validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare),
+                                             help: GET_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS

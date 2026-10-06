@@ -58,13 +58,15 @@ module Planka
 
       def validate_response!(response)
         unless response.is_a?(Hash) && response["item"].is_a?(Hash) &&
-            response["item"]["id"].is_a?(String) && !response["item"]["id"].empty? && response["included"].is_a?(Hash)
+               response["item"]["id"].is_a?(String) && !response["item"]["id"].empty? && response["included"].is_a?(Hash)
           raise InvalidResponse, "Invalid card response"
         end
+
         description = response["item"]["description"]
         unless description.nil? || description.is_a?(String)
           raise InvalidResponse, "Invalid card description"
         end
+
         %w[cardLabels cardMemberships taskLists tasks].each do |key|
           records = response["included"][key]
           unless records.nil? || (records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) })
@@ -97,8 +99,8 @@ module Planka
             "name" => tl["name"],
             "position" => tl["position"],
             "tasks" => tasks.select { |t| t["taskListId"] == tl["id"] }
-              .sort_by { |t| t["position"].to_f }
-              .map { |t| t.slice("id", "name", "isCompleted", "linkedCardId", "position") },
+                            .sort_by { |t| t["position"].to_f }
+                            .map { |t| t.slice("id", "name", "isCompleted", "linkedCardId", "position") },
           }
         end
       end
@@ -116,6 +118,7 @@ module Planka
         if @validate && (!records.is_a?(Array) || !records.all? { |record| record.is_a?(Hash) })
           raise InvalidResponse, "Invalid comment records"
         end
+
         records.map { |c| c.slice("id", "text", "userId", "createdAt") }
       end
     end

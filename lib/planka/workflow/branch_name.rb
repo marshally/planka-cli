@@ -16,6 +16,7 @@ module Planka
         unless card.name.is_a?(String) && valid_labels
           raise InvalidResponse, "Invalid branch-name title or labels"
         end
+
         { "cardId" => id, "branch" => self.for(card, prefix: prefix) }
       rescue KeyError
         raise InvalidResponse, "Invalid branch-name board records"

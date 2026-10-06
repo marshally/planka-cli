@@ -7,8 +7,8 @@ module Planka
       module Cards
         module Labels
           ROOT_HELP = <<~HELP.gsub(/^/, "  ")
-              add label LABEL --card CARD  Add one existing board label to a card
-              remove label LABEL --card CARD  Detach only this label from a card
+            add label LABEL --card CARD  Add one existing board label to a card
+            remove label LABEL --card CARD  Detach only this label from a card
           HELP
           COMMON_HELP = <<~HELP
             LABEL is an ID or exact label name on the card's board.
@@ -40,7 +40,7 @@ module Planka
             Cards.prepare_scope(env, instance: instance, flags: flags).merge(present: false)
           end
 
-          def self.format(data) = "Label #{data['labelId']} on card #{data['cardId']}\npresent: #{data['present']}"
+          def self.format(data) = "Label #{data["labelId"]} on card #{data["cardId"]}\npresent: #{data["present"]}"
 
           GROUP_HELP = {
             "add" => "  label LABEL --card CARD  Add one existing board label to a card\n",
@@ -49,13 +49,13 @@ module Planka
 
           COMMANDS = {
             ["remove", "label"] => Command.new(aliases: [["remove", "labels"]], names: true, mutation: true,
-              resource: "label", collection: "labels", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_remove),
-              help: REMOVE_HELP, reader: Planka::Cards::Labels, formatter: method(:format)),
+                                               resource: "label", collection: "labels", flags: { "--card CARD" => :card, "--board BOARD" => :board },
+                                               validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_remove),
+                                               help: REMOVE_HELP, reader: Planka::Cards::Labels, formatter: method(:format)),
             ["add", "label"] => Command.new(aliases: [["add", "labels"]], names: true, mutation: true,
-              resource: "label", collection: "labels", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-              validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_add),
-              help: ADD_HELP, reader: Planka::Cards::Labels, formatter: method(:format)),
+                                            resource: "label", collection: "labels", flags: { "--card CARD" => :card, "--board BOARD" => :board },
+                                            validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_add),
+                                            help: ADD_HELP, reader: Planka::Cards::Labels, formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS

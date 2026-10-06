@@ -11,11 +11,11 @@ module Planka
         configuration = Configuration.from_env(env)
         instance = configuration.instance
         arguments = if command.reference?
-          [invocation.reference && instance.resolve(invocation.reference, resource: command.resource,
-            collection: command.collection, names: command.names?)]
-        else
-          []
-        end
+                      [invocation.reference && instance.resolve(invocation.reference, resource: command.resource,
+                                                                                      collection: command.collection, names: command.names?)]
+                    else
+                      []
+                    end
         options = { base_url: instance.base_url }
         options.merge!(command.preparation(env, instance: instance, flags: invocation.flags))
         new(command.reader, arguments, options, configuration: configuration)

@@ -32,6 +32,7 @@ module Planka
       if @validate_responses && (!response.is_a?(Hash) || !response["item"].is_a?(String) || response["item"].empty?)
         raise InvalidResponse, "Invalid authentication response"
       end
+
       @token = response.fetch("item")
     end
 
@@ -48,6 +49,7 @@ module Planka
       if @validate_responses && !response["included"].is_a?(Hash)
         raise InvalidResponse, "Invalid board response"
       end
+
       response.fetch("included")
     end
 
@@ -56,6 +58,7 @@ module Planka
       if @validate_responses && !response["items"].is_a?(Array)
         raise InvalidResponse, "Invalid comments response"
       end
+
       response.fetch("items")
     end
 
@@ -138,13 +141,13 @@ module Planka
     ATTEMPTS = 3
     # Failures before the request reaches Planka cannot have changed anything,
     # so retrying is always safe, even for a create.
-    UNSENT = [ Errno::ECONNREFUSED, Net::OpenTimeout, SocketError ].freeze
+    UNSENT = [Errno::ECONNREFUSED, Net::OpenTimeout, SocketError].freeze
     # Failures after the request was sent leave the outcome unknown: Planka may
     # have applied the change. Retrying is safe only when the call is idempotent.
-    UNKNOWN = [ ServerError, Errno::ECONNRESET, Net::ReadTimeout, EOFError ].freeze
+    UNKNOWN = [ServerError, Errno::ECONNRESET, Net::ReadTimeout, EOFError].freeze
     TRANSIENT = (UNSENT + UNKNOWN).freeze
     # Every failure to reach Planka or keep a connection to it.
-    NETWORK_ERRORS = [ SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError ].freeze
+    NETWORK_ERRORS = [SystemCallError, SocketError, Timeout::Error, EOFError, IOError, OpenSSL::SSL::SSLError].freeze
 
     # Whether a failed request certainly left Planka unchanged: Planka rejected
     # it with an HTTP status, or it never reached Planka.

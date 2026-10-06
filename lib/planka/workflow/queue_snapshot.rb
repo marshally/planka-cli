@@ -18,10 +18,14 @@ module Planka
         valid!(labels.values.all? { |label| label["name"].is_a?(String) })
         valid!(included.fetch("cardLabels").all? { |record| cards.key?(record["cardId"]) && labels.key?(record["labelId"]) })
         valid!(task_lists.values.all? { |list| cards.key?(list["cardId"]) && list["name"].is_a?(String) })
-        valid!(tasks.values.all? { |task| task_lists.key?(task["taskListId"]) &&
-          [true, false].include?(task["isCompleted"]) && (task["linkedCardId"].nil? || cards.key?(task["linkedCardId"])) })
-        valid!(included.fetch("cardMemberships").all? { |record| cards.key?(record["cardId"]) &&
-          record["userId"].is_a?(String) && !record["userId"].empty? })
+        valid!(tasks.values.all? { |task|
+          task_lists.key?(task["taskListId"]) &&
+                  [true, false].include?(task["isCompleted"]) && (task["linkedCardId"].nil? || cards.key?(task["linkedCardId"]))
+        })
+        valid!(included.fetch("cardMemberships").all? { |record|
+          cards.key?(record["cardId"]) &&
+                  record["userId"].is_a?(String) && !record["userId"].empty?
+        })
         Board.new(Planka::Board.new(included, base_url: base_url))
       rescue KeyError
         raise InvalidResponse, "Missing workflow-next board records"

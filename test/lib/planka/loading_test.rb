@@ -24,10 +24,10 @@ class PlankaLoadingTest < Minitest::Test
     RUBY
     env = %w[PLANKA_BASE_URL PLANKA_AGENT_EMAIL PLANKA_AGENT_PASSWORD PLANKA_BOARD_ID PLANKA_BRANCH_PREFIX].to_h { |key| [key, nil] }
     out, err, status = Open3.capture3(env, RbConfig.ruby, "-w", "-I#{ROOT}/lib", "-e", script,
-      "#{ROOT}/test/fixtures/files/planka/board.json", chdir: Dir.tmpdir)
+                                      "#{ROOT}/test/fixtures/files/planka/board.json", chdir: Dir.tmpdir)
     assert status.success?, err
     assert_empty err
     assert_equal({ "client" => "Planka::Client", "ticket" => true,
-      "branch" => "feature/workspaces-contract-edits-by-direct-request" }, JSON.parse(out))
+                   "branch" => "feature/workspaces-contract-edits-by-direct-request" }, JSON.parse(out))
   end
 end

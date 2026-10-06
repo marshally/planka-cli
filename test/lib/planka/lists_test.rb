@@ -13,7 +13,7 @@ class Planka::ListsTest < Minitest::Test
     def board(_id) = { "lists" => @lists }
 
     def create_list(board_id, **attrs)
-      @writes << [ :create_list, board_id, attrs ]
+      @writes << [:create_list, board_id, attrs]
       { "id" => "list-new", "boardId" => board_id, "name" => attrs[:name], "type" => attrs[:type], "position" => attrs[:position] }
     end
   end
@@ -22,19 +22,19 @@ class Planka::ListsTest < Minitest::Test
 
   def test_create_appends_after_existing_columns_ignoring_archive_and_trash
     client = FakeClient.new(lists: [
-      { "id" => "a", "type" => "active", "position" => 65_536 },
-      { "id" => "b", "type" => "closed", "position" => 131_072 },
-      { "id" => "arch", "type" => "archive", "position" => 999_999 },
-    ])
+                              { "id" => "a", "type" => "active", "position" => 65_536 },
+                              { "id" => "b", "type" => "closed", "position" => 131_072 },
+                              { "id" => "arch", "type" => "archive", "position" => 999_999 },
+                            ])
 
     result = lists(client).create(board_id: "B", name: "done", type: "closed")
 
     assert result["created"]
-    assert_equal [ [ :create_list, "B", { name: "done", type: "closed", position: 196_608 } ] ], client.writes
+    assert_equal [[:create_list, "B", { name: "done", type: "closed", position: 196_608 }]], client.writes
   end
 
   def test_create_on_a_board_with_no_columns_starts_at_the_first_position
-    client = FakeClient.new(lists: [ { "id" => "trash", "type" => "trash", "position" => 0 } ])
+    client = FakeClient.new(lists: [{ "id" => "trash", "type" => "trash", "position" => 0 }])
 
     lists(client).create(board_id: "B", name: "ready-for-agent")
 
