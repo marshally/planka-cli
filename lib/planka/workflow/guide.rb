@@ -46,6 +46,13 @@ module Planka
         6. `planka comment CARD "TEXT" --output json` (legacy): record handoff
            with `Branch: BRANCH` and `PR: URL` on separate lines in TEXT.
 
+        Verify each criterion before marking its ordinary task complete:
+        `planka get tasks --card CARD --completed false -o json`, then
+        `planka update task TASK --card CARD --completed true -o json`.
+        Linked tasks follow their linked card; never complete them directly.
+        Native create/update/move/delete task commands are available without
+        workflow conventions. Use help for scopes, assignments, and recovery.
+
         ## Publish and recover
         Card assignments use `planka get members --card CARD`,
         `planka get member USER --card CARD`, `planka add member USER --card CARD`,

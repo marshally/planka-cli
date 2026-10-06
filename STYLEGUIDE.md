@@ -221,8 +221,8 @@ and implementation are deferred; no project-manager commands are implemented.
 
 ### Tasks
 
-Planned task resource operations cover both ordinary checklist tasks and tasks
-linked to another card: create, collection/individual read, update, and delete.
+Implemented task resource operations cover both ordinary checklist tasks and tasks
+linked to another card: create, collection/individual read, update, move, and delete.
 Collection reads support `get tasks --task-list TASK_LIST` and
 `get tasks --card CARD`, requiring exactly one collection scope. Card-wide results
 identify each task's containing task list. Individual reads use `get task TASK`.
@@ -286,8 +286,17 @@ into extra writes to the linked card.
 containing card/task list and any linked card. Follow native deletion and shared
 unknown-write/recovery rules without client-side cascades. Workflow blocker
 commands remain convention-based operations over these resources. Track this
-planned resource slice in [issue #34](https://github.com/marshally/planka-cli/issues/34);
-no task resource commands are implemented.
+resource slice in [issue #34](https://github.com/marshally/planka-cli/issues/34).
+All five verbs are implemented with singular/plural aliases. Names have a native
+1024-character limit. The earlier update-only `--completed`/`--no-completed`
+shorthands remain accepted alongside explicit booleans; reads/creation require
+an explicit boolean. Human output identifies task/card/task-list and completion;
+deletes add a deleted line. Mutation objects use the read shape, with `deleted`
+added for deletion; uncertain fields are null and `readback-task` supplies known
+resource references. Unscoped IDs use native accessible finite-list board
+snapshots; `--card` supports other known cards. See the [implemented task
+slice](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-task-resource-operations)
+for precise references, schemas, errors, API evidence, and verification limits.
 
 ### Users
 

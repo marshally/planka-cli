@@ -301,30 +301,71 @@ the card, and unrelated labels, and apply no workflow convention. Endpoint
 contract: Community v2.2.1 routes use POST card-labels and DELETE
 card-labels/labelId:ID; live acceptance is recorded in the dependency PR.
 
-### Canonical card tasks
+### Canonical tasks
 
 ```sh
-planka update task TASK --card CARD --completed -o json
-planka update task TASK --card CARD --no-completed -o json
+planka get tasks --card CARD --completed false -o json
+planka get tasks --task-list TASK_LIST --name "Verify login" --limit 5
+planka get task TASK --card CARD -o json
+planka create task --task-list TASK_LIST --name "Verify login" --completed false
+planka create task --task-list TASK_LIST --linked-card CARD
+planka update task TASK --completed true --assignee USER
+planka update task TASK --clear-assignee
+planka move task TASK --task-list TASK_LIST
+planka delete task TASK
 ```
 
-`task` and `tasks` are aliases. TASK is a task ID or exact task name on the
-card. CARD is an ID, same-instance URL, or exact name with `--board BOARD` or
-`PLANKA_BOARD_ID`, with the same scope rules as card members. Unknown tasks are
-`not_found`; ambiguous names report candidate IDs as `invalid_input`. Every
-linked-card task, including linked Blocked by tasks, is refused as
-`linked_task`.
+These commands are implemented; `task` and `tasks` are aliases. TASK and
+TASK_LIST accept IDs, exact names in known parent scope, and same-instance
+resource references (`/tasks/ID`, `/api/tasks/ID`, `/task-lists/ID`, or
+`/api/task-lists/ID`). These reference paths identify resources; Community's
+browser UI has no task/task-list detail route. Task names require `--card` or,
+for reads, `--task-list`; task-list names require `--card`. Card names require
+`--board` or `PLANKA_BOARD_ID`. Explicit IDs ignore environment-default boards;
+`--board` asserts the parent. Unscoped task/task-list IDs are located through
+accessible board snapshots, which include finite-list cards in Community v2.2.1.
+Use `--card` for a known card outside those snapshots. Failed discovery does not
+silently select another scope. Ambiguous names report candidate IDs.
 
-JSON `data` contains `id`, `name`, `taskListId`, `cardId`, and `isCompleted`. An
-already satisfied task is a no-op (`meta.changed: false`); a confirmed write
-returns `changed: true`. An unknown write returns `isCompleted: null`,
-`changed: null`, and `error.code: unknown_outcome`; follow `error.recovery`'s
-`readback-task` action before retrying.
+Collections require exactly one `--card` or `--task-list`. Exact `--name`,
+`--completed true|false`, `--assignee USER`, and `--linked-card CARD` filters
+combine with AND before a positive `--limit`. Names for assignee/link filters
+resolve on the card's board; explicit IDs compare native relationships, including
+preexisting cross-board links. Order is task-list position/ID, then task position/ID.
+`meta.complete` describes the matching collection; retrieval/validation failures
+preserve matching partial data and exit 1. Reads issue no resource writes.
 
-Human output prints `NAME (TASK_ID) on card CARD_ID` and
-`completed: true|false`. Success exits 0, local input 2, other failures 1. Only
-completion changes; no workflow convention is applied. This completion-only
-consumer slice does not ship the other planned task verbs.
+JSON task objects contain `id`, `cardId`, `taskListId`, `name`, `position`,
+`isCompleted`, `assigneeUserId`, `linkedCardId`, `createdAt`, and `updatedAt`.
+Absent relationship IDs and timestamps are null. Collections are arrays;
+individual reads and mutations are objects. Human output identifies the task,
+card, task list, and completion; deletion adds `deleted: true`.
+
+Ordinary creation requires a nonempty name of at most 1024 characters;
+completion defaults false. Linked creation requires a card on the same board and
+uses native name/completion. Assignment is a separate update. Positions are
+finite, nonnegative native ordering values; creation and cross-list moves append
+by default. Native ordering can adjust positions without extra client writes.
+
+Updates change only supplied name, position, completion, or assignment fields;
+empty updates fail. `--assignee USER` requires board membership and conflicts
+with `--clear-assignee`, which sends null. Linked tasks allow position only.
+The prior update completion shorthands `--completed` and `--no-completed` remain
+accepted. Moves require a task list on the same card; same-list moves without
+position are no-ops. Deletion preserves the card, task lists, linked card, and
+unrelated tasks; successful data adds `deleted: true`.
+
+Mutation `meta.changed` is true after a validated write, false for no-ops and
+rejected writes, and null for unknown outcomes. Unknown updates clear uncertain
+fields in known data; unknown creation has no confirmed task ID; unknown deletion
+reports `deleted: null`. `readback-task` recovery identifies the card, task list,
+and known task ID. Read back before retrying; writes are never blindly retried
+after a sent request becomes uncertain. Success exits 0, local input 2, other
+failures 1. Session cleanup preserves the primary outcome.
+
+Source evidence is pinned to Community v2.2.1; fixture/package checks do not prove
+live server compatibility or support across editions. See the
+[task API evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-task-resource-operations).
 
 ### Canonical card detail
 

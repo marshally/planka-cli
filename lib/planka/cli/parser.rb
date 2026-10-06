@@ -32,6 +32,8 @@ module Planka
         unless @show_help
           validate_required_arguments!
           parse_reference!
+          message = @command.input_error(@reference, @flag_values)
+          invalid!(message) if message
         end
         build_invocation
       rescue OptionParser::ParseError
@@ -88,7 +90,8 @@ module Planka
           return
         end
 
-        unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.collection}/\d+/?\z})
+        collections = Array(@command.collection).map { |path| Regexp.escape(path) }.join("|")
+        unless @reference.match?(/\A\d+\z/) || @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/(?:#{collections})/\d+/?\z})
           resource = @command.resource
           invalid!("Expected a numeric #{resource} ID or supported #{resource} URL")
         end

@@ -648,6 +648,70 @@ related board cannot supply the fields required by its index. Credentials remain
 in memory and sign-out failures preserve the primary result. This restructuring
 adds no new commands or endpoints.
 
+## Implemented task resource operations
+
+Issue #34 expands the earlier completion-only consumer command to native task
+create/get/update/move/delete, with singular/plural aliases. `Planka::Tasks` owns
+resource behavior: Scope locates the card, Snapshot validates task hydration and
+projects flat objects, Users resolves actual board-member assignees, and Write
+classifies one target mutation's outcome. The CLI catalog owns flags, pre-session
+preparation, help and human formatting. Core tasks do not load workflows or CLI.
+Command input validators receive the reference and flags before preparation or
+session creation; flag validators still run for help, while required-input checks
+are skipped for help. Existing catalogs retain their defaults.
+
+[README task usage](../README.md#canonical-tasks) records reference discovery,
+accepted same-instance resource URL forms, filters, schemas, human output and
+mutation recovery. Resource URLs identify API resources rather than native
+browser routes. Task/task-list IDs without `--card` are discovered through
+`GET /api/projects` and accessible board snapshots; those snapshots include only
+finite-list cards. Discovery failures remain failures; supply `--card` for other
+known cards. Exact names require a known parent, and explicit parents are checked.
+Collection task-list scope is applied to individual resolution and partial data
+as well as successful collection results.
+
+Stable failures use the shared codes: invalid_input (2), configuration_error (1),
+not_found (1), authentication_error/authorization_error/api_error/network_error
+(1), linked_task (1), and unknown_outcome (1). Known rejected writes preserve task
+data with changed false; uncertain writes retain known identities, clear fields
+whose values are uncertain, and report changed null with readback-task recovery.
+Create failures expose card/task-list references without inventing a task ID.
+Delete data adds deleted true/false/null. Successful reads have no changed field;
+collection metadata contains complete, including false on truncated or failed
+reads. Cleanup never masks the primary result.
+
+Pinned official Community **v2.2.1** evidence:
+
+- [Routes](https://github.com/plankanban/planka/blob/v2.2.1/server/config/routes.js)
+  provide POST /api/task-lists/:taskListId/tasks, PATCH /api/tasks/:id and
+  DELETE /api/tasks/:id; there is no task/task-list GET endpoint.
+- [Card reads](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/show.js)
+  hydrate every task list and its tasks without paging. [Board reads](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js)
+  hydrate tasks of finite-list cards, also without paging. The scope is complete
+  after the verified card read; there is no invented pagination request.
+- [Task model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/Task.js)
+  defines task-list, linked-card, and assignee fields and nullable timestamps.
+- [Create](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/tasks/create.js)
+  requires editor membership, position >= 0, and ordinary names of 1–1024 characters.
+  [Create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/tasks/create-one.js)
+  derives linked name/completion and applies native sparse ordering. The CLI's
+  same-board linked creation is an approved restriction beyond native behavior.
+- [Update](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/tasks/update.js)
+  requires editor membership, board-member assignees, same-card relocation, and
+  allows only position/relocation for linked tasks. [Update helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/tasks/update-one.js)
+  can reposition neighboring tasks; the CLI does not add cleanup/reordering writes.
+- [Delete helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/tasks/delete-one.js)
+  deletes the target task and emits native events; it does not delete the linked card.
+- [Browser paths](https://github.com/plankanban/planka/blob/v2.2.1/client/src/constants/Paths.js)
+  have card/board/project routes, without task/task-list detail routes.
+
+Context7 was unavailable. Validation uses Bundler 4.0.14 and the local resolved
+bundle (net-http 0.9.1, minitest 6.0.6, RuboCop 1.91.0); HTTP behavior reuses the
+existing client interface and installed dependencies. No dependency upgrade is
+part of this change. Source inspection and public CLI/local HTTP/package checks
+do not establish live acceptance, other editions, or uniform 2.0.0+ support.
+No live writes were performed.
+
 ## Subsequent implementation sequence
 
 1. Migrate remaining existing reads and workflow inspection, then existing
@@ -729,7 +793,7 @@ Task scope is settled in the style guide's [tasks section](../STYLEGUIDE.md#task
 include ordinary and linked-card tasks, with same-board linked-task creation and
 same-card moves. The approved resource ticket is
 [issue #34](https://github.com/marshally/planka-cli/issues/34), expanded from the
-consumer's completion-only request. No task commands are implemented.
+consumer's completion-only request. All task verbs are implemented; see the task slice below.
 
 User reads are settled in the style guide's [users section](../STYLEGUIDE.md#users):
 directory and explicit board scopes, minimal identity results, explicit username
@@ -896,7 +960,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, and card-member operations are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, and task resource operations are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

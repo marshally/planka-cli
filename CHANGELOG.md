@@ -2,13 +2,20 @@
 
 ## Unreleased
 
-Added card-scoped `update task TASK --completed|--no-completed` with a plural
-alias, offline help, and the same card scope, reference failures and write
-outcome classification as card members and labels. TASK is a task ID or exact
-name on the card. Linked tasks are refused as `linked_task`; a satisfied task is
-a no-op, and unknown writes report `isCompleted: null` and require
-`readback-task`. Task operations live under `Planka::Cards::Tasks` and
-`CLI::Resources::Cards::Tasks`; `update` group help lists them.
+Implemented the full task resource slice (#34): create, collection/individual
+read, supplied-field update, same-card move, and target deletion. Both ordinary
+and linked tasks use identity-only flat task data; collections support exact AND
+filters, deterministic position/ID ordering, limits, and partial-read results.
+Creation appends by default; updates validate board-member assignees and preserve
+omitted fields. Linked tasks allow position/move/delete, with native derived
+name/completion and same-board linked creation. Mutations preserve no-ops,
+unknown-outcome readback, and session cleanup. Existing update completion
+shorthands remain accepted. Task data now includes position, relationships and
+timestamps; human output includes the task list. Task ownership moves from
+`Planka::Cards::Tasks` to `Planka::Tasks` and `CLI::Resources::Tasks`.
+All legacy flat/direct interfaces remain unchanged. Source compatibility evidence
+is Community v2.2.1; local fixtures and installed-package checks are not live
+acceptance or cross-edition guarantees.
 
 `workflow claim-status` ignores claims on cards labelled `quarantine` and accepts
 native archive and trash lists, including unnamed ones; claim scope accepts the

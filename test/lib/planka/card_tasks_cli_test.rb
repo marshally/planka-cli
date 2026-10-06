@@ -69,7 +69,8 @@ class CardTasksCLITest < Minitest::Test
     assert_equal 1, status.exitstatus, err
     assert_equal "authorization_error", doc.dig("error", "code")
     assert_equal false, doc.dig("meta", "changed")
-    assert_equal({ "id" => "700", "name" => "Verify", "taskListId" => "600", "isCompleted" => false, "cardId" => CARD }, doc["data"])
+    assert_equal({ "id" => "700", "name" => "Verify", "taskListId" => "600", "isCompleted" => false, "cardId" => CARD,
+                   "position" => 1, "assigneeUserId" => nil, "linkedCardId" => nil, "createdAt" => nil, "updatedAt" => nil }, doc["data"])
   end
 
   def test_tasks_use_the_shared_card_scope_help_and_output
@@ -78,14 +79,14 @@ class CardTasksCLITest < Minitest::Test
     name = @server.find_card(CARD).fetch("name")
     out, err, status = planka("update", "task", "Verify", "--card", name, "--board", @server.board_id, "--completed")
     assert status.success?, err
-    assert_equal "Verify (700) on card #{CARD}\ncompleted: true\n", out
+    assert_equal "Verify (700) on card #{CARD} / task list 600\ncompleted: true\n", out
     out, err, status = planka("update", "task", "Verify", "--card", name, "--completed", "-o", "json")
     assert_equal 2, status.exitstatus, err
     assert_equal "Card names require --board or PLANKA_BOARD_ID", JSON.parse(out).dig("error", "message")
     out, err, status = planka("update", "--help")
     assert status.success?, err
-    assert_includes out, "usage: planka update <resource> REF --card CARD [flags]"
-    assert_match(/^  task TASK --card CARD  /, out)
+    assert_includes out, "usage: planka update <resource> REF [flags]"
+    assert_match(/^  task TASK \[--card CARD\]  /, out)
   end
 
   def test_a_malformed_write_response_is_an_unknown_outcome
@@ -100,8 +101,8 @@ class CardTasksCLITest < Minitest::Test
   end
 
   def test_card_and_completion_flags_are_required_before_any_request
-    [[["update", "task", "700", "--completed"], "Exactly one --card is required"],
-     [["update", "task", "700", "--card", CARD], "Exactly one --completed or --no-completed is required"]].each do |args, message|
+    [[["update", "task", "Verify", "--completed"], "Task names require --card"],
+     [["update", "task", "700", "--card", CARD], "Update requires at least one task field"]].each do |args, message|
       out, err, status = planka(*args, "-o", "json")
       assert_equal 2, status.exitstatus, err
       assert_equal({ "code" => "invalid_input", "message" => message }, JSON.parse(out)["error"])
@@ -113,7 +114,7 @@ class CardTasksCLITest < Minitest::Test
     [["update", "task", "--help"], ["update", "tasks", "--help"]].each do |args|
       out, err, status = planka(*args, env: { "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil, "PLANKA_AGENT_PASSWORD" => nil })
       assert status.success?, err
-      assert_includes out, "usage: planka update task TASK --card CARD [--board BOARD] --completed|--no-completed [-o human|json]"
+      assert_includes out, "usage: planka update task TASK [--card CARD] [--board BOARD] [flags]"
     end
     assert_empty @server.requests
   end

@@ -26,7 +26,8 @@ module Planka
 
         reference = URI(value)
         prefix = Regexp.escape(@base.path.sub(%r{/+\z}, ""))
-        target = reference.path.match(%r{\A#{prefix}/#{collection}/(\d+)/?\z})
+        collections = Array(collection).map { |path| Regexp.escape(path) }.join("|")
+        target = reference.path.match(%r{\A#{prefix}/(?:#{collections})/(\d+)/?\z})
         unless [reference.scheme, reference.host, reference.port] == [@base.scheme, @base.host, @base.port] &&
                target && !reference.userinfo && !reference.query && !reference.fragment
           raise InvalidReference, "#{resource.capitalize} URL must belong to PLANKA_BASE_URL"

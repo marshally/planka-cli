@@ -86,9 +86,14 @@ module Planka
 
     def update_task_list(task_list_id, **attrs) = request(:patch, "/api/task-lists/#{task_list_id}", attrs).fetch("item")
 
+    def delete_task(id) = request(:delete, "/api/tasks/#{id}", idempotent: false)["item"]
+
     def update_task(id, **attrs) = request(:patch, "/api/tasks/#{id}", attrs, idempotent: false)["item"]
 
-    def create_task(task_list_id, **attrs) = request(:post, "/api/task-lists/#{task_list_id}/tasks", attrs, idempotent: false).fetch("item")
+    def create_task(task_list_id, **attrs)
+      response = request(:post, "/api/task-lists/#{task_list_id}/tasks", attrs, idempotent: false)
+      @validate_responses ? response["item"] : response.fetch("item")
+    end
 
     def me
       response = request(:get, "/api/users/me")

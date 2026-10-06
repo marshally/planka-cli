@@ -222,6 +222,10 @@ class FakePlanka
     data = body.to_s.empty? ? {} : JSON.parse(body)
     seg = path.split("/").reject(&:empty?)
     case [method, seg]
+    in ["DELETE", ["api", "tasks", id]]
+      task = fetch(@state[:tasks], id)
+      @state[:tasks].delete(task)
+      [200, { "item" => task }]
     in ["PATCH", ["api", "tasks", id]]
       task = @state[:tasks].find { |entry| entry["id"] == id }
       task.merge!(data)
@@ -351,7 +355,7 @@ class FakePlanka
   def make_task(task_list_id, data)
     linked = data["linkedCardId"]
     completed = linked ? closed?(linked) : (data["isCompleted"] || false)
-    record = { "id" => next_id, "taskListId" => task_list_id, "name" => data["name"], "linkedCardId" => linked, "isCompleted" => completed, "position" => data["position"] }
+    record = { "id" => next_id, "taskListId" => task_list_id, "name" => linked ? find_card(linked)["name"] : data["name"], "linkedCardId" => linked, "isCompleted" => completed, "position" => data["position"] }
     @state[:tasks] << record
     record
   end
