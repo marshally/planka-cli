@@ -38,6 +38,7 @@ require_relative "planka/boards/snapshot"
 require_relative "planka/cards/detail"
 require_relative "planka/labels"
 require_relative "planka/cards/labels"
+require_relative "planka/cards/tasks"
 require_relative "planka/lists"
 require_relative "planka/task_lists"
 

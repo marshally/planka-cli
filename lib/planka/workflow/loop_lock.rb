@@ -5,11 +5,13 @@ module Planka
     # other half, an open agent-loop PR, is GitHub's to answer.
     #
     # comments answers #comments(card_id) with Planka's comment records.
+    # exclude_quarantine skips quarantined claims; canonical claim-status sets
+    # it and legacy loop-lock keeps its original rule.
     module LoopLock
-      def self.report(client, base_url:)
+      def self.report(client, base_url:, exclude_quarantine: false)
         boards = client.board_ids.map { |id| Board.new(Planka::Board.new(client.board(id), base_url: base_url)) }
         me = client.me.fetch("id")
-        card = held(boards: boards, user_id: me, comments: client)
+        card = held(boards: boards, user_id: me, comments: client, exclude_quarantine: exclude_quarantine)
         return { "held" => false, "card" => nil } unless card
 
         claimed = card.claimed_at(me)
@@ -17,9 +19,9 @@ module Planka
           "claimedAt" => claimed.iso8601, "ageSeconds" => (Time.now - claimed).to_i }
       end
 
-      def self.held(boards:, user_id:, comments:)
+      def self.held(boards:, user_id:, comments:, exclude_quarantine: false)
         boards.lazy.flat_map(&:cards).find do |card|
-          card.claimed_by?(user_id) && card.open? && !Handoff.latest(comments.comments(card.id))&.pr_url
+          card.claimed_by?(user_id) && card.open? && !(exclude_quarantine && card.quarantined?) && !Handoff.latest(comments.comments(card.id))&.pr_url
         end
       end
     end

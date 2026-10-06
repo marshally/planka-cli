@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+Added card-scoped `update task TASK --completed|--no-completed` with a plural
+alias, offline help, and the same card scope, reference failures and write
+outcome classification as card members and labels. TASK is a task ID or exact
+name on the card. Linked tasks are refused as `linked_task`; a satisfied task is
+a no-op, and unknown writes report `isCompleted: null` and require
+`readback-task`. Task operations live under `Planka::Cards::Tasks` and
+`CLI::Resources::Cards::Tasks`; `update` group help lists them.
+
+`workflow claim-status` ignores claims on cards labelled `quarantine` and accepts
+native archive and trash lists, including unnamed ones; claim scope accepts the
+same lists. Legacy `loop-lock` keeps its original claim rule.
+
 Added card-scoped `add label LABEL` and `remove label LABEL` with singular/plural
 aliases, offline help, and the same card scope, reference failures and write
 outcome classification as card members. LABEL is a board label ID or exact name

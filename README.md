@@ -301,6 +301,31 @@ the card, and unrelated labels, and apply no workflow convention. Endpoint
 contract: Community v2.2.1 routes use POST card-labels and DELETE
 card-labels/labelId:ID; live acceptance is recorded in the dependency PR.
 
+### Canonical card tasks
+
+```sh
+planka update task TASK --card CARD --completed -o json
+planka update task TASK --card CARD --no-completed -o json
+```
+
+`task` and `tasks` are aliases. TASK is a task ID or exact task name on the
+card. CARD is an ID, same-instance URL, or exact name with `--board BOARD` or
+`PLANKA_BOARD_ID`, with the same scope rules as card members. Unknown tasks are
+`not_found`; ambiguous names report candidate IDs as `invalid_input`. Every
+linked-card task, including linked Blocked by tasks, is refused as
+`linked_task`.
+
+JSON `data` contains `id`, `name`, `taskListId`, `cardId`, and `isCompleted`. An
+already satisfied task is a no-op (`meta.changed: false`); a confirmed write
+returns `changed: true`. An unknown write returns `isCompleted: null`,
+`changed: null`, and `error.code: unknown_outcome`; follow `error.recovery`'s
+`readback-task` action before retrying.
+
+Human output prints `NAME (TASK_ID) on card CARD_ID` and
+`completed: true|false`. Success exits 0, local input 2, other failures 1. Only
+completion changes; no workflow convention is applied. This completion-only
+consumer slice does not ship the other planned task verbs.
+
 ### Canonical card detail
 
 ```sh
@@ -394,8 +419,9 @@ planka workflow claim-status --help
 
 This read-only inspection uses the signed-in user's claims across all accessible
 boards. It reports the first open claimed card without a PR handoff, following
-legacy `loop-lock` rules. It does not acquire a lock, change resources, or query
-GitHub. An empty board scope or no eligible card is a successful `free` result.
+legacy `loop-lock` rules, except that a card labelled `quarantine` never holds
+the claim (legacy `loop-lock` still reports it). It does not acquire a lock,
+change resources, or query GitHub. An empty board scope or no eligible card is a successful `free` result.
 
 The three connection/credential variables are required. There is no positional
 target or `--board` flag; `PLANKA_BOARD_ID` does not restrict this operation.

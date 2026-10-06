@@ -49,7 +49,8 @@ module Planka
 
         def validate_lists!(lists)
           unless lists.is_a?(Array) && lists.all? { |list| list.is_a?(Hash) && Records.id?(list["id"]) &&
-              list["boardId"] == @card["boardId"] && list["name"].is_a?(String) } &&
+              list["boardId"] == @card["boardId"] &&
+              (list["name"].is_a?(String) || (%w[archive trash].include?(list["type"]) && list["name"].nil?)) } &&
               lists.map { |list| list["id"] }.uniq.size == lists.size && lists.any? { |list| list["id"] == @card["listId"] }
             raise InvalidResponse, "Invalid claim scope records"
           end

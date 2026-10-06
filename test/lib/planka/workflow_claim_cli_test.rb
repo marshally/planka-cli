@@ -19,6 +19,17 @@ class Planka::WorkflowClaimCLITest < Minitest::Test
     Open3.capture3(settings.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args, chdir: Dir.tmpdir)
   end
 
+  def test_claim_status_accepts_native_archive_and_trash_lists
+    @server.lists << { "id" => "888", "boardId" => FakePlanka::BOARD_ID, "name" => nil, "type" => "archive", "position" => 1 }
+    @server.lists << { "id" => "889", "boardId" => FakePlanka::BOARD_ID, "name" => nil, "type" => "trash", "position" => 2 }
+    out, err, status = planka("workflow", "claim-status", "-o", "json")
+    assert status.success?, err
+    assert_equal false, JSON.parse(out).dig("data", "held")
+    out, err, status = planka("workflow", "claim", CARD, "-o", "json")
+    assert status.success?, err
+    assert_equal true, JSON.parse(out).dig("data", "claimed")
+  end
+
   def test_claim_adds_membership_then_moves_the_card_and_reports_both_effects
     out, err, status = planka("workflow", "claim", "#{@server.base_url}/cards/#{CARD}", "-o", "json")
     assert status.success?, err

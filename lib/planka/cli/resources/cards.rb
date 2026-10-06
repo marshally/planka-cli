@@ -44,7 +44,7 @@ module Planka
 
         def self.validate_scope_flags(flags)
           return "Conflicting scalar flags" if flags.values.any? { |values| values.uniq.size > 1 }
-          return "Flags must have nonempty values" if flags.values.any? { |values| values.first.strip.empty? }
+          return "Flags must have nonempty values" if flags.values.any? { |values| values.first.to_s.strip.empty? }
           return "--limit must be a positive integer" if flags[:limit] && !flags[:limit].first.match?(/\A[1-9]\d*\z/)
         end
 
