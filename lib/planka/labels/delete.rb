@@ -8,16 +8,28 @@ module Planka
 
       def self.delete(client, before)
         item = client.delete_label(before.fetch("id"))
-        Read.validate!(item, board_id: before.fetch("boardId"))
-        raise InvalidResponse, "Invalid deleted label" unless item["id"] == before["id"]
-
+        confirm_write!(item, before)
         MutationResult.new(data: Read.project(item).merge("deleted" => true), changed: true)
       rescue *Read::ERRORS => error
-        uncertain = !Client.unapplied?(error)
-        raise MutationFailure.new(data: before.merge("deleted" => uncertain ? nil : false), changed: uncertain ? nil : false, uncertain: uncertain,
-                                  recovery: { "action" => "readback-label", "resources" => [{ "type" => "board", "id" => before["boardId"] }, { "type" => "label", "id" => before["id"] }] })
+        raise write_failure(error, before)
       end
-      private_class_method :delete
+
+      def self.confirm_write!(item, before)
+        Read.validate!(item, board_id: before.fetch("boardId"))
+        raise InvalidResponse, "Invalid deleted label" unless item["id"] == before["id"]
+      end
+
+      def self.write_failure(error, before)
+        uncertain = !Client.unapplied?(error)
+        MutationFailure.new(data: before.merge("deleted" => uncertain ? nil : false), changed: uncertain ? nil : false, uncertain: uncertain,
+                            recovery: recovery(before))
+      end
+
+      def self.recovery(before)
+        { "action" => "readback-label", "resources" => [{ "type" => "board", "id" => before["boardId"] }, { "type" => "label", "id" => before["id"] }] }
+      end
+
+      private_class_method :delete, :confirm_write!, :write_failure, :recovery
     end
   end
 end
