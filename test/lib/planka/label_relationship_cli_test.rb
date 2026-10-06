@@ -99,4 +99,24 @@ class Planka::LabelRelationshipCLITest < Minitest::Test
     assert_match(/^  add label LABEL --card CARD  /, out)
     assert_empty @server.requests
   end
+
+  def test_a_malformed_write_response_is_an_unknown_outcome
+    @server.inject("POST", %r{card-labels$}, { "item" => { "cardId" => "999", "labelId" => FakePlanka::LABEL_ENHANCEMENT } })
+    out, err, status = planka("add", "label", "enhancement", "--card", CARD, "-o", "json")
+    doc = JSON.parse(out)
+    assert_equal 1, status.exitstatus, err
+    assert_equal "unknown_outcome", doc.dig("error", "code")
+    assert_nil doc.dig("meta", "changed")
+    assert_equal "readback-card-labels", doc.dig("error", "recovery", "action")
+  end
+
+  def test_leaf_help_needs_no_credentials_or_network
+    [["add", "label", "--help"], ["remove", "labels", "--help"]].each do |args|
+      out, err, status = Open3.capture3({ "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil, "PLANKA_AGENT_PASSWORD" => nil },
+        RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
+      assert status.success?, err
+      assert_includes out, "usage: planka #{args.first} label LABEL --card CARD [--board BOARD] [-o human|json]"
+    end
+    assert_empty @server.requests
+  end
 end
