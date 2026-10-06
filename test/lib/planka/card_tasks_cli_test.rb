@@ -1,6 +1,28 @@
-require_relative "label_relationship_cli_test"
+require "minitest/autorun"
+require "open3"
+require "json"
+require "tmpdir"
+require "rbconfig"
+require_relative "fake_planka"
 
-class Planka::TaskCompletionCLITest < Planka::LabelRelationshipCLITest
+class CardTasksCLITest < Minitest::Test
+  ROOT = File.expand_path("../../..", __dir__)
+  CARD = FakePlanka::PARENT_CARD
+
+  def setup = @server = FakePlanka.new
+  def teardown = @server.stop
+
+  def planka(*args, env: {})
+    settings = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com",
+      "PLANKA_AGENT_PASSWORD" => "fixture", "PLANKA_BOARD_ID" => nil }
+    Open3.capture3(settings.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/planka", *args, chdir: Dir.tmpdir)
+  end
+
+  def ordinary_task
+    @server.task_lists << { "id" => "600", "cardId" => CARD, "name" => "Any tasks", "position" => 1 }
+    @server.tasks << { "id" => "700", "taskListId" => "600", "name" => "Verify", "isCompleted" => false, "linkedCardId" => nil, "position" => 1 }
+  end
+
   def test_completes_and_reopens_an_ordinary_task_but_refuses_linked_tasks
     list = { "id" => "600", "cardId" => CARD, "name" => "Any tasks", "position" => 1 }
     @server.task_lists << list
@@ -64,5 +86,35 @@ class Planka::TaskCompletionCLITest < Planka::LabelRelationshipCLITest
     assert status.success?, err
     assert_includes out, "usage: planka update <resource> REF --card CARD [flags]"
     assert_match(/^  task TASK --card CARD  /, out)
+  end
+
+  def test_a_malformed_write_response_is_an_unknown_outcome
+    ordinary_task
+    @server.inject("PATCH", %r{/api/tasks/700$}, { "item" => { "id" => "700", "taskListId" => "999", "isCompleted" => true } })
+    out, err, status = planka("update", "task", "700", "--card", CARD, "--completed", "-o", "json")
+    doc = JSON.parse(out)
+    assert_equal 1, status.exitstatus, err
+    assert_equal "unknown_outcome", doc.dig("error", "code")
+    assert_nil doc.dig("meta", "changed")
+    assert_equal "readback-task", doc.dig("error", "recovery", "action")
+  end
+
+  def test_card_and_completion_flags_are_required_before_any_request
+    [[["update", "task", "700", "--completed"], "Exactly one --card is required"],
+      [["update", "task", "700", "--card", CARD], "Exactly one --completed or --no-completed is required"]].each do |args, message|
+      out, err, status = planka(*args, "-o", "json")
+      assert_equal 2, status.exitstatus, err
+      assert_equal({ "code" => "invalid_input", "message" => message }, JSON.parse(out)["error"])
+    end
+    assert_empty @server.requests
+  end
+
+  def test_leaf_help_needs_no_credentials_or_network
+    [["update", "task", "--help"], ["update", "tasks", "--help"]].each do |args|
+      out, err, status = planka(*args, env: { "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil, "PLANKA_AGENT_PASSWORD" => nil })
+      assert status.success?, err
+      assert_includes out, "usage: planka update task TASK --card CARD [--board BOARD] --completed|--no-completed [-o human|json]"
+    end
+    assert_empty @server.requests
   end
 end
