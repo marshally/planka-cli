@@ -276,6 +276,31 @@ assignments. Native subscription/activity effects apply; no workflow claim or
 client cleanup writes are performed. See the [source evidence and verification
 limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-ninth-slice-card-members).
 
+### Canonical card labels
+
+```sh
+planka add label LABEL --card CARD -o json
+planka remove label LABEL --card CARD -o json
+```
+
+`label` and `labels` are aliases. LABEL is a label ID or exact label name on the
+card's board. CARD is an ID, same-instance URL, or exact name with `--board BOARD`
+or `PLANKA_BOARD_ID`, with the same scope rules as card members. Unknown labels
+are `not_found`; ambiguous names report candidate IDs as `invalid_input`.
+
+JSON `data` contains `cardId`, `labelId`, and `present`. Existing-add and
+absent-remove are no-ops (`meta.changed: false`); a confirmed write returns
+`changed: true`. An unknown write returns `present: null`, `changed: null`, and
+`error.code: unknown_outcome`; follow `error.recovery`'s `readback-card-labels`
+action and inspect `describe card CARD` before retrying. There are no blind
+retries after an uncertain write.
+
+Human output prints `Label LABEL_ID on card CARD_ID` and `present: true|false`.
+Success exits 0, local input 2, other failures 1. Add/remove preserve the label,
+the card, and unrelated labels, and apply no workflow convention. Endpoint
+contract: Community v2.2.1 routes use POST card-labels and DELETE
+card-labels/labelId:ID; live acceptance is recorded in the dependency PR.
+
 ### Canonical card detail
 
 ```sh
@@ -608,15 +633,3 @@ Lucenta continues using its original library and 1Password integrations.
 Switching it to this gem is a separate consumer change once a repository or
 release is available to CI. No release license has been selected; choose one
 before publishing the gem.
-
-### Card labels
-
-`planka add label LABEL --card CARD` and `planka remove label LABEL --card CARD`
-accept a board label ID or exact name. CARD is an ID, same-instance URL, or exact
-name with `--board BOARD` or `PLANKA_BOARD_ID`, as for card members.
-Both preserve other labels and succeed when already satisfied. JSON returns
-`data: {cardId, labelId, present}`, `meta.changed`, and `error`. A lost response
-returns `unknown_outcome` with `readback-card-labels`; inspect `describe card`
-before retrying. No workflow convention is needed for these resource operations.
-Endpoint contract: Community v2.2.1 routes use POST card-labels and DELETE
-card-labels/labelId:ID. Live acceptance is recorded in the dependency PR.

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+Added card-scoped `add label LABEL` and `remove label LABEL` with singular/plural
+aliases, offline help, and the same card scope, reference failures and write
+outcome classification as card members. LABEL is a board label ID or exact name
+on the card's board. Add/remove are idempotent on satisfied relationships and
+preserve unrelated labels; unknown writes report `present: null` and require
+`readback-card-labels`. Card scoping is shared through `Planka::Cards::Scope`
+and `CLI::Resources::Cards.prepare_scope`; reference resolution through
+`Planka::Reference`. Group help for `get`, `add` and `remove` now lists each
+relationship with a short description.
+
+Workflow selection never picks a card labelled `quarantine`, in `workflow next`
+and, as a deliberate exception to the legacy retention contract, legacy
+`next-card`. Waiting reports mark such cards `quarantined` in human output and
+with a `quarantined` boolean in JSON.
+
 Applied a POODR design review to the library. Planka positions, network-error
 classification and response-record checks each have one owner (`Planka::Position`,
 `Planka::Client`, `Planka::Records`). Canonical commands are `CLI::Command`
@@ -138,7 +153,3 @@ commands now expose structured JSON results as well.
 ## 0.1.0
 
 Extracted Planka Ruby workflows from Lucenta; added configurable instance, board and branch prefix, gem packaging, and the `planka` command.
-
-- Generic `add label LABEL --card CARD` and `remove label LABEL --card CARD`
-  set one association idempotently; uncertain writes require card readback.
-- Workflow queue selection skips the `quarantine` label.
