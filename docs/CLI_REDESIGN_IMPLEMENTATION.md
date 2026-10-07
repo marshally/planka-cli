@@ -592,26 +592,51 @@ Legacy executables retain their existing argument/output adapters.
 | [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable operation arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, catalog-selected human/JSON presentation, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
+| [Resource](../lib/planka/resource.rb) | Retain the supplied client and provide protected mutation mechanics: compare observed/requested data, return no-ops, and execute confirmed writes through Write. Concrete resources expose supported public operations. |
+| [Relationship](../lib/planka/relationship.rb) | Share `add`, `remove`, and `include?` across card members and labels through explicit observation, presence, projection, write, and recovery messages. |
 | [Write](../lib/planka/write.rb) | Run one resource write, returning its confirmed result or preserving unchanged/unknown data and recovery references on failure. |
 | Canonical readers | Read and validate only the records their operation needs. Return resource data or existing workflow reports; catalogs select result projections. |
 
-Card-label relationships, card memberships, and task completion share
-`Write.perform(unchanged:, unknown:, recovery:)`. Resource operations resolve
-scope and return no-ops before calling it. The block performs exactly one write,
-validates its response, and returns the successful result data. Resources own
-their validation and result/recovery shapes; Write owns mutation result and
-failure construction, retaining the original failure as its cause. HTTP retry
-policy remains with Client. Multi-step workflow progress remains separate.
+Card-label relationships, card memberships, and task completion inherit from
+`Resource`. Its protected `mutate(unchanged:, desired:, unknown:, recovery:)`
+compares public state projections, returns `changed: false` without executing
+the block when the desired state is already satisfied, and otherwise invokes
+`Write.perform(unchanged:, unknown:, recovery:)`. The block performs exactly one
+write, validates its response, and returns confirmed data, including any new
+server identity or metadata. Concrete resources resolve scope and validate reads
+before entering this lifecycle. They own result/recovery shapes; Write owns
+confirmed mutation results and failure classification, retaining the original
+failure as its cause. HTTP retry policy remains with Client. Multi-step workflow
+progress remains separate.
+
+`Cards::Members` and `Cards::Labels` include `Relationship`. The role observes
+fresh state for every call and treats that observation as opaque. Its private
+host contract is `observe_relationship(reference)`,
+`relationship_present?(observation)`, `relationship_data(observation, present:)`,
+`relationship_recovery(observation)`, and
+`write_relationship(observation, present:)`, alongside inherited `mutate`.
+Presence is Boolean; projection accepts true, false, or nil for uncertain state.
+The write hook returns validated public data. The mixin owns the operation
+sequence without inspecting host instance variables or membership/label fields.
+
+`include?` returns false only for a known target with no relationship. Unknown
+or ambiguous references and failed/malformed reads raise. Adding an existing
+relationship and removing an absent one are no-ops; removal preserves both
+endpoints. The shared public role tests run against members and labels using
+the real client and local HTTP fixture. Resource-specific and CLI acceptance
+tests retain validation, result, and uncertain-write coverage. The hierarchy
+does not infer endpoints or add unsupported public CRUD methods.
 
 Commands select an `operation` callable. PreparedCommand invokes `call` with
 its prepared arguments; it does not require every operation to implement `read`.
-Read-only commands bind existing readers through `method(:read)`. The member and
-task catalogs construct scoped core resources and call `all`, `find`, `add`,
-`remove`, or `update`; their Ruby interface is documented under
+Read-only commands bind existing readers through `method(:read)`. The member,
+label, and task catalogs construct scoped core resources and call `all`, `find`,
+`add`, `remove`, or `update`; their Ruby interface is documented under
 [Library](../README.md#library). Scope/client state belongs to the resource
 instance, while each operation observes fresh server data. Member/task `.read`
-dispatchers and mutation-selection flags are removed. Card labels expose `set`
-for their existing desired-state operation. Resource mutations no longer accept
+dispatchers and mutation-selection flags are removed. Card labels expose instance
+`add`/`remove` operations instead of the internal singleton `set` dispatcher.
+Resource mutations no longer accept
 an unused `base_url:` argument.
 
 The coordinator now follows parse → prepare → open session when required →

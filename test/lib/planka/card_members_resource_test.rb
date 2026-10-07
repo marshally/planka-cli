@@ -1,8 +1,10 @@
 require "minitest/autorun"
 require "planka"
 require_relative "fake_planka"
+require_relative "relationship_contract"
 
 class CardMembersResourceTest < Minitest::Test
+  include RelationshipContract
   CARD = FakePlanka::PARENT_CARD
   USER = "600000000000000001"
   MEMBERSHIP = "800000000000000001"
@@ -19,6 +21,15 @@ class CardMembersResourceTest < Minitest::Test
     Planka::Client.session(base_url: @server.base_url, email: "bot@example.com", password: "fixture", validate_responses: true) do |client|
       yield Planka::Cards::Members.new(client, card_id: CARD)
     end
+  end
+
+  def with_relationship
+    with_members { |members| yield members, USER, "Ada" }
+  end
+
+  def duplicate_relationship_name
+    @server.users << { "id" => "600000000000000002", "name" => "Ada", "username" => "other" }
+    @server.board_memberships << { "id" => "900000000000000002", "boardId" => @server.board_id, "userId" => "600000000000000002", "role" => "editor" }
   end
 
   def assignment
