@@ -1,6 +1,7 @@
 require "socket"
 require "json"
 require "openssl"
+require "uri"
 
 # A small in-memory Planka that speaks the REST endpoints the CLI uses, so the
 # publishing commands can be driven end to end over real HTTP without a live
@@ -17,7 +18,10 @@ class FakePlanka
   LIST_DONE = "200000000000000003".freeze
   LABEL_ENHANCEMENT = "300000000000000001".freeze
   PARENT_CARD = "400000000000000001".freeze
+  FINITE_TYPES = %w[active closed].freeze
   attr_reader :requests
+  # Endless (archive/trash) list pages hold this many cards, as Planka's 50.
+  attr_accessor :page_size
 
   def initialize(tls_failure_after: nil)
     @tls_failure_after = tls_failure_after
@@ -28,6 +32,7 @@ class FakePlanka
     @seq = 1_900_000_000_000_000_000
     @requests = []
     @faults = []
+    @page_size = 50
     @lock = Mutex.new
     seed
     @server = TCPServer.new("127.0.0.1", 0)
@@ -54,7 +59,21 @@ class FakePlanka
 
   # Adds another list or label with an existing name, to test ambiguous name
   # resolution.
-  def add_list(name) = @state[:lists] << list(next_id, name, "active")
+  def add_list(name, type = "active", board_id: BOARD_ID)
+    record = list(next_id, name, type).merge("boardId" => board_id)
+    @state[:lists] << record
+    record["id"]
+  end
+
+  def add_board(id) = @boards << { "id" => id }
+
+  def add_card(name, list_id, position: 65_536, list_changed_at: "2026-09-01T00:00:00.000Z")
+    board_id = @state[:lists].find { |entry| entry["id"] == list_id }.fetch("boardId")
+    record = card(next_id, name, list_id, nil).merge("boardId" => board_id, "position" => position, "listChangedAt" => list_changed_at)
+    @state[:cards] << record
+    record["id"]
+  end
+
   def add_label(name) = @state[:labels] << label(next_id, name, "lagoon-blue")
 
   # Current state, for assertions.
@@ -189,6 +208,7 @@ class FakePlanka
     when :malformed_board_reference then return write(socket, 200, { "item" => { "boardId" => "not-an-id" } })
     when :malformed_board_path then return write(socket, 200, { "item" => { "boardId" => "../cards/123" } })
     when :malformed_description then return write(socket, 200, { "item" => { "id" => PARENT_CARD, "description" => 42 }, "included" => {} })
+    when :malformed_card_page then return write(socket, 200, { "items" => [{ "id" => 42 }], "included" => {} })
     when :malformed_included then return write(socket, 200, { "item" => find_card(PARENT_CARD), "included" => [] })
     when :drop then return
     when :server_error then return write(socket, 500, { "message" => "injected failure" })
@@ -220,6 +240,8 @@ class FakePlanka
 
   def route(method, path, body)
     data = body.to_s.empty? ? {} : JSON.parse(body)
+    path, query = path.split("?", 2)
+    query = URI.decode_www_form(query.to_s).to_h
     seg = path.split("/").reject(&:empty?)
     case [method, seg]
     in ["PATCH", ["api", "tasks", id]]
@@ -233,7 +255,9 @@ class FakePlanka
     in ["GET", ["api", "projects"]] then [200, { "included" => { "boards" => @boards } }]
     in ["GET", ["api", "cards", id, "comments"]] then [200, { "items" => comments_for(id) }]
     in ["GET", ["api", "cards", id]] then [200, card_payload(id)]
-    in ["GET", ["api", "lists", id, "cards"]] then [200, { "items" => @state[:cards].select { |c| c["listId"] == id }, "included" => {} }]
+    in ["GET", ["api", "lists", id, "cards"]] then [200, list_cards_page(id, query)]
+    in ["GET", ["api", "lists", id]] then list_payload(id)
+    in ["DELETE", ["api", "cards", id]] then [200, { "item" => delete_card(id) }]
     in ["POST", ["api", "boards", id, "lists"]] then [200, { "item" => make_list(id, data) }]
     in ["POST", ["api", "lists", id, "cards"]] then [200, { "item" => make_card(id, data) }]
     in ["PATCH", ["api", "cards", id]] then [200, { "item" => patch_card(id, data) }]
@@ -258,8 +282,11 @@ class FakePlanka
     [500, { "message" => e.message }]
   end
 
+  # Board reads include only cards in finite (active/closed) lists; archive and
+  # trash cards are paged through GET /api/lists/:id/cards.
   def board_payload(id)
-    cards = @state[:cards].select { |card| card["boardId"] == id }
+    endless = @state[:lists].reject { |list| FINITE_TYPES.include?(list["type"]) }.map { |list| list["id"] }
+    cards = @state[:cards].select { |card| card["boardId"] == id && !endless.include?(card["listId"]) }
     card_ids = cards.map { |card| card["id"] }
     task_lists = @state[:taskLists].select { |list| card_ids.include?(list["cardId"]) }
     task_list_ids = task_lists.map { |list| list["id"] }
@@ -272,7 +299,34 @@ class FakePlanka
       "users" => users,
       "boardMemberships" => board_memberships.select { |record| record["boardId"] == id }
     }
-    { "item" => { "id" => id, "name" => "Board" }, "included" => included }
+    { "item" => { "id" => id, "name" => "Board", "defaultCardType" => "project" }, "included" => included }
+  end
+
+  def list_payload(id)
+    record = @state[:lists].find { |list| list["id"] == id }
+    return [404, { "message" => "List not found" }] unless record && FINITE_TYPES.include?(record["type"])
+
+    [200, { "item" => record, "included" => {} }]
+  end
+
+  # Pages by listChangedAt then id, newest first, as Planka's endless lists do.
+  def list_cards_page(id, query)
+    cards = @state[:cards].select { |card| card["listId"] == id }
+                          .sort_by { |card| [card["listChangedAt"].to_s, card["id"].to_i] }.reverse
+    if query["before[id]"]
+      cursor = [query.fetch("before[listChangedAt]"), query.fetch("before[id]").to_i]
+      cards = cards.select { |card| ([card["listChangedAt"].to_s, card["id"].to_i] <=> cursor).negative? }
+    end
+    cards = cards.first(@page_size)
+    ids = cards.map { |card| card["id"] }
+    { "items" => cards, "included" => { "cardLabels" => @state[:cardLabels].select { |record| ids.include?(record["cardId"]) },
+                                        "cardMemberships" => @state[:cardMemberships].select { |record| ids.include?(record["cardId"]) } } }
+  end
+
+  def delete_card(id)
+    record = fetch(@state[:cards], id)
+    @state[:cards].delete(record)
+    record
   end
 
   def card_payload(id)
