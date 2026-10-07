@@ -14,6 +14,7 @@ module Planka
       USAGE = {
         "describe" => "usage: planka describe <resource> REF [flags]\n",
         "get" => "usage: planka get <resource> [REF] [flags]\n",
+        "create" => "usage: planka create <resource> [flags]\n",
         "add" => "usage: planka add <resource> REF --card CARD [flags]\n",
         "remove" => "usage: planka remove <resource> REF --card CARD [flags]\n",
         "update" => "usage: planka update <resource> REF [flags]\n",

@@ -54,7 +54,7 @@ module Planka
       def relationship_present?(known) = known.fetch("present")
       def relationship_data(known, present:) = known.merge("present" => present)
 
-      def create_record(known) = client.add_card_label(known["cardId"], known["labelId"])["item"]
+      def create_record(known, _desired) = client.add_card_label(known["cardId"], known["labelId"])["item"]
       def delete_record(known) = client.remove_card_label(known["cardId"], known["labelId"])["item"]
 
       def validate_record!(item, desired)

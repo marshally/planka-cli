@@ -27,7 +27,7 @@ class Planka::CLITest < Minitest::Test
       assert_empty err
       assert_includes out, "describe"
       assert_includes out, "card"
-      refute_includes out, "create card"
+      refute_includes out, "create comment"
     end
     out, = run_cli("describe", "card", "--help")
     assert_includes out, "planka describe card CARD"

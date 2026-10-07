@@ -13,15 +13,18 @@ module Planka
 
     attr_reader :client
 
-    def create(reference)
-      known = read_record(reference)
-      persist(known, creation_data(known)) { create_record(known) }
+    def create(reference, **attributes)
+      attributes = creation_attributes(**attributes)
+      known = read_creation_scope(reference)
+      desired = creation_data(known, attributes)
+      persist(known, desired) { create_record(known, desired) }
     end
 
     def update(reference, **attributes)
       attributes = update_attributes(**attributes)
       known = read_record(reference)
-      persist(known, updated_data(known, attributes)) { update_record(known, attributes) }
+      desired = updated_data(known, attributes)
+      persist(known, desired) { update_record(known, desired) }
     end
 
     def delete(reference)
@@ -33,6 +36,10 @@ module Planka
 
     # Read hooks may return an opaque observation. Public state projections are
     # flat hashes; desired state retains known fields and changes requested ones.
+    # A creation observes the scope it creates in, which is the target itself for
+    # relationships and the parent for a new resource.
+    def creation_attributes(**attributes) = attributes
+    def read_creation_scope(reference) = read_record(reference)
     def record_data(known) = known
     def updated_data(known, attributes) = record_data(known).merge(attributes)
     def confirmed_data(_record, desired) = desired

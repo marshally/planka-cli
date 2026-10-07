@@ -118,7 +118,7 @@ module Planka
       def relationship_present?(known) = !known["membershipId"].nil?
       def relationship_data(known, present:) = known.merge("assigned" => present)
 
-      def create_record(known) = client.add_card_member(known["cardId"], known["id"])["item"]
+      def create_record(known, _desired) = client.add_card_member(known["cardId"], known["id"])["item"]
       def delete_record(known) = client.remove_card_member(known["cardId"], known["id"])["item"]
 
       def validate_record!(record, desired)

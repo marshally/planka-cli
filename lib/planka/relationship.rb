@@ -15,7 +15,7 @@ module Planka
     private
 
     def record_data(known) = relationship_data(known, present: relationship_present?(known))
-    def creation_data(known) = relationship_data(known, present: true)
+    def creation_data(known, _attributes) = relationship_data(known, present: true)
     def deletion_data(known) = relationship_data(known, present: false)
   end
 end
