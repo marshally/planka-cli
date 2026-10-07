@@ -294,4 +294,33 @@ class ListResourcesCLITest < Minitest::Test
     assert_equal({ "action" => "readback-list", "resources" => [{ "type" => "list", "id" => READY }] }, doc.dig("error", "recovery"))
     assert_equal 2, @server.counts("DELETE", %r{/api/lists/}), "the unknown delete is not retried"
   end
+
+  def test_help_is_offline_at_root_group_and_leaf_levels
+    offline = { "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil, "PLANKA_AGENT_PASSWORD" => nil }
+    { [] => "get lists --board BOARD", %w[--help] => "delete list LIST",
+      %w[get --help] => "lists --board BOARD", %w[create --help] => "list --board BOARD --name NAME",
+      %w[update --help] => "list LIST  Change only supplied list fields", %w[delete --help] => "list LIST  Delete one list",
+      %w[get lists --help] => "usage: planka get lists --board BOARD", %w[get list -h] => "planka get list LIST",
+      %w[create lists --help] => "usage: planka create list", %w[update list --help] => "--clear-color sends an explicit null",
+      %w[update lists -h] => "usage: planka update list LIST", %w[delete list --help] => "moves the list's cards to the board's trash" }.each do |args, text|
+      out, err, status = planka(*args, env: offline)
+      assert status.success?, "#{args.inspect}: #{err}"
+      assert_includes out, text, args.inspect
+    end
+    assert_equal 0, @server.requests.size
+  end
+
+  def test_legacy_create_list_names_its_replacement_and_keeps_its_contract
+    out, err, status = planka("--help", executable: "planka-create-list")
+    assert status.success?, err
+    assert_includes out, "planka create list --board BOARD --name NAME"
+    out, err, status = planka("create-list", "--name", "Legacy", "--output", "json", env: { "PLANKA_BOARD_ID" => BOARD })
+    assert status.success?, err
+    created = @server.lists.last
+    assert_equal({ "list" => { "id" => created["id"], "boardId" => BOARD, "name" => "Legacy", "type" => "active", "position" => 131_072.0 },
+                   "created" => true }, JSON.parse(out))
+    _out, err, status = planka("create-list", "--name", "Legacy", "--type", "archive", env: { "PLANKA_BOARD_ID" => BOARD })
+    assert_equal 1, status.exitstatus
+    assert_match(/type must be one of active, closed/, err)
+  end
 end
