@@ -22,7 +22,11 @@ module Planka
       def collection_read? = collection_read
       def flag_keys = flags.values
       def flag_error(values) = validate_flags&.call(values)
-      def preparation(env, instance:, flags:) = prepare ? prepare.call(env, instance:, flags:) : { base_url: instance.base_url }
+
+      def preparation(env, instance:, flags:, reference: nil)
+        prepare ? prepare.call(env, instance:, flags:, reference:) : { base_url: instance.base_url }
+      end
+
       def project(data) = projector ? projector.call(data) : data
       def format(data) = formatter.call(data)
     end
