@@ -57,6 +57,10 @@ module Planka
       # Its current list without a position is already satisfied.
       def move(reference, list:, position: nil) = change(reference, list: list, position: position)
 
+      # Issues one native card deletion; Planka removes the card's own records
+      # and clears other tasks' links to it without deleting those cards.
+      def delete(reference) = super
+
       # Validates text the way Planka does: lengths count UTF-16 code units.
       def self.text?(value, limit) = value.is_a?(String) && !value.empty? && value.encode("UTF-16LE").bytesize / 2 <= limit
 
@@ -148,7 +152,9 @@ module Planka
         end
       end
 
-      def confirmed_data(record, _desired) = card_data(record)
+      def deletion_data(known) = known.card.merge("deleted" => true)
+      def delete_record(known) = client.delete_card(known.card["id"])
+      def confirmed_data(record, desired) = card_data(record).merge(desired.slice("deleted"))
 
       def recovery(known)
         card = known.card

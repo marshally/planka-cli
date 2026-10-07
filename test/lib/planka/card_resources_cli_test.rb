@@ -298,4 +298,35 @@ class CardResourcesCLITest < Minitest::Test
     end
     assert_equal 1, writes.size
   end
+
+  def test_delete_issues_one_target_deletion_and_leaves_linked_cards
+    blocked = @server.add_card("Blocked", READY)
+    @server.task_lists << { "id" => "910", "cardId" => blocked, "name" => "Blockers" }
+    @server.tasks << { "id" => "911", "taskListId" => "910", "name" => "Spec", "linkedCardId" => CARD, "isCompleted" => false }
+    doc, err, status = json("delete", "card", "Spec: Work-next refinement", "--board", BOARD)
+    assert status.success?, err
+    assert_equal expected_card("deleted" => true), doc["data"]
+    assert_equal({ "changed" => true }, doc["meta"])
+    assert_equal [["DELETE", "/api/cards/#{CARD}", nil]], writes
+    assert_nil @server.find_card(CARD)
+    refute_nil @server.find_card(blocked), "linked cards are never deleted"
+    out, err, status = planka("delete", "cards", blocked)
+    assert status.success?, err
+    assert_equal "Deleted card Blocked (#{blocked}) from list #{READY}", out.chomp
+  end
+
+  def test_delete_requires_a_target_and_reports_rejected_or_unknown_outcomes
+    doc, _err, status = json("delete", "card")
+    assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")]
+    assert_equal 0, @server.requests.size
+    @server.inject("DELETE", %r{/api/cards/}, 403)
+    doc, _err, status = json("delete", "card", CARD)
+    assert_equal [1, "authorization_error", false, expected_card], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed"), doc["data"]]
+    @server.inject("DELETE", %r{/api/cards/}, :apply_then_drop)
+    doc, _err, status = json("delete", "card", CARD)
+    assert_equal [1, "unknown_outcome", nil], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+    assert_equal expected_card("deleted" => nil), doc["data"]
+    assert_equal({ "action" => "readback-card", "resources" => [{ "type" => "card", "id" => CARD }] }, doc.dig("error", "recovery"))
+    assert_equal 2, @server.counts("DELETE", %r{/api/cards/}), "the unknown delete is not retried"
+  end
 end

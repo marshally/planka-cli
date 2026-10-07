@@ -19,6 +19,7 @@ module Planka
         "remove" => "usage: planka remove <resource> REF --card CARD [flags]\n",
         "update" => "usage: planka update <resource> REF [flags]\n",
         "move" => "usage: planka move <resource> REF [flags]\n",
+        "delete" => "usage: planka delete <resource> REF [flags]\n",
       }.freeze
       GROUPS = USAGE.to_h { |verb, usage| [verb, usage + COMMAND_MODULES.filter_map { |resource| resource::GROUP_HELP[verb] }.join] }.freeze
 

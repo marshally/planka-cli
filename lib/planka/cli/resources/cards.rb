@@ -13,6 +13,7 @@ module Planka
           create card --list LIST --name NAME  Create one native card
           update card CARD  Change only supplied card fields
           move card CARD --list LIST  Move a card to a list on its board
+          delete card CARD  Delete one card with native cleanup
         HELP
         COMMON_HELP = <<~HELP
           CARD is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID.
@@ -56,6 +57,7 @@ module Planka
           "create" => "  card --list LIST --name NAME  Create one native card\n",
           "update" => "  card CARD  Change only supplied card fields\n",
           "move" => "  card CARD --list LIST  Move a card to a list on its board\n",
+          "delete" => "  card CARD  Delete one card with native cleanup\n",
         }.freeze
         HELP = <<~HELP
           usage: planka describe card CARD [--output human|json]
@@ -196,6 +198,10 @@ module Planka
           Planka::Boards::Cards.new(client, board_id: board_id).move(reference, **destination)
         end
 
+        def self.delete(client, reference, board_id: nil)
+          Planka::Boards::Cards.new(client, board_id: board_id).delete(reference)
+        end
+
         def self.format_card(card) = "#{card["name"]} (#{card["id"]}) in list #{card["listId"]}"
 
         def self.format_cards(data)
@@ -223,6 +229,16 @@ module Planka
           neither claims nor releases work. JSON data is the resulting card; meta.changed is true/false/null.
           A rejected write keeps the unchanged card; an unknown or malformed response marks the list and
           position null with readback-card recovery. Read back with planka get card CARD before retrying.
+        HELP
+
+        DELETE_HELP = <<~HELP + COMMON_HELP
+          usage: planka delete card CARD [--board BOARD] [-o human|json]
+          Issue one native deletion without prompts; an omitted CARD is an input error and never a bulk delete.
+          Planka deletes the card's task lists, tasks, attachments, comments, memberships, label assignments,
+          and subscriptions, and clears links to it from other cards' tasks without deleting those cards.
+          Native board editor permission is required. JSON data is the card with deleted true; meta.changed is
+          true/false/null. A rejected deletion keeps the unchanged card without deleted; an unknown or malformed
+          response sets deleted null with readback-card recovery. Read back with planka get card CARD.
         HELP
 
         def self.format(detail)
@@ -274,6 +290,10 @@ module Planka
                                           flags: { "--list LIST" => :list, "--board BOARD" => :board, "--position N" => :position },
                                           validate_flags: method(:validate_card_values), prepare: method(:prepare_move),
                                           help: MOVE_HELP, operation: method(:move), formatter: ->(card) { "Moved card #{format_card(card)}" }),
+          ["delete", "card"] => Command.new(aliases: [["delete", "cards"]], names: true, mutation: true, resource: "card", collection: "cards",
+                                            flags: { "--board BOARD" => :board }, validate_flags: method(:validate_scope_flags),
+                                            prepare: method(:prepare_card), help: DELETE_HELP, operation: method(:delete),
+                                            formatter: ->(card) { "Deleted card #{card["name"]} (#{card["id"]}) from list #{card["listId"]}" }),
           ["describe", "card"] => Command.new(aliases: [["describe", "cards"]], resource: "card", collection: "cards", help: HELP, operation: Planka::Cards::Detail.method(:read), formatter: method(:format)),
         }.freeze
 
