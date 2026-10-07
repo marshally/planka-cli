@@ -39,6 +39,24 @@ class CardMembersResourceTest < Minitest::Test
     end
   end
 
+  def test_all_rejects_invalid_limits_before_reading_resources
+    with_members do |members|
+      [0, -1, 1.5, "2", false].each do |limit|
+        assert_raises(ArgumentError) { members.all(limit: limit) }
+      end
+      assert_empty(@server.requests.select { |method, _path, _body| method == "GET" })
+    end
+  end
+
+  def test_all_rejects_non_string_name_filters_before_reading_resources
+    with_members do |members|
+      [false, 42, []].each do |name|
+        assert_raises(ArgumentError) { members.all(name: name) }
+      end
+      assert_empty(@server.requests.select { |method, _path, _body| method == "GET" })
+    end
+  end
+
   def test_find_returns_one_assignment_by_id_or_exact_name
     @server.memberships << assignment
     with_members do |members|
