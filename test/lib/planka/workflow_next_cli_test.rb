@@ -357,7 +357,7 @@ class Planka::WorkflowNextCLITest < Minitest::Test
 
   def test_api_failures_and_cleanup_failures_preserve_the_primary_result
     [401, 403, 404, 500].zip(%w[authentication_error authorization_error not_found api_error]).each do |http, code|
-      @server.inject("GET", %r{boards/#{BOARD}$}, http, times: http == 500 ? 3 : 1)
+      @server.inject("GET", %r{boards/#{BOARD}$}, http)
       @server.inject("DELETE", %r{access-tokens/me$}, 403)
       out, err, status = planka("workflow", "next", "-o", "json")
       assert_equal 1, status.exitstatus

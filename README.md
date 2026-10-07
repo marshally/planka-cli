@@ -292,8 +292,8 @@ unknown or malformed write response returns `error.code: unknown_outcome`,
 `changed: null`, and marks requested fields null (`deleted: null` for delete).
 Unknown creates never invent a card ID and report `readback-cards` recovery for
 the list: inspect `get cards --list LIST` before retrying. Other mutations
-report `readback-card`: inspect `get card CARD`. Creates and deletes are never
-retried automatically.
+report `readback-card`: inspect `get card CARD`. No request is retried
+automatically.
 
 Human reads print `NAME (CARD_ID) in list LIST_ID` per card, or `No cards.`;
 limited output adds a truncation notice. Mutations print `Created card`,
