@@ -7,10 +7,7 @@ module Planka
       NAME_LIMIT = 1024
       DESCRIPTION_LIMIT = 1_048_576
 
-      # Validates text the way Planka does: lengths count UTF-16 code units.
-      def self.text?(value, limit)
-        value.is_a?(String) && value.valid_encoding? && !value.empty? && value.encode("UTF-16LE").bytesize / 2 <= limit
-      end
+      def self.text?(value, limit) = Records.text?(value, limit)
 
       def self.text!(field, value, limit)
         return value if text?(value, limit)
@@ -19,7 +16,7 @@ module Planka
       end
 
       def self.position!(position)
-        return position if position.nil? || (position.is_a?(Numeric) && position.finite? && position >= 0)
+        return position if position.nil? || Records.position?(position)
 
         raise ArgumentError, "position must be finite and nonnegative"
       end

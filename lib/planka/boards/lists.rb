@@ -6,6 +6,9 @@ module Planka
     class Lists < Resource
       OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
 
+      # A list's public data with the position that appends a new kanban list.
+      Observation = Data.define(:list, :append_position)
+
       def initialize(client, board_id: nil)
         super(client)
         @board_id = board_id
@@ -25,7 +28,11 @@ module Planka
         raise CollectionFailure.new(data: CollectionResult.limited(data, limit).data)
       end
 
-      def find(reference) = read_record(reference)
+      def find(reference) = read_record(reference).list
+
+      # Creates a native kanban list on the board, appending after its active
+      # and closed lists unless a position is given.
+      def create(name:, type: "active", position: nil) = super(@board_id, name: name, type: type, position: position)
 
       private
 
@@ -35,7 +42,29 @@ module Planka
         raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
       end
 
-      def read_record(reference) = ListRecord.data(@scope.lists(@scope.board(reference), reference).first)
+      def read_record(reference) = Observation.new(list: ListRecord.data(@scope.lists(@scope.board(reference), reference).first), append_position: nil)
+
+      def read_creation_scope(_board_id)
+        board = @scope.board(nil)
+        kanban = @scope.lists(board).select { |record| @scope.finite?(record) }
+        Observation.new(list: ListRecord.placeholder(board["item"]["id"]), append_position: Position.after(kanban))
+      end
+
+      def record_data(known) = known.list
+
+      def creation_attributes(name:, type:, position:)
+        { "name" => ListRecord.name!(name), "type" => ListRecord.type!(type), "position" => ListRecord.position!(position) }
+      end
+
+      def creation_data(known, attributes) = known.list.merge(attributes, "position" => attributes["position"] || known.append_position)
+
+      def create_record(_known, desired)
+        client.create_list(desired["boardId"], type: desired["type"], name: desired["name"], position: desired["position"])
+      end
+
+      def validate_record!(record, desired) = ListRecord.confirm!(record, desired)
+      def confirmed_data(record, _desired) = ListRecord.data(record)
+      def recovery(known) = ListRecord.recovery(known.list)
     end
   end
 end
