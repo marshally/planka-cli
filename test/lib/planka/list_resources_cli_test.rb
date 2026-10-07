@@ -260,4 +260,38 @@ class ListResourcesCLITest < Minitest::Test
     assert_equal [1, "unknown_outcome"], [status.exitstatus, doc.dig("error", "code")]
     assert_equal 3, @server.counts("PATCH", %r{/api/lists/}), "unknown updates are not retried"
   end
+
+  def test_delete_issues_one_target_deletion_and_planka_moves_cards_to_trash
+    card = @server.add_card("Doing", PROGRESS)
+    doc, err, status = json("delete", "list", "in-progress", "--board", BOARD)
+    assert status.success?, err
+    assert_equal({ "data" => expected_list("id" => PROGRESS, "name" => "in-progress", "deleted" => true), "meta" => { "changed" => true },
+                   "error" => nil }, doc)
+    assert_equal [["DELETE", "/api/lists/#{PROGRESS}", nil]], writes, "no card is deleted or moved by the client"
+    trash = @server.lists.find { |list| list["type"] == "trash" }
+    assert_equal [trash["id"], nil], @server.find_card(card).values_at("listId", "position"), "Planka keeps the card in trash"
+    out, err, status = planka("delete", "lists", DONE)
+    assert status.success?, err
+    assert_equal "Deleted list done (#{DONE}) from board #{BOARD}", out.chomp
+  end
+
+  def test_delete_requires_an_eligible_target_and_reports_rejected_or_unknown_outcomes
+    doc, _err, status = json("delete", "list")
+    assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")]
+    assert_equal 0, @server.requests.size
+    archive = @server.add_list(nil, "archive")
+    doc, _err, status = json("delete", "list", archive, "--board", BOARD)
+    assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")]
+    assert_match(/archive and trash/i, doc.dig("error", "message"))
+    assert_empty writes
+    @server.inject("DELETE", %r{/api/lists/}, 403)
+    doc, _err, status = json("delete", "list", READY)
+    assert_equal [1, "authorization_error", false, expected_list], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed"), doc["data"]]
+    @server.inject("DELETE", %r{/api/lists/}, :apply_then_drop)
+    doc, _err, status = json("delete", "list", READY)
+    assert_equal [1, "unknown_outcome", nil], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+    assert_equal expected_list("deleted" => nil), doc["data"]
+    assert_equal({ "action" => "readback-list", "resources" => [{ "type" => "list", "id" => READY }] }, doc.dig("error", "recovery"))
+    assert_equal 2, @server.counts("DELETE", %r{/api/lists/}), "the unknown delete is not retried"
+  end
 end

@@ -12,6 +12,7 @@ module Planka
           get list LIST  Read one board list (read-only)
           create list --board BOARD --name NAME  Create one kanban list
           update list LIST  Change only supplied list fields
+          delete list LIST  Delete one list; Planka moves its cards to trash
         HELP
         COMMON_HELP = <<~HELP
           LIST is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID. A list ID
@@ -57,10 +58,21 @@ module Planka
           list; an unknown or malformed response marks changed fields null with readback-list recovery.
           Read back with planka get list LIST before retrying.
         HELP
+        DELETE_HELP = <<~HELP + COMMON_HELP
+          usage: planka delete list LIST [--board BOARD] [-o human|json]
+          Issue one native deletion without prompts; an omitted LIST is an input error and never a bulk delete.
+          Planka moves the list's cards to the board's trash list, where get cards does not read them; they are
+          not deleted, and the client makes no card writes. Archive and trash lists cannot be deleted. This
+          differs from deleting a board, which removes its lists and cards. Native board editor permission is
+          required. JSON data is the list with deleted true; meta.changed is true/false/null. A rejected
+          deletion keeps the unchanged list without deleted; an unknown or malformed response sets deleted null
+          with readback-list recovery. Read back with planka get lists --board BOARD.
+        HELP
         GROUP_HELP = {
           "get" => "  lists --board BOARD  List a board's lists of every type (read-only)\n  list LIST  Read one board list (read-only)\n",
           "create" => "  list --board BOARD --name NAME  Create one kanban list\n",
           "update" => "  list LIST  Change only supplied list fields\n",
+          "delete" => "  list LIST  Delete one list; Planka moves its cards to trash\n",
         }.freeze
 
         # get reads one list with a reference, otherwise the board's lists.
@@ -128,6 +140,8 @@ module Planka
           Planka::Boards::Lists.new(client, board_id: board_id).update(reference, **attributes)
         end
 
+        def self.delete(client, reference, board_id: nil) = Planka::Boards::Lists.new(client, board_id: board_id).delete(reference)
+
         def self.format_list(list) = "#{list["name"] || "(unnamed)"} (#{list["id"]}) #{list["type"]} on board #{list["boardId"]}"
 
         def self.format_lists(data)
@@ -151,6 +165,10 @@ module Planka
                                                      "--clear-color" => :clear_color, "--position N" => :position, "--type TYPE" => :type },
                                             validate_flags: method(:validate_list_values), prepare: method(:prepare_update),
                                             help: UPDATE_HELP, operation: method(:update), formatter: ->(list) { "Updated list #{format_list(list)}" }),
+          ["delete", "list"] => Command.new(aliases: [["delete", "lists"]], names: true, mutation: true, resource: "list", collection: "lists",
+                                            flags: { "--board BOARD" => :board }, validate_flags: Cards.method(:validate_scope_flags),
+                                            prepare: method(:prepare_list), help: DELETE_HELP, operation: method(:delete),
+                                            formatter: ->(list) { "Deleted list #{list["name"] || "(unnamed)"} (#{list["id"]}) from board #{list["boardId"]}" }),
         }.freeze
 
         def self.commands = COMMANDS
