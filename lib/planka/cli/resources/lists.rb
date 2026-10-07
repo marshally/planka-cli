@@ -10,6 +10,7 @@ module Planka
         ROOT_HELP = <<~HELP.gsub(/^/, "  ")
           get lists --board BOARD  List a board's lists of every type (read-only)
           get list LIST  Read one board list (read-only)
+          create list --board BOARD --name NAME  Create one kanban list
         HELP
         COMMON_HELP = <<~HELP
           LIST is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID. A list ID
@@ -30,8 +31,19 @@ module Planka
           when truncated or the read fails.
           With LIST, data is one list object and meta is empty.
         HELP
+        CREATE_HELP = <<~HELP + COMMON_HELP
+          usage: planka create list --board BOARD --name NAME [--type active|closed] [--position N] [-o human|json]
+          Create a native kanban list even when its name exists. --board is required. TYPE defaults to active;
+          archive and trash are system lists and cannot be created. Appends after the board's active/closed
+          lists, ignoring archive/trash, unless --position gives a finite nonnegative native ordering value;
+          Planka may renumber positions. NAME is nonempty, at most 128 characters.
+          JSON data is the created list; meta.changed is true, or null with unknown_outcome.
+          An unknown or malformed write response gives readback-lists recovery for the board and no list ID.
+          Read back with planka get lists --board BOARD before retrying; creates are never retried.
+        HELP
         GROUP_HELP = {
           "get" => "  lists --board BOARD  List a board's lists of every type (read-only)\n  list LIST  Read one board list (read-only)\n",
+          "create" => "  list --board BOARD --name NAME  Create one kanban list\n",
         }.freeze
 
         # get reads one list with a reference, otherwise the board's lists.
@@ -46,10 +58,39 @@ module Planka
           { board_id: BoardScope.for_reference(env, instance, reference, flags[:board]&.first, resource: "List") }
         end
 
+        def self.prepare_create(_env, instance:, flags:, **)
+          unless flags[:board] && flags[:name]
+            raise Failure.new(code: "invalid_input", status: 2, message: "create list requires --board and --name")
+          end
+
+          { board_id: BoardScope.resolve(instance, flags[:board].first), name: flags[:name].first,
+            type: flags[:type]&.first || "active", position: position(flags) }
+        end
+
+        # Validated by validate_list_values before preparation.
+        def self.position(flags) = flags[:position] && Float(flags[:position].first)
+        private_class_method :position
+
+        def self.validate_list_values(flags)
+          error = Cards.validate_scope_flags(flags)
+          return error if error
+          if flags[:name] && !Records.text?(flags[:name].first, Planka::Boards::ListRecord::NAME_LIMIT)
+            return "--name must be at most #{Planka::Boards::ListRecord::NAME_LIMIT} characters"
+          end
+          if flags[:type] && !Planka::Boards::ListRecord::KANBAN_TYPES.include?(flags[:type].first)
+            return "--type must be #{Planka::Boards::ListRecord::KANBAN_TYPES.join(" or ")}"
+          end
+
+          position = flags[:position] && Float(flags[:position].first, exception: false)
+          "--position must be finite and nonnegative" if flags[:position] && !(position && Records.position?(position))
+        end
+
         def self.get(client, reference = nil, board_id: nil, **collection)
           lists = Planka::Boards::Lists.new(client, board_id: board_id)
           reference ? lists.find(reference) : lists.all(**collection)
         end
+
+        def self.create(client, board_id:, **attributes) = Planka::Boards::Lists.new(client, board_id: board_id).create(**attributes)
 
         def self.format_list(list) = "#{list["name"] || "(unnamed)"} (#{list["id"]}) #{list["type"]} on board #{list["boardId"]}"
 
@@ -65,6 +106,10 @@ module Planka
                                          flags: { "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit },
                                          validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_get),
                                          help: GET_HELP, operation: method(:get), formatter: method(:format_lists)),
+          ["create", "list"] => Command.new(aliases: [["create", "lists"]], reference: false, mutation: true, resource: "list", collection: "lists",
+                                            flags: { "--board BOARD" => :board, "--name NAME" => :name, "--type TYPE" => :type, "--position N" => :position },
+                                            validate_flags: method(:validate_list_values), prepare: method(:prepare_create),
+                                            help: CREATE_HELP, operation: method(:create), formatter: ->(list) { "Created list #{format_list(list)}" }),
         }.freeze
 
         def self.commands = COMMANDS

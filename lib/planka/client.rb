@@ -90,7 +90,7 @@ module Planka
 
     def delete_card(card_id) = item(request(:delete, "/api/cards/#{card_id}"), "card")
 
-    def create_list(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/lists", attrs).fetch("item")
+    def create_list(board_id, **attrs) = item(request(:post, "/api/boards/#{board_id}/lists", attrs), "list")
 
     def create_label(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/labels", attrs).fetch("item")
 

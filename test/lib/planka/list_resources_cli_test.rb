@@ -116,4 +116,58 @@ class ListResourcesCLITest < Minitest::Test
     assert_equal "api_error", doc.dig("error", "code")
     assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
   end
+
+  def test_create_appends_an_active_list_after_kanban_lists_ignoring_archive_and_trash
+    @server.add_list(nil, "archive", position: 999_999)
+    @server.add_list("Later", "closed", position: 131_072)
+    doc, err, status = json("create", "list", "--board", BOARD, "--name", "Ünïcode review")
+    assert status.success?, err
+    assert_equal({ "changed" => true }, doc["meta"])
+    created = @server.lists.last
+    assert_equal expected_list("id" => created["id"], "name" => "Ünïcode review", "position" => 196_608), doc["data"]
+    assert_equal [["POST", "/api/boards/#{BOARD}/lists", { "type" => "active", "name" => "Ünïcode review", "position" => 196_608 }]], writes
+    @server.requests.clear
+    out, err, status = planka("create", "lists", "--board", "#{@server.base_url}/boards/#{BOARD}", "--name", "Done", "--type", "closed", "--position", "1")
+    assert status.success?, err
+    assert_match(/\ACreated list Done \(\d+\) closed on board #{BOARD}\n\z/, out)
+    assert_equal [["POST", "/api/boards/#{BOARD}/lists", { "type" => "closed", "name" => "Done", "position" => 1 }]], writes
+  end
+
+  def test_create_and_scope_inputs_are_validated_before_any_request
+    [["create", "list", "--name", "x"],
+     ["create", "list", "--board", BOARD],
+     ["create", "list", "--board", BOARD, "--name", ""],
+     ["create", "list", "--board", BOARD, "--name", "x" * 129],
+     ["create", "list", "--board", BOARD, "--name", "x", "--type", "archive"],
+     ["create", "list", "--board", BOARD, "--name", "x", "--type", "trash"],
+     ["create", "list", "--board", BOARD, "--name", "x", "--position", "-1"],
+     ["create", "list", "--board", BOARD, "--name", "x", "--position", "Infinity"],
+     ["create", "list", "--board", BOARD, "--name", "x", "--color", "berry-red"],
+     ["create", "list", READY, "--board", BOARD, "--name", "x"]].each do |args|
+      doc, err, status = json(*args, env: { "PLANKA_BOARD_ID" => BOARD })
+      assert_equal 2, status.exitstatus, "#{args.inspect}: #{err}"
+      assert_equal "invalid_input", doc.dig("error", "code"), args.inspect
+      refute_match(/unknown command/, err, args.inspect)
+    end
+    doc, err, status = json("create", "list", "--board", BOARD, "--name", "x" * 128)
+    assert status.success?, err
+    assert_equal 128, doc.dig("data", "name").size
+    assert_equal 1, writes.size
+  end
+
+  def test_unknown_create_outcome_reports_no_invented_id_and_is_not_retried
+    @server.inject("POST", %r{/api/boards/.+/lists\z}, :apply_then_drop)
+    doc, _err, status = json("create", "list", "--board", BOARD, "--name", "Review")
+    assert_equal [1, "unknown_outcome", nil], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+    assert_nil doc.dig("data", "id")
+    assert_equal BOARD, doc.dig("data", "boardId")
+    assert_equal({ "action" => "readback-lists", "resources" => [{ "type" => "board", "id" => BOARD }] }, doc.dig("error", "recovery"))
+    assert_equal 1, @server.counts("POST", %r{/api/boards/.+/lists\z})
+    @server.inject("POST", %r{/api/boards/.+/lists\z}, { "item" => { "id" => "1" } })
+    doc, _err, status = json("create", "list", "--board", BOARD, "--name", "Malformed")
+    assert_equal [1, "unknown_outcome"], [status.exitstatus, doc.dig("error", "code")]
+    @server.inject("POST", %r{/api/boards/.+/lists\z}, 403)
+    doc, _err, status = json("create", "list", "--board", BOARD, "--name", "Forbidden")
+    assert_equal [1, "authorization_error", false], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+  end
 end
