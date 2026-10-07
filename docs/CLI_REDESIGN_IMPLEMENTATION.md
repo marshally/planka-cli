@@ -18,7 +18,8 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow claim-status`; the sixth adds
 `planka workflow guide`; the seventh adds
 `planka workflow next`; the eighth adds `planka workflow claim CARD`; the tenth
-adds native card `get`, `create`, `update`, `move`, and `delete`. All legacy entry
+adds native card `get`, `create`, `update`, `move`, and `delete`; the eleventh
+adds native list `get`, `create`, `update`, and `delete`. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.

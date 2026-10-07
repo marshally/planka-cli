@@ -106,6 +106,11 @@ class ListResourcesCLITest < Minitest::Test
       assert_equal({ "complete" => false }, doc["meta"], args.inspect)
     end
     assert_equal 0, @server.requests.size
+    @server.add_board(OTHER_BOARD)
+    elsewhere = @server.add_list("elsewhere", board_id: OTHER_BOARD)
+    doc, _err, status = json("get", "list", elsewhere, "--board", BOARD)
+    assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")], "explicit parent mismatches fail"
+    assert_match(/does not belong to --board/, doc.dig("error", "message"))
   end
 
   def test_malformed_lists_report_an_incomplete_failed_read
@@ -235,6 +240,9 @@ class ListResourcesCLITest < Minitest::Test
   def test_archive_and_trash_lists_are_not_updated
     archive = @server.add_list(nil, "archive")
     trash = @server.add_list("Trash", "trash")
+    doc, err, status = json("get", "list", archive, "--board", BOARD)
+    assert status.success?, err
+    assert_equal [nil, "archive"], doc["data"].values_at("name", "type"), "system lists are read through the board"
     [archive, "Trash"].each do |list|
       doc, _err, status = json("update", "list", list, "--board", BOARD, "--name", "Kept")
       assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")], list
