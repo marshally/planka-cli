@@ -6,7 +6,7 @@ module Planka
     module Resources
       module Boards
         ROOT_HELP = "  describe board BOARD  Read board snapshot and related data (read-only)\n".freeze
-        GROUP_HELP = "  board BOARD  Read board snapshot and related data (read-only)\n".freeze
+        GROUP_HELP = { "describe" => "  board BOARD  Read board snapshot and related data (read-only)\n" }.freeze
         HELP = <<~HELP
           usage: planka describe board BOARD [--output human|json]
           Read-only: board ID or same-instance board URL; an explicit target is required.

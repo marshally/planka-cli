@@ -99,7 +99,7 @@ module Planka
         raise Planka::CLI::Failure.new(code: "configuration_error", message: error.message)
       end
 
-      def self.next_preparation(env, instance:, flags:)
+      def self.next_preparation(env, instance:, flags:, **)
         board = flags.fetch(:board, []).first || env["PLANKA_BOARD_ID"]
         if board.to_s.strip.empty?
           raise Planka::CLI::Failure.new(code: "configuration_error", message: "Missing required environment: PLANKA_BOARD_ID (or supply --board BOARD)")

@@ -84,7 +84,7 @@ class CardTasksCLITest < Minitest::Test
     assert_equal "Card names require --board or PLANKA_BOARD_ID", JSON.parse(out).dig("error", "message")
     out, err, status = planka("update", "--help")
     assert status.success?, err
-    assert_includes out, "usage: planka update <resource> REF --card CARD [flags]"
+    assert_includes out, "usage: planka update <resource> REF [flags]"
     assert_match(/^  task TASK --card CARD  /, out)
   end
 

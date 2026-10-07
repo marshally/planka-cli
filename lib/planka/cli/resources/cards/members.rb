@@ -42,7 +42,7 @@ module Planka
             Native board editor permission is required. A lost/malformed write response gives readback-membership recovery.
           HELP
 
-          def self.prepare(env, instance:, flags:)
+          def self.prepare(env, instance:, flags:, **)
             Cards.prepare_scope(env, instance: instance, flags: flags)
                  .merge(name: flags[:name]&.first, limit: flags[:limit]&.first&.to_i)
           end
