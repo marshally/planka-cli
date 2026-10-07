@@ -2,7 +2,7 @@ module Planka
   module CLI
     # One canonical command definition. Optional behavior defaults live here, so
     # parsing, preparation and output ask the command instead of re-applying them.
-    Command = Data.define(:help, :reader, :formatter, :resource, :collection, :aliases, :flags,
+    Command = Data.define(:help, :operation, :formatter, :resource, :collection, :aliases, :flags,
                           :reference, :optional_reference, :names, :session, :mutation, :collection_read, :collection_flags,
                           :prepare, :validate_flags, :projector) do
       def initialize(aliases: [], flags: {}, reference: true, optional_reference: false, names: false,
@@ -22,7 +22,7 @@ module Planka
       def collection_read? = collection_read
       def flag_keys = flags.values
       def flag_error(values) = validate_flags&.call(values)
-      def preparation(env, instance:, flags:) = prepare ? prepare.call(env, instance:, flags:) : {}
+      def preparation(env, instance:, flags:) = prepare ? prepare.call(env, instance:, flags:) : { base_url: instance.base_url }
       def project(data) = projector ? projector.call(data) : data
       def format(data) = formatter.call(data)
     end

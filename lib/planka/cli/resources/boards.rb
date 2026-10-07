@@ -33,7 +33,7 @@ module Planka
         end
 
         COMMANDS = {
-          ["describe", "board"] => Command.new(aliases: [["describe", "boards"]], resource: "board", collection: "boards", help: HELP, reader: Planka::Boards::Snapshot, formatter: method(:format)),
+          ["describe", "board"] => Command.new(aliases: [["describe", "boards"]], resource: "board", collection: "boards", help: HELP, operation: Planka::Boards::Snapshot.method(:read), formatter: method(:format)),
         }.freeze
 
         def self.commands = COMMANDS

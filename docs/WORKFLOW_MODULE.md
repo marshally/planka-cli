@@ -79,22 +79,24 @@ Claim retains its original behavior and result shape.
 `require "planka/workflow/cli"` loads the workflow CLI adapter. The bundled
 executable passes it to `CanonicalCLI.run` through `extensions:`. An extension
 provides `commands`, `groups`, and `root_help`; each command is a
-`Planka::CLI::Command`, which owns its defaults and selects a reader, callable formatter, optional JSON projector, applicable flag definitions,
+`Planka::CLI::Command`, which owns its defaults and selects a callable operation, callable formatter, optional JSON projector, applicable flag definitions,
 local flag validator, and optional `prepare` callback. Declared aliases belong to
 the catalog rather than shared grammar. Commands
 declaring `mutation: true` return a core `MutationResult`; Output projects its data
 and changed metadata. Other commands retain their existing read-result contracts. Commands
 without references select `reference: false`; offline commands additionally select
-`session: false` and their readers take no client or settings.
+`session: false` and their operations take no client or settings.
 
 Shared `Parser` returns an immutable `Invocation`. `PreparedCommand.build`
-captures the connection settings and reader inputs before authentication; workflow
-`prepare` callbacks receive `env`, `instance:`, and `flags:` and return reader
-keyword arguments. The supplied `Instance` owns same-instance URL resolution
+captures the connection settings and operation inputs before authentication; workflow
+`prepare` callbacks receive `env`, `instance:`, and `flags:` and return the complete operation
+keyword arguments, including `base_url:` when needed. The supplied `Instance` owns same-instance URL resolution
 without credentials or environment defaults. Workflow next preparation owns scope
 precedence and input-versus-configuration failure classification. Branch naming
-owns its prefix settings. Prepared readers receive explicit inputs; shared CLI
-code contains no workflow names. See the
+owns its prefix settings. Prepared operations receive explicit inputs; shared CLI
+code contains no workflow names. Workflow command definitions bind existing
+readers with `operation: Reader.method(:read)`; shared execution invokes `call`.
+See the
 [canonical architecture](CLI_REDESIGN_IMPLEMENTATION.md#canonical-cli-architecture). Shared
 parsing and output contain no workflow command names or branch-prefix rules.
 

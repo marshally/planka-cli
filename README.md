@@ -642,6 +642,35 @@ agent conventions, then wrap a core board with `Planka::Workflow::Board.new(boar
 per-call prefix. Historical workflow Ruby paths and constant aliases are removed;
 legacy CLI commands remain available.
 
+Card-scoped resources accept an authenticated client and explicit scope. Reuse
+the object within the session; each operation reads current server state:
+
+```ruby
+Planka::Client.session(validate_responses: true) do |client|
+  members = Planka::Cards::Members.new(client, card_id: "123")
+  members.all                     # CollectionResult: data and complete
+  members.find("456")              # One assigned user's public fields
+  members.add("456")               # MutationResult: data and changed
+  members.remove("456")            # MutationResult: data and changed
+
+  tasks = Planka::Cards::Tasks.new(client, card_id: "123")
+  tasks.update("789", completed: true)
+end
+```
+
+Member and task references accept IDs or exact scoped names. Constructors also
+accept `board_id:` to assert the card's board or resolve a card name within it;
+they do not read environment defaults or open a session. `Members#all` accepts
+an exact `name:` filter and positive integer `limit:`. `Tasks#update` changes
+only completion, requires a Boolean, and refuses linked tasks. Repeated
+already-satisfied mutations return `changed: false`.
+
+Mutation failures raise `Planka::MutationFailure` with `data`, `changed`,
+`uncertain`, and `recovery`; use readback before retrying an uncertain write.
+Collection failures raise `Planka::CollectionFailure` with known partial `data`.
+The CLI uses these same resource methods. The former member/task `.read`
+dispatchers are replaced by these instance methods.
+
 ## Development and extraction boundary
 
 Before implementation, refactoring, or review, read the

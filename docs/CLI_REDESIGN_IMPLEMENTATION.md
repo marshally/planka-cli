@@ -583,13 +583,13 @@ Legacy executables retain their existing argument/output adapters.
 | Owner | Interface and responsibility |
 | --- | --- |
 | [CLI::Resources](../lib/planka/cli/resources.rb) | Combines resource-owned command definitions and help into the shared catalog role. |
-| [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb), [CLI::Resources::Boards](../lib/planka/cli/resources/boards.rb), [CLI::Resources::Cards::Members](../lib/planka/cli/resources/cards/members.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Own paths, aliases, help, applicable flags, local validation, readers, presentation, and command-specific preparation. |
+| [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb), [CLI::Resources::Boards](../lib/planka/cli/resources/boards.rb), [CLI::Resources::Cards::Members](../lib/planka/cli/resources/cards/members.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Own paths, aliases, help, applicable flags, local validation, callable operations, presentation, and command-specific preparation. |
 | [CLI::Catalog](../lib/planka/cli/catalog.rb) | Combine resource commands with explicitly attached catalogs and resolve declared aliases. Own root/group/leaf help selection. |
 | [CLI::Parser](../lib/planka/cli/parser.rb) | `parse` owns mutable option parsing and local syntax validation, returning an immutable invocation. No configuration or execution. |
 | [CLI::Invocation](../lib/planka/cli/invocation.rb) | Immutable snapshot of the selected definition, program, output format, reference, flags, and optional help text. No parsing, environment access, preparation, or execution. |
 | [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` captures required connection settings and provides session arguments. Credentials are frozen and inspection is redacted. Owns a validated instance, not resource-reference resolution. |
 | [CLI::Instance](../lib/planka/cli/instance.rb) | Own the validated server URL, including instance path, and `resolve` numeric IDs or same-instance resource URLs. No credentials, environment defaults, or command policy. |
-| [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable reader arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
+| [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable operation arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, catalog-selected human/JSON presentation, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
 | [Write](../lib/planka/write.rb) | Run one resource write, returning its confirmed result or preserving unchanged/unknown data and recovery references on failure. |
@@ -603,9 +603,20 @@ their validation and result/recovery shapes; Write owns mutation result and
 failure construction, retaining the original failure as its cause. HTTP retry
 policy remains with Client. Multi-step workflow progress remains separate.
 
+Commands select an `operation` callable. PreparedCommand invokes `call` with
+its prepared arguments; it does not require every operation to implement `read`.
+Read-only commands bind existing readers through `method(:read)`. The member and
+task catalogs construct scoped core resources and call `all`, `find`, `add`,
+`remove`, or `update`; their Ruby interface is documented under
+[Library](../README.md#library). Scope/client state belongs to the resource
+instance, while each operation observes fresh server data. Member/task `.read`
+dispatchers and mutation-selection flags are removed. Card labels expose `set`
+for their existing desired-state operation. Resource mutations no longer accept
+an unused `base_url:` argument.
+
 The coordinator now follows parse → prepare → open session when required →
 execute → render. Help returns after parsing. Offline guide preparation captures
-its reader without inspecting connection settings or opening a session.
+its operation without inspecting connection settings or opening a session.
 API command preparation finishes all required settings and scope validation
 before authentication. Connection settings remain frozen and private.
 
@@ -619,8 +630,10 @@ catch-and-relabel of an already classified CLI failure. Branch-prefix settings
 remain in `Workflow::Configuration` and are captured during branch preparation.
 
 Catalog `prepare` callbacks receive the supplied environment, validated instance,
-and immutable parsed flags, and return reader keyword arguments. Reader/client
-inputs are captured before the session starts. General positional references are
+and immutable parsed flags, and return the complete operation keyword arguments.
+Without a callback, preparation supplies `base_url:` for the standard detailed
+readers. Custom preparation includes `base_url:` only when its operation needs
+it. Operation/client inputs are captured before the session starts. General positional references are
 resolved by shared preparation; workflow scope/default policy stays in its catalog.
 Declared resource aliases preserve card/cards and board/boards grammar.
 Shared parsing contains no resource or workflow command names.

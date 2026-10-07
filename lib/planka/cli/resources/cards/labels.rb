@@ -51,11 +51,11 @@ module Planka
             ["remove", "label"] => Command.new(aliases: [["remove", "labels"]], names: true, mutation: true,
                                                resource: "label", collection: "labels", flags: { "--card CARD" => :card, "--board BOARD" => :board },
                                                validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_remove),
-                                               help: REMOVE_HELP, reader: Planka::Cards::Labels, formatter: method(:format)),
+                                               help: REMOVE_HELP, operation: Planka::Cards::Labels.method(:set), formatter: method(:format)),
             ["add", "label"] => Command.new(aliases: [["add", "labels"]], names: true, mutation: true,
                                             resource: "label", collection: "labels", flags: { "--card CARD" => :card, "--board BOARD" => :board },
                                             validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_add),
-                                            help: ADD_HELP, reader: Planka::Cards::Labels, formatter: method(:format)),
+                                            help: ADD_HELP, operation: Planka::Cards::Labels.method(:set), formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS
