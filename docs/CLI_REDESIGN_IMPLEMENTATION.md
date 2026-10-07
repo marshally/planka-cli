@@ -687,7 +687,9 @@ replacement. `snapshot` and `describe board` are unchanged.
 - `CLI::Resources::Lists` owns command definitions, local validation, and human
   text. `CLI::Resources::BoardScope` owns the shared reference board policy
   (explicit `--board` asserts the parent; names fall back to `PLANKA_BOARD_ID`;
-  IDs need none), now also used by cards.
+  IDs need none), now also used by cards. `CLI::Resources::ScalarFlags` owns the
+  shared single-value flag checks; `Cards.validate_scope_flags` delegates to it
+  for the card family.
 
 Shared changes: `CollectionResult.limited` owns the limit/completeness rule for
 card and list collections, and `Records.text?`/`Records.position?` own Planka's

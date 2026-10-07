@@ -32,7 +32,11 @@ module Planka
 
       # Creates a native kanban list on the board, appending after its active
       # and closed lists unless a position is given.
-      def create(name:, type: "active", position: nil) = super(@board_id, name: name, type: type, position: position)
+      def create(name:, type: "active", position: nil)
+        raise ArgumentError, "lists are created on a board" unless @board_id
+
+        super(@board_id, name: name, type: type, position: position)
+      end
 
       # Changes only the supplied fields; color: nil clears the color. The list
       # stays on its board, and Planka applies a type change's effects itself.
@@ -52,6 +56,7 @@ module Planka
 
       def read_record(reference) = Observation.new(list: ListRecord.data(@scope.lists(@scope.board(reference), reference).first), append_position: nil)
 
+      # The board ID is the one this resource was constructed with.
       def read_creation_scope(_board_id)
         board = @scope.board(nil)
         kanban = @scope.lists(board).select { |record| @scope.finite?(record) }

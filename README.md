@@ -309,8 +309,8 @@ limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-tenth-slice-cards).
 planka get lists --board BOARD [--name NAME] [--limit N] -o json
 planka get list LIST [--board BOARD] -o json
 planka create list --board BOARD --name NAME [--type active|closed] [--position N] -o json
-planka update list LIST [--name NAME] [--color COLOR | --clear-color] [--position N] [--type active|closed] -o json
-planka delete list LIST -o json
+planka update list LIST [--board BOARD] [--name NAME] [--color COLOR | --clear-color] [--position N] [--type active|closed] -o json
+planka delete list LIST [--board BOARD] -o json
 ```
 
 `list` and `lists` are aliases. LIST is an ID, same-instance URL, or exact name
