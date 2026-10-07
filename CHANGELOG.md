@@ -16,7 +16,9 @@ available unchanged; their help names the replacements. Card operations live
 under `Planka::Boards::Cards` and `CLI::Resources::Cards`. `Resource#create`
 now takes validated attributes and a creation scope, create/update requests
 receive the desired state, and catalog preparation receives the resolved
-positional reference.
+positional reference. Canonical commands treat arguments and description files
+as UTF-8 whatever the process locale and reject invalid UTF-8 as `invalid_input`;
+previously a non-ASCII argument under a C locale could crash.
 
 Added card-scoped `update task TASK --completed|--no-completed` with a plural
 alias, offline help, and the same card scope, reference failures and write

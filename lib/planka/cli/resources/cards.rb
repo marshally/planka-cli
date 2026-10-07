@@ -111,11 +111,11 @@ module Planka
 
         def self.description(flags)
           path = flags[:description_file]&.first or return
-          text = path == "-" ? $stdin.read : File.read(path)
+          text = (path == "-" ? $stdin.binmode.read : File.binread(path)).force_encoding(Encoding::UTF_8)
           return text if Planka::Boards::Cards.text?(text, Planka::Boards::Cards::DESCRIPTION_LIMIT)
 
-          raise Failure.new(code: "invalid_input", status: 2, message: "--description-file must be nonempty and at most 1048576 characters")
-        rescue SystemCallError, IOError, EncodingError
+          raise Failure.new(code: "invalid_input", status: 2, message: "--description-file must be nonempty UTF-8 text of at most 1048576 characters")
+        rescue SystemCallError, IOError
           raise Failure.new(code: "invalid_input", status: 2, message: "Could not read --description-file")
         end
 

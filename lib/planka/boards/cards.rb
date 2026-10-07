@@ -62,7 +62,9 @@ module Planka
       public :delete
 
       # Validates text the way Planka does: lengths count UTF-16 code units.
-      def self.text?(value, limit) = value.is_a?(String) && !value.empty? && value.encode("UTF-16LE").bytesize / 2 <= limit
+      def self.text?(value, limit)
+        value.is_a?(String) && value.valid_encoding? && !value.empty? && value.encode("UTF-16LE").bytesize / 2 <= limit
+      end
 
       private
 
