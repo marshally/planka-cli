@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+Added native list resource commands with singular/plural aliases and offline
+root/group/leaf help: `get lists --board BOARD` (every native list type in board
+order, exact `--name`, `--limit`), `get list LIST`,
+`create list --board BOARD --name NAME [--type active|closed] [--position N]`,
+`update list LIST` (`--name`, `--color` or `--clear-color`, `--position`,
+`--type active|closed`), and `delete list LIST`. Creates append after the
+board's active and closed lists; updates send only supplied, changed fields,
+with `--clear-color` sending null, and keep the list on its board; deletes issue
+one native deletion, and Planka moves the list's cards to trash. A type change
+is one write whose native effects close or reopen the list's cards and the tasks
+linked to them. Archive and trash lists cannot be created, updated, or deleted.
+Unknown outcomes report `readback-lists` or `readback-list` recovery without
+retries or invented IDs. `create list` replaces legacy `create-list`, which
+remains available unchanged; its help names the replacement. List operations
+live under `Planka::Boards::Lists` with `ListScope` (extracted from `CardScope`)
+and `ListRecord`, and `CLI::Resources::Lists`; cards and lists share
+`CLI::Resources::BoardScope`, `CollectionResult.limited`, and
+`Records.text?`/`Records.position?`.
+
 Removed all HTTP retries. Every request, read or write, canonical or legacy, is
 sent exactly once: the three-attempt client loop, its stderr retry warnings and
 sleeps, net-http's internal retry, and the per-call `idempotent:` flags are gone.

@@ -43,7 +43,7 @@ record. Use an isolated implementation branch and preserve unrelated work.
 | [lib/planka/canonical_cli.rb](../lib/planka/canonical_cli.rb), [lib/planka/cli/](../lib/planka/cli/) | Canonical coordinator, parsed invocations, validated configuration, output/status handling, and expected failures. |
 | [lib/planka/client.rb](../lib/planka/client.rb) | HTTP endpoints, session lifecycle, and unknown-write-outcome detection; every request is sent once. |
 | [lib/planka/cards/detail.rb](../lib/planka/cards/detail.rb), [lib/planka/boards/snapshot.rb](../lib/planka/boards/snapshot.rb) | Existing detailed card and board/list read models. |
-| [lib/planka/workflow/publishing.rb](../lib/planka/workflow/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and resource operations. |
+| [lib/planka/workflow/publishing.rb](../lib/planka/workflow/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and legacy resource operations; legacy `create-list` uses `Lists`, canonical lists use `Boards::Lists`. |
 | [lib/planka/workflow/prime.rb](../lib/planka/workflow/prime.rb) | Built-in, credential-free agent guide. |
 | [test/lib/planka/cli_test.rb](../test/lib/planka/cli_test.rb) | Subprocess help, argument, environment, and direct-executable checks. |
 | [test/lib/planka/publishing_cli_test.rb](../test/lib/planka/publishing_cli_test.rb) | End-to-end subprocess commands against a local HTTP fake, including recovery. |
@@ -666,6 +666,83 @@ exact single writes, supplied-only updates, no-ops, rejected and unknown outcome
 without retries or invented IDs, and legacy parity. This is pinned-source and fixture
 evidence, not live acceptance; no live writes were authorized or performed.
 
+## Implemented eleventh slice: lists
+
+Issue [#18](https://github.com/marshally/planka-cli/issues/18) implements
+`get lists --board BOARD` (exact `--name`, `--limit`), `get list LIST`,
+`create list`, `update list`, and `delete list`. Singular/plural aliases share
+behavior. The [README contract](../README.md#canonical-lists) owns usage, fields,
+ordering, scopes, clearing semantics, native effects, and recovery. Legacy
+`create-list` keeps its arguments, output, JSON, and exits; its help now names the
+replacement. `snapshot` and `describe board` are unchanged.
+
+- `Boards::ListScope` owns the board read, board-ordered list validation, list
+  reference resolution, and the archive/trash `LIST_NOT_FOUND` rule. It was
+  extracted from `CardScope`, which now composes it; card behavior is unchanged.
+- `Boards::ListRecord` owns list field rules: name (128), kanban type, color enum,
+  and position input checks, the validated public projection, write
+  confirmation, and recovery references.
+- `Boards::Lists < Resource` exposes `all`, `find`, `create`, `update`, and
+  `delete`. Update and delete refuse archive/trash lists before the write.
+- `CLI::Resources::Lists` owns command definitions, local validation, and human
+  text. `CLI::Resources::BoardScope` owns the shared reference board policy
+  (explicit `--board` asserts the parent; names fall back to `PLANKA_BOARD_ID`;
+  IDs need none), now also used by cards.
+
+Shared changes: `CollectionResult.limited` owns the limit/completeness rule for
+card and list collections, and `Records.text?`/`Records.position?` own Planka's
+UTF-16 text-length and finite nonnegative position rules. `Client#create_list`
+validates its `item` in canonical sessions; legacy calls are unchanged.
+
+Collections and creates require an explicit `--board`, matching `get cards`,
+which requires `--board` or `--list`. `PLANKA_BOARD_ID` resolves only list names.
+Unlike card collections, list collections include archive and trash lists,
+because the board read returns every list.
+
+### List API evidence
+
+Inspected official Community source at v2.0.0 (`bda32e0`), 2.1.1 (`a8dcd7c`), and
+v2.2.1 (`266246e`). The list model, the list create/show/update/delete
+controllers, their create/update/delete helpers, the list query methods,
+`is-finite`, `is-kanban`, `get-kanban-lists-by-id`, and `insert-to-positionables`
+are byte-identical across all three.
+
+- [`GET /api/boards/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js)
+  includes every list on the board, of all four types, sorted by position then
+  ID, without paging.
+- [`GET /api/lists/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/lists/show.js)
+  answers only finite (`active`/`closed`) lists; archive/trash are `LIST_NOT_FOUND`.
+- [`POST /api/boards/:boardId/lists`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/lists/create.js)
+  requires `type` (`active`/`closed`), a nonnegative `position`, and `name` (at most
+  128), and board editor membership. The [create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/create-one.js)
+  inserts the position among the board's kanban lists and may renumber them.
+  The [model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/List.js)
+  rejects empty names and fixes the color enum.
+- [`PATCH /api/lists/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/lists/update.js)
+  accepts nonempty `name` (at most 128), nullable `color` from the enum, nonnegative
+  `position`, `type` (`active`/`closed`), and `boardId`, which the CLI never
+  sends. It refuses archive/trash lists and non-editors as `NOT_ENOUGH_RIGHTS`.
+  The [query method](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/List.js)
+  applies a type change in one transaction: active→closed sets the list's cards
+  `isClosed` and completes tasks linked to them; closed→active reverses both.
+- [`DELETE /api/lists/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/lists/delete.js)
+  refuses archive/trash lists and non-editors; the
+  [delete helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/delete-one.js)
+  moves the list's cards to the board's trash list with a null position, then
+  returns the list under `item` and those cards under `included.cards`.
+
+Context7 was not used; the evidence is the pinned upstream source above.
+Development checks use Bundler 4.0.14 with the unchanged lockfile.
+
+Public subprocess/local HTTP tests cover every command, aliases, offline help at
+all levels, ID/URL/name scopes and mismatches, all native list types in board
+order, name filters before limits, malformed reads, local validation before
+requests, exact single writes, supplied-only updates with explicit null color,
+no-ops, archive/trash refusals, type-change effects and card-to-trash deletion
+as modelled by the fake, rejected and unknown outcomes without retries or
+invented IDs, and legacy `create-list` parity. This is pinned-source and fixture
+evidence, not live acceptance; no live writes were authorized or performed.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -691,6 +768,8 @@ Legacy executables retain their existing argument/output adapters.
 | [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable operation arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, catalog-selected human/JSON presentation, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
+| [Boards::Lists](../lib/planka/boards/lists.rb), [Boards::ListScope](../lib/planka/boards/list_scope.rb), [Boards::ListRecord](../lib/planka/boards/list_record.rb), [CLI::Resources::Lists](../lib/planka/cli/resources/lists.rb) | Own native list reads, creation, updates, and deletion; board/list resolution shared with cards; list record rules; and their command definitions. |
+| [CLI::Resources::BoardScope](../lib/planka/cli/resources/board_scope.rb) | Resolve the board scope of a card or list reference before authentication, classifying a bad default board as configuration failure. |
 | [Boards::Cards](../lib/planka/boards/cards.rb), [Boards::CardMove](../lib/planka/boards/card_move.rb), [Boards::CardScope](../lib/planka/boards/card_scope.rb), [Boards::CardRecord](../lib/planka/boards/card_record.rb), [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb) | Own native card reads, creation, updates, moves, and deletion; card scope and record rules; and their command definitions. |
 | [Resource](../lib/planka/resource.rb) | Own protected create/update/delete algorithms: input preparation, current-state lookup, change detection, request execution, response validation, and result construction. Concrete resources supply operation hooks and expose supported verbs. |
 | [Relationship](../lib/planka/relationship.rb) | Expose association `add`/`remove` through Resource create/delete, query inclusion, and project observed/created/deleted relationship state without inspecting resource fields. |
@@ -699,8 +778,8 @@ Legacy executables retain their existing argument/output adapters.
 
 ### Resource operation algorithms
 
-Card-label relationships, card memberships, task completion, and native cards
-inherit from `Resource`. Its protected `create(reference, **attributes)`,
+Card-label relationships, card memberships, task completion, native cards, and
+native lists inherit from `Resource`. Its protected `create(reference, **attributes)`,
 `update(reference, **attributes)`, and `delete(reference)` own operation
 sequencing. `Tasks` makes the inherited `update` public without replacing its
 algorithm; `Boards::Cards` exposes create/update/delete with card arguments, and
@@ -849,9 +928,10 @@ Requests are never retried; change that only as an explicit, documented decision
 ## Settled decisions and implementation deliverables
 
 The resource-sized [lists issue #18](https://github.com/marshally/planka-cli/issues/18)
-now has a settled update-field contract. See the style guide’s
-[list updates](../STYLEGUIDE.md#list-updates); implementation and API acceptance
-remain outstanding.
+has a settled update-field contract. See the style guide’s
+[list updates](../STYLEGUIDE.md#list-updates); it is implemented in the eleventh
+slice above with pinned-source and fixture evidence. Live API acceptance remains
+outstanding.
 
 The design decisions below are settled. Per-command schemas, error codes,
 recovery actions, and API capability evidence remain deliverables of each
@@ -1072,7 +1152,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, and native card operations are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, and native list operations are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,
