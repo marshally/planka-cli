@@ -19,7 +19,8 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow guide`; the seventh adds
 `planka workflow next`; the eighth adds `planka workflow claim CARD`; the tenth
 adds native card `get`, `create`, `update`, `move`, and `delete`; the eleventh
-adds native list `get`, `create`, `update`, and `delete`. All legacy entry
+adds native list `get`, `create`, `update`, and `delete`; the twelfth adds
+`planka workflow resume ticket CARD`. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -746,6 +747,73 @@ as modelled by the fake, rejected and unknown outcomes without retries or
 invented IDs, and legacy `create-list` parity. This is pinned-source and fixture
 evidence, not live acceptance; no live writes were authorized or performed.
 
+## Implemented twelfth slice: resume a ticket
+
+`planka workflow resume ticket CARD --criteria-file FILE|-` implements
+[issue #25](https://github.com/marshally/planka-cli/issues/25), the canonical
+replacement for legacy `create-ticket --card`. The
+[README section](../README.md#canonical-resume-ticket) owns its human output,
+data/meta/error schema, error codes, and recovery instructions.
+
+It is the first three-word canonical path. `CLI::Catalog` resolves the longest
+declared command path (three words, then two), so a two-word command whose
+reference is the third word is unaffected. Catalogs key groups by path arrays,
+such as `["workflow"]` and `["workflow", "resume"]`, and nested group help is
+offline at every level. The parser derives argument counts from the resolved
+path length. Later three-word workflows (`workflow create spec|ticket`,
+`workflow add|remove blocker`) attach through the same catalog role.
+
+`Workflow::CLI.resume_preparation` reads `--criteria-file` (or stdin) before
+authentication and requires a nonempty JSON array of distinct, nonblank strings
+of at most 1024 UTF-16 code units. Missing connection settings are reported
+first (exit 1); file, JSON and shape failures exit 2. The command's `--criteria-file` flag
+uses the shared scalar-flag checks.
+
+[Resume::Ticket](../lib/planka/workflow/resume/ticket.rb) coordinates the fill
+with the same structure as `Claim::Card`. [Resume::Scope](../lib/planka/workflow/resume/scope.rb)
+reads the card once, validates its task lists and tasks, rejects two or more
+`Acceptance criteria` lists as `ambiguous_criteria_list` before writes, and
+validates each write response. [Resume::Progress](../lib/planka/workflow/resume/progress.rb)
+owns confirmed and uncertain effects, result projection, and `resume-ticket`
+recovery. Each write is confirmed only after its response validates; an
+uncertain step is recorded with null identity. Legacy `Publishing#resume_ticket`
+and the `create-ticket` adapter keep their behavior and JSON shape. Their help
+names only the implemented resume replacement. Canonical sessions now reject a
+missing `item` from task-list and task creates as an invalid response instead
+of a `KeyError`; legacy sessions are unchanged.
+
+### Resume API evidence
+
+Inspected official Community source at v2.0.0 (`bda32e0`) and v2.2.1 (`266246e`).
+The task and task-list create controllers are byte-identical blobs across both
+tags, and the card show controller includes the same records.
+
+- [`GET /api/cards/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/show.js)
+  returns the card under `item` with all of its `taskLists` and their `tasks`
+  under `included`, without paging.
+- [`POST /api/cards/:cardId/task-lists`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/task-lists/create.js)
+  requires a nonnegative `position` and `name` (at most 128), accepts
+  `showOnFrontOfCard`, and requires board editor membership. The CLI sends
+  `name: "Acceptance criteria"`, one gap after the card's last task list, and
+  `showOnFrontOfCard: true`, as legacy creation does.
+- [`POST /api/task-lists/:taskListId/tasks`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/tasks/create.js)
+  requires a nonnegative `position` and either `linkedCardId` or a nonempty
+  `name` of at most 1024 characters; it requires board editor membership. The
+  CLI sends only `name` and one gap after the list's last task.
+
+No endpoint checks for duplicate task names; the CLI's exact-text match is a
+client convention. Context7 was not used; the evidence is the pinned upstream
+source above. Development checks use Bundler 4.0.14 with the unchanged lockfile.
+
+Public subprocess/local HTTP tests cover nested help, aliases, local input and
+configuration precedence before requests, exact write bodies, list creation,
+reuse with preserved completion/order, no-ops, duplicate-list refusal, malformed
+reads and write responses, rejected and unknown outcomes without retries or
+invented IDs, rerun recovery without duplicates or card creation, stdin input,
+cleanup failure, the offline guide, and legacy `create-ticket` parity. This is
+pinned-source and fixture evidence, not live acceptance; no live writes were
+authorized or performed.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -763,7 +831,7 @@ Legacy executables retain their existing argument/output adapters.
 | --- | --- |
 | [CLI::Resources](../lib/planka/cli/resources.rb) | Combines resource-owned command definitions and help into the shared catalog role. |
 | [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb), [CLI::Resources::Boards](../lib/planka/cli/resources/boards.rb), [CLI::Resources::Cards::Members](../lib/planka/cli/resources/cards/members.rb), [Workflow::CLI](../lib/planka/workflow/cli.rb) | Own paths, aliases, help, applicable flags, local validation, callable operations, presentation, and command-specific preparation. |
-| [CLI::Catalog](../lib/planka/cli/catalog.rb) | Combine resource commands with explicitly attached catalogs and resolve declared aliases. Own root/group/leaf help selection. |
+| [CLI::Catalog](../lib/planka/cli/catalog.rb) | Combine resource commands with explicitly attached catalogs and resolve the longest declared two- or three-word path or alias. Own root/group/leaf help selection; groups are keyed by path arrays. |
 | [CLI::Parser](../lib/planka/cli/parser.rb) | `parse` owns mutable option parsing and local syntax validation, returning an immutable invocation. No configuration or execution. |
 | [CLI::Invocation](../lib/planka/cli/invocation.rb) | Immutable snapshot of the selected definition, program, output format, reference, flags, and optional help text. No parsing, environment access, preparation, or execution. |
 | [CLI::Configuration](../lib/planka/cli/configuration.rb) | `from_env` captures required connection settings and provides session arguments. Credentials are frozen and inspection is redacted. Owns a validated instance, not resource-reference resolution. |
@@ -1155,7 +1223,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, and native list operations are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, and workflow resume ticket are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+Added `workflow resume ticket CARD --criteria-file FILE|-` (alias `tickets`) with
+offline help at `workflow resume` and the leaf. It adds the criteria missing from
+an existing ticket's `Acceptance criteria` list and never creates a card. The
+list is reused, or created when absent. Existing criteria keep their completion,
+text and order, and missing ones are appended in file order. An all-present run
+is a no-op, and two or more criteria lists fail as `ambiguous_criteria_list`
+before writes. Criteria are read and validated before any request as a nonempty
+JSON array of distinct nonblank strings of at most 1024 characters. Failures
+keep known IDs, report uncertain steps as null, and recover with `resume-ticket`
+by rerunning the command. It replaces legacy `create-ticket --card`, which
+remains unchanged; its help and the workflow guide name the replacement.
+Canonical catalogs now support three-word command paths with nested group help;
+groups are keyed by path arrays. Canonical task-list and task creates report a
+missing `item` as an invalid response.
+
 Added native list resource commands with singular/plural aliases and offline
 root/group/leaf help: `get lists --board BOARD` (every native list type in board
 order, exact `--name`, `--limit`), `get list LIST`,

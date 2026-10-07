@@ -28,7 +28,7 @@ interfaces; this document owns the workflow-specific architecture.
 | `Planka::Client` | HTTP requests and authenticated session lifecycle. |
 | `Planka::Board`, `Planka::Card` | General lists, labels, tasks, memberships, card references, and native list types. |
 | `Workflow::Board`, `Workflow::Card` | Interpret core snapshots using agent conventions: ticket/spec classification, ready/in-progress lists, acceptance criteria, feature labels, claims, and blockers. |
-| Workflow operations | Branch naming, pending criteria, queue selection, claiming, claim inspection, blocking links, spec/ticket publishing, handoff interpretation, and completed specs. |
+| Workflow operations | Branch naming, pending criteria, queue selection, claiming, resuming tickets, claim inspection, blocking links, spec/ticket publishing, handoff interpretation, and completed specs. |
 | `Workflow::Configuration` | Explicitly captures workflow settings from a supplied environment. Branch-prefix validation belongs here, independently of connection settings. |
 | `Workflow::Format` | Workflow human text, without IO or session ownership. Next-card reports answer their own `as_json` projection. |
 | `Workflow::CLI` | Workflow command definitions, help, formatters, and conversion of workflow configuration failures into canonical CLI failures. |
@@ -70,7 +70,10 @@ Canonical Claim::Card coordinates scope loading, membership, and placement.
 Claim::Scope owns scoped reads and validation of read/write responses. Claim::Progress
 owns confirmed effects, pending writes, result projection, and recovery state;
 a write is confirmed only after its response validates. Claim::Card returns core `MutationResult` or raises `MutationFailure` with known
-results, uncertainty, and recovery references. Core outcome values are independent
+results, uncertainty, and recovery references. Canonical Resume::Ticket follows
+the same structure: Resume::Scope owns the card's criteria reads and write-response
+validation, Resume::Progress owns confirmed/uncertain effects and `resume-ticket`
+recovery, and legacy `Publishing#resume_ticket` keeps its original result shape. Core outcome values are independent
 of workflow policy; shared CLI Output owns their canonical presentation. Legacy
 Claim retains its original behavior and result shape.
 
@@ -79,7 +82,7 @@ Claim retains its original behavior and result shape.
 `require "planka/workflow/cli"` loads the workflow CLI adapter. The bundled
 executable passes it to `CanonicalCLI.run` through `extensions:`. An extension
 provides `commands`, `groups`, and `root_help`; each command is a
-`Planka::CLI::Command`, which owns its defaults and selects a callable operation, callable formatter, optional JSON projector, applicable flag definitions,
+`Planka::CLI::Command` keyed by a two- or three-word path, with groups keyed by path arrays; a command owns its defaults and selects a callable operation, callable formatter, optional JSON projector, applicable flag definitions,
 local flag validator, and optional `prepare` callback. Declared aliases belong to
 the catalog rather than shared grammar. Commands
 declaring `mutation: true` return a core `MutationResult`; Output projects its data
