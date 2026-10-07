@@ -579,14 +579,21 @@ filters, scopes, clearing semantics, and recovery. Legacy `snapshot`,
 their help now names the implemented replacements. `describe card/board` and
 `show` are unchanged.
 
-Core `Boards::Cards` owns card reads and writes on `Resource`; card-scoped
-relationships stay under `Cards::*`. It exposes `all`, `find`, `create`,
-`update`, `move`, and `delete`. `update` and `move` both run Resource's update
-algorithm (aliased privately as `change`), so their no-op, write, and outcome
-handling is shared. A move resolves its destination on the card's own board
-inside `updated_data`, the one hook that reads after `read_record`, because the
-destination depends on the observed card. `CLI::Resources::Cards` owns command
-definitions, pre-session inputs (including the description file), and human text.
+Card-scoped relationships stay under `Cards::*`; native cards live under `Boards`:
+
+- `Boards::CardRecord` owns card field rules: input text/position limits, the
+  validated public projection, write confirmation, and recovery references.
+- `Boards::CardScope` resolves the card, board, lists, and a `Destination`
+  (board, list, finiteness, append position, default card type). `Destination`
+  owns the position rule: append unless positioned, none for archive/trash.
+- `Boards::Cards < Resource` exposes `all`, `find`, `create`, `update`, `move`,
+  and `delete`. `move` delegates to `Boards::CardMove`.
+- `Boards::CardMove < Resource` is scoped to its destination list. Its
+  `read_record` reads the card and then its destination on the card's own board,
+  so `updated_data` stays a pure projection, as the hook contract requires.
+
+`CLI::Resources::Cards` owns command definitions, pre-session inputs (including
+the description file), and human text.
 
 The shared catalog changed in three ways. Preparation callbacks receive the
 already-resolved positional `reference:`, so scope policy can apply the default
@@ -684,7 +691,7 @@ Legacy executables retain their existing argument/output adapters.
 | [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable operation arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, catalog-selected human/JSON presentation, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
-| [Boards::Cards](../lib/planka/boards/cards.rb), [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb) | Own native card reads, creation, updates, moves, and deletion, and their command definitions. |
+| [Boards::Cards](../lib/planka/boards/cards.rb), [Boards::CardMove](../lib/planka/boards/card_move.rb), [Boards::CardScope](../lib/planka/boards/card_scope.rb), [Boards::CardRecord](../lib/planka/boards/card_record.rb), [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb) | Own native card reads, creation, updates, moves, and deletion; card scope and record rules; and their command definitions. |
 | [Resource](../lib/planka/resource.rb) | Own protected create/update/delete algorithms: input preparation, current-state lookup, change detection, request execution, response validation, and result construction. Concrete resources supply operation hooks and expose supported verbs. |
 | [Relationship](../lib/planka/relationship.rb) | Expose association `add`/`remove` through Resource create/delete, query inclusion, and project observed/created/deleted relationship state without inspecting resource fields. |
 | [Write](../lib/planka/write.rb) | Run one resource write, returning its confirmed result or preserving unchanged/unknown data and recovery references on failure. |
@@ -696,8 +703,8 @@ Card-label relationships, card memberships, task completion, and native cards
 inherit from `Resource`. Its protected `create(reference, **attributes)`,
 `update(reference, **attributes)`, and `delete(reference)` own operation
 sequencing. `Tasks` makes the inherited `update` public without replacing its
-algorithm; `Boards::Cards` exposes create/update/delete with card arguments and
-routes `move` through the same update algorithm. Relationship resources keep
+algorithm; `Boards::Cards` exposes create/update/delete with card arguments, and
+`Boards::CardMove` exposes a destination-scoped update as `move`. Relationship resources keep
 CRUD methods protected and expose `add`/`remove` through the `Relationship` role.
 No unsupported public verbs or endpoint conventions are inferred.
 
@@ -775,7 +782,9 @@ catch-and-relabel of an already classified CLI failure. Branch-prefix settings
 remain in `Workflow::Configuration` and are captured during branch preparation.
 
 Catalog `prepare` callbacks receive the supplied environment, validated instance,
-and immutable parsed flags, and return the complete operation keyword arguments.
+immutable parsed flags, and the resolved positional `reference:` (nil when the
+command takes none), and return the complete operation keyword arguments.
+Callbacks that do not need the reference accept and ignore it with `**`.
 Without a callback, preparation supplies `base_url:` for the standard detailed
 readers. Custom preparation includes `base_url:` only when its operation needs
 it. Operation/client inputs are captured before the session starts. General positional references are
