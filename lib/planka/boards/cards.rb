@@ -21,11 +21,11 @@ module Planka
         board = @scope.board(list)
         wanted = filters(board, labels: labels, members: members)
         readable_lists(board, list).each { |record| collect!(data, board, record, name, wanted) }
-        collection(data, limit)
+        CollectionResult.limited(data, limit)
       rescue *OPERATION_ERRORS => error
         raise if error.is_a?(ReferenceError)
 
-        raise CollectionFailure.new(data: collection(data, limit).data)
+        raise CollectionFailure.new(data: CollectionResult.limited(data, limit).data)
       end
 
       def find(reference) = read_record(reference).card
@@ -106,8 +106,6 @@ module Planka
           [key, records.group_by { |record| record["cardId"] }.transform_values { |group| group.map { |record| record[key] } }]
         end
       end
-
-      def collection(data, limit) = CollectionResult.new(data: limit ? data.first(limit) : data, complete: !limit || data.size <= limit)
 
       def read_record(reference) = CardScope::Observation.new(card: @scope.card(reference), destination: nil)
 

@@ -55,8 +55,8 @@ class FakePlanka
 
   # Adds another list or label with an existing name, to test ambiguous name
   # resolution.
-  def add_list(name, type = "active", board_id: BOARD_ID)
-    record = list(next_id, name, type).merge("boardId" => board_id)
+  def add_list(name, type = "active", board_id: BOARD_ID, position: 65_536)
+    record = list(next_id, name, type).merge("boardId" => board_id, "position" => position)
     @state[:lists] << record
     record["id"]
   end
