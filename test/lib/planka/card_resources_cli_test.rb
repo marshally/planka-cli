@@ -19,8 +19,9 @@ class CardResourcesCLITest < Minitest::Test
   def planka(*args, env: {}, executable: "planka", stdin: "")
     settings = { "PLANKA_BASE_URL" => @server.base_url, "PLANKA_AGENT_EMAIL" => "bot@example.com",
                  "PLANKA_AGENT_PASSWORD" => "fake-password", "PLANKA_BOARD_ID" => nil }
-    Open3.capture3(settings.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args,
-                   chdir: Dir.tmpdir, stdin_data: stdin)
+    out, err, status = Open3.capture3(settings.merge(env), RbConfig.ruby, "-I#{ROOT}/lib", "#{ROOT}/exe/#{executable}", *args,
+                                      chdir: Dir.tmpdir, stdin_data: stdin)
+    [out.force_encoding(Encoding::UTF_8), err.force_encoding(Encoding::UTF_8), status]
   end
 
   def json(*args, **options)
@@ -173,6 +174,24 @@ class CardResourcesCLITest < Minitest::Test
     assert_equal [["POST", "/api/lists/#{READY}/cards", { "type" => "project", "name" => "Top", "position" => 1, "description" => "From stdin" }]], writes
     assert_equal [], @server.task_lists, "no workflow criteria"
     assert_equal [], @server.memberships, "no claim"
+  end
+
+  def test_text_inputs_are_utf8_regardless_of_locale_and_invalid_utf8_is_rejected
+    c_locale = { "LC_ALL" => "C", "LANG" => "C" }
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "description.md").tap { |file| File.write(file, "Ünïcode\n") }
+      doc, err, status = json("create", "card", "--list", READY, "--name", "Café", "--description-file", path, env: c_locale)
+      assert status.success?, err
+      assert_equal ["Café", "Ünïcode\n"], doc["data"].values_at("name", "description")
+      doc, err, status = json("update", "card", CARD, "--name", "Crème", env: c_locale)
+      assert status.success?, err
+      assert_equal "Crème", doc.dig("data", "name")
+      invalid = File.join(dir, "invalid.md").tap { |file| File.binwrite(file, "\xFF\xFE") }
+      doc, _err, status = json("create", "card", "--list", READY, "--name", "x", "--description-file", invalid)
+      assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")]
+      refute_match(/Could not read/, doc.dig("error", "message"))
+      assert_equal 2, writes.size
+    end
   end
 
   def test_create_into_archive_omits_position_and_rejects_explicit_positions

@@ -595,7 +595,10 @@ board to names but not IDs; existing callbacks accept and ignore it. Group help 
 assembled from each module's verb-keyed `GROUP_HELP`, adding `create`, `move`,
 and `delete` groups. `Resource#create` takes validated attributes and observes a
 creation scope, and create/update requests receive the desired state (see the hook
-table below).
+table below). The parser reads canonical arguments as UTF-8 regardless of the
+process locale and rejects invalid UTF-8 as local input; description files are
+read as UTF-8 bytes. An installed-gem run without `LANG` exposed the earlier
+locale-dependent failure.
 
 Planka 2.x pages archive and trash ("endless") lists; board reads omit their
 cards. Completeness therefore needs one board read plus, for each such list, cursor

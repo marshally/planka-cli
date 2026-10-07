@@ -13,7 +13,8 @@ module Planka
 
       def initialize(argv, legacy_commands:, extensions:)
         @catalog = Catalog.new(legacy_commands: legacy_commands, extensions: extensions)
-        @args = argv.dup
+        # Arguments are UTF-8 text whatever the process locale.
+        @args = argv.map { |arg| arg.dup.force_encoding(Encoding::UTF_8) }
         @flag_values = {}
         @show_help = argv.empty?
         requested = argv.each_cons(2).filter_map { |flag, value| value if %w[-o --output].include?(flag) }.last
@@ -25,6 +26,7 @@ module Planka
       end
 
       def parse
+        validate_encoding!
         parse_options!
         resolve_command!
         validate_flags!
@@ -39,6 +41,10 @@ module Planka
       end
 
       private
+
+      def validate_encoding!
+        invalid!("Arguments must be valid UTF-8") unless @args.all?(&:valid_encoding?)
+      end
 
       def parse_options!
         parser_for(@catalog.commands.values).parse!(@args)
