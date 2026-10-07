@@ -16,6 +16,7 @@ parser = OptionParser.new do |o|
   o.banner = "usage: planka update-card <card> [--title TITLE] [--description-file F|-] [--output human|json]"
   o.on("--title TITLE", "new title") { |v| options[:title] = v }
   o.on("--description-file F", "new description from a file, or - for stdin") { |v| options[:description] = v }
+  o.separator "Canonical replacement: planka update card CARD [--name NAME] [--description-file F] (new JSON envelope)."
   Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka update-card")
