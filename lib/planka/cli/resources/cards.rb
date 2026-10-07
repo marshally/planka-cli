@@ -1,6 +1,7 @@
 require "planka"
 require "planka/cli/command"
 require "planka/cli/failure"
+require "planka/cli/input_file"
 require "planka/cli/resources/board_scope"
 require "planka/cli/resources/scalar_flags"
 
@@ -146,7 +147,7 @@ module Planka
 
         def self.description(flags)
           path = flags[:description_file]&.first or return
-          text = (path == "-" ? $stdin.binmode.read : File.binread(path)).force_encoding(Encoding::UTF_8)
+          text = InputFile.read(path)
           return text if Planka::Boards::CardRecord.text?(text, Planka::Boards::CardRecord::DESCRIPTION_LIMIT)
 
           raise Failure.new(code: "invalid_input", status: 2,

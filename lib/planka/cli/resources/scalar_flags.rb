@@ -1,8 +1,9 @@
 module Planka
   module CLI
     module Resources
-      # Local checks shared by resource commands whose flags each take one value:
-      # no conflicting repeats, no blank values, and a positive integer --limit.
+      # Local checks for commands whose flags each take one value: no conflicting
+      # repeats, no blank values, and a positive integer --limit. Shared by resource
+      # commands and workflow resume ticket.
       module ScalarFlags
         def self.error(flags)
           return "Conflicting scalar flags" if flags.values.any? { |values| values.uniq.size > 1 }
