@@ -38,6 +38,10 @@ module Planka
       # stays on its board, and Planka applies a type change's effects itself.
       def update(reference, **attributes) = super
 
+      # Issues one native list deletion; Planka moves the list's cards to the
+      # board's trash list rather than deleting them.
+      public :delete
+
       private
 
       def validate_options!(name:, limit:)
@@ -72,6 +76,9 @@ module Planka
         client.update_list(known.list["id"], **changed.transform_keys(&:to_sym))
       end
 
+      def deletion_data(known) = kanban!(known).list.merge("deleted" => true)
+      def delete_record(known) = client.delete_list(known.list["id"])
+
       # Archive and trash are system lists that Planka does not let callers change.
       def kanban!(known)
         return known if @scope.finite?(known.list)
@@ -90,7 +97,7 @@ module Planka
       end
 
       def validate_record!(record, desired) = ListRecord.confirm!(record, desired)
-      def confirmed_data(record, _desired) = ListRecord.data(record)
+      def confirmed_data(record, desired) = ListRecord.data(record).merge(desired.slice("deleted"))
       def recovery(known) = ListRecord.recovery(known.list)
     end
   end

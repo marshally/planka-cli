@@ -94,6 +94,8 @@ module Planka
 
     def update_list(list_id, **attrs) = item(request(:patch, "/api/lists/#{list_id}", attrs), "list")
 
+    def delete_list(list_id) = item(request(:delete, "/api/lists/#{list_id}"), "list")
+
     def create_label(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/labels", attrs).fetch("item")
 
     def add_card_label(card_id, label_id) = request(:post, "/api/cards/#{card_id}/card-labels", { labelId: label_id })
