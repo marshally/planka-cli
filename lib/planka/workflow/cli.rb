@@ -2,6 +2,7 @@ require "planka/workflow/format"
 require "planka/workflow/configuration"
 require "planka/cli/failure"
 require "planka/cli/command"
+require "planka/cli/input_file"
 require "planka/cli/resources/scalar_flags"
 require "json"
 
@@ -149,8 +150,7 @@ module Planka
 
       # A nonempty JSON array of distinct criteria, each a valid task name.
       def self.criteria(path)
-        text = (path == "-" ? $stdin.binmode.read : File.binread(path)).force_encoding(Encoding::UTF_8)
-        criteria = JSON.parse(text)
+        criteria = JSON.parse(Planka::CLI::InputFile.read(path))
         return criteria if criteria.is_a?(Array) && !criteria.empty? && criteria.uniq.size == criteria.size &&
                            criteria.all? { |criterion| Records.text?(criterion, Resume::Ticket::CRITERION_LIMIT) && !criterion.strip.empty? }
 
