@@ -20,7 +20,8 @@ deletes issue one native deletion. Unknown outcomes report `readback-cards` or
 `readback-card` recovery without retries or invented IDs. These replace legacy
 `update-card`, `move-card`, and the list view of `snapshot`, which remain
 available unchanged; their help names the replacements. Card operations live
-under `Planka::Boards::Cards` and `CLI::Resources::Cards`. `Resource#create`
+under `Planka::Boards::Cards` and `Boards::CardMove`, with shared `CardScope` and
+`CardRecord`, and `CLI::Resources::Cards`. `Resource#create`
 now takes validated attributes and a creation scope, create/update requests
 receive the desired state, and catalog preparation receives the resolved
 positional reference. Canonical commands treat arguments and description files

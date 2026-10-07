@@ -72,6 +72,9 @@ class CardResourcesCLITest < Minitest::Test
       assert_match(/archive and trash/i, doc.dig("error", "message"))
     end
     assert_equal 0, @server.counts("GET", %r{\A/api/lists/}), "no list card pages are read"
+    doc, _err, status = json("create", "card", "--list", archive, "--name", "Shelved")
+    assert_equal [1, "not_found"], [status.exitstatus, doc.dig("error", "code")]
+    assert_match(/archive and trash lists need --board/, doc.dig("error", "message"))
     assert_empty resource_writes
   end
 

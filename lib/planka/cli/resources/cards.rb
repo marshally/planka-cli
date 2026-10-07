@@ -51,6 +51,34 @@ module Planka
           An unknown or malformed write response gives readback-cards recovery for the list and no card ID.
           Read back with planka get cards --list LIST before retrying; creates are never retried.
         HELP
+        UPDATE_HELP = <<~HELP + COMMON_HELP
+          usage: planka update card CARD [--board BOARD] [--name NAME] [--description-file FILE|-] [-o human|json]
+          Change only supplied fields; at least one is required. Omitted fields, list, position, labels,
+          members, tasks, and comments are preserved. Identical values are a no-op (meta.changed false).
+          NAME is nonempty, at most 1024 characters. A description file (- for stdin) must be nonempty and at
+          most 1048576 characters; empty input is rejected, and clearing a description is not supported.
+          JSON data is the resulting card; meta.changed is true/false/null. A rejected write keeps the unchanged
+          card; an unknown or malformed response marks requested fields null with readback-card recovery.
+        HELP
+        MOVE_HELP = <<~HELP + COMMON_HELP
+          usage: planka move card CARD --list LIST [--board BOARD] [--position N] [-o human|json]
+          Move to LIST on the card's own board, appending to an active/closed list unless --position gives a
+          finite nonnegative native ordering value; archive/trash lists take no position. LIST is an ID,
+          same-instance URL, or exact name on the card's board. The current list without --position is a
+          no-op. Only list and position change: members, labels, tasks, and comments are preserved, and moving
+          neither claims nor releases work. JSON data is the resulting card; meta.changed is true/false/null.
+          A rejected write keeps the unchanged card; an unknown or malformed response marks the list and
+          position null with readback-card recovery. Read back with planka get card CARD before retrying.
+        HELP
+        DELETE_HELP = <<~HELP + COMMON_HELP
+          usage: planka delete card CARD [--board BOARD] [-o human|json]
+          Issue one native deletion without prompts; an omitted CARD is an input error and never a bulk delete.
+          Planka deletes the card's task lists, tasks, attachments, comments, memberships, label assignments,
+          and subscriptions, and clears links to it from other cards' tasks without deleting those cards.
+          Native board editor permission is required. JSON data is the card with deleted true; meta.changed is
+          true/false/null. A rejected deletion keeps the unchanged card without deleted; an unknown or malformed
+          response sets deleted null with readback-card recovery. Read back with planka get card CARD.
+        HELP
         GROUP_HELP = {
           "describe" => "  card CARD  Read card details and related data (read-only)\n",
           "get" => "  cards --board BOARD|--list LIST  List cards with exact filters (read-only)\n  card CARD  Read one concise card (read-only)\n",
@@ -76,10 +104,13 @@ module Planka
           { card_id: card, board_id: scope_board(env, instance, card, flags[:board]&.first) }
         end
 
-        def self.prepare_card(env, instance:, flags:, reference:)
-          return { board_id: scope_board(env, instance, reference, flags[:board]&.first) } if reference
+        # get reads one card with a reference, otherwise a scoped collection.
+        def self.prepare_get(env, instance:, flags:, reference:)
+          reference ? prepare_card(env, instance: instance, flags: flags, reference: reference) : prepare_collection(env, instance, flags)
+        end
 
-          prepare_collection(env, instance, flags)
+        def self.prepare_card(env, instance:, flags:, reference:)
+          { board_id: scope_board(env, instance, reference, flags[:board]&.first) }
         end
 
         def self.prepare_collection(env, instance, flags)
@@ -94,8 +125,7 @@ module Planka
             raise Failure.new(code: "invalid_input", status: 2, message: "create card requires --list and --name")
           end
 
-          list_scope(env, instance, flags).merge(name: flags[:name].first, description: description(flags),
-                                                 position: flags[:position] && Float(flags[:position].first))
+          list_scope(env, instance, flags).merge(name: flags[:name].first, description: description(flags), position: position(flags))
         end
 
         # An explicit --board asserts the list's parent; list names fall back to
@@ -109,12 +139,16 @@ module Planka
           { board_id: board_id, list: list }
         end
 
+        # Validated by validate_card_values before preparation.
+        def self.position(flags) = flags[:position] && Float(flags[:position].first)
+
         def self.description(flags)
           path = flags[:description_file]&.first or return
           text = (path == "-" ? $stdin.binmode.read : File.binread(path)).force_encoding(Encoding::UTF_8)
-          return text if Planka::Boards::Cards.text?(text, Planka::Boards::Cards::DESCRIPTION_LIMIT)
+          return text if Planka::Boards::CardRecord.text?(text, Planka::Boards::CardRecord::DESCRIPTION_LIMIT)
 
-          raise Failure.new(code: "invalid_input", status: 2, message: "--description-file must be nonempty UTF-8 text of at most 1048576 characters")
+          raise Failure.new(code: "invalid_input", status: 2,
+                            message: "--description-file must be nonempty UTF-8 text of at most #{Planka::Boards::CardRecord::DESCRIPTION_LIMIT} characters")
         rescue SystemCallError, IOError
           raise Failure.new(code: "invalid_input", status: 2, message: "Could not read --description-file")
         end
@@ -132,10 +166,9 @@ module Planka
           raise Failure.new(code: "invalid_input", status: 2, message: "move card requires --list") unless flags[:list]
 
           prepare_card(env, instance: instance, flags: flags, reference: reference)
-            .merge(list: instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true),
-                   position: flags[:position] && Float(flags[:position].first))
+            .merge(list: instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true), position: position(flags))
         end
-        private_class_method :prepare_collection, :list_scope, :description
+        private_class_method :prepare_collection, :list_scope, :position, :description
 
         # An explicit --board always asserts the parent; card names fall back to
         # PLANKA_BOARD_ID; IDs and URLs need no board.
@@ -160,8 +193,8 @@ module Planka
         def self.validate_card_values(flags)
           error = validate_scope_flags(flags)
           return error if error
-          if flags[:name] && !Planka::Boards::Cards.text?(flags[:name].first, Planka::Boards::Cards::NAME_LIMIT)
-            return "--name must be at most 1024 characters"
+          if flags[:name] && !Planka::Boards::CardRecord.text?(flags[:name].first, Planka::Boards::CardRecord::NAME_LIMIT)
+            return "--name must be at most #{Planka::Boards::CardRecord::NAME_LIMIT} characters"
           end
 
           position = flags[:position] && Float(flags[:position].first, exception: false)
@@ -210,37 +243,6 @@ module Planka
           data.empty? ? "No cards." : data.map { |card| format_card(card) }.join("\n")
         end
 
-        UPDATE_HELP = <<~HELP + COMMON_HELP
-          usage: planka update card CARD [--board BOARD] [--name NAME] [--description-file FILE|-] [-o human|json]
-          Change only supplied fields; at least one is required. Omitted fields, list, position, labels,
-          members, tasks, and comments are preserved. Identical values are a no-op (meta.changed false).
-          NAME is nonempty, at most 1024 characters. A description file (- for stdin) must be nonempty and at
-          most 1048576 characters; empty input is rejected, and clearing a description is not supported.
-          JSON data is the resulting card; meta.changed is true/false/null. A rejected write keeps the unchanged
-          card; an unknown or malformed response marks requested fields null with readback-card recovery.
-        HELP
-
-        MOVE_HELP = <<~HELP + COMMON_HELP
-          usage: planka move card CARD --list LIST [--board BOARD] [--position N] [-o human|json]
-          Move to LIST on the card's own board, appending to an active/closed list unless --position gives a
-          finite nonnegative native ordering value; archive/trash lists take no position. LIST is an ID,
-          same-instance URL, or exact name on the card's board. The current list without --position is a
-          no-op. Only list and position change: members, labels, tasks, and comments are preserved, and moving
-          neither claims nor releases work. JSON data is the resulting card; meta.changed is true/false/null.
-          A rejected write keeps the unchanged card; an unknown or malformed response marks the list and
-          position null with readback-card recovery. Read back with planka get card CARD before retrying.
-        HELP
-
-        DELETE_HELP = <<~HELP + COMMON_HELP
-          usage: planka delete card CARD [--board BOARD] [-o human|json]
-          Issue one native deletion without prompts; an omitted CARD is an input error and never a bulk delete.
-          Planka deletes the card's task lists, tasks, attachments, comments, memberships, label assignments,
-          and subscriptions, and clears links to it from other cards' tasks without deleting those cards.
-          Native board editor permission is required. JSON data is the card with deleted true; meta.changed is
-          true/false/null. A rejected deletion keeps the unchanged card without deleted; an unknown or malformed
-          response sets deleted null with readback-card recovery. Read back with planka get card CARD.
-        HELP
-
         def self.format(detail)
           lines = [
             "#{detail.fetch("name")} (#{detail.fetch("url")})",
@@ -275,7 +277,7 @@ module Planka
                                          resource: "card", collection: "cards", collection_flags: [:list, :name, :labels, :members, :limit],
                                          flags: { "--board BOARD" => :board, "--list LIST" => :list, "--name NAME" => :name,
                                                   "--label LABEL" => :labels, "--member USER" => :members, "--limit N" => :limit },
-                                         validate_flags: method(:validate_collection_flags), prepare: method(:prepare_card),
+                                         validate_flags: method(:validate_collection_flags), prepare: method(:prepare_get),
                                          help: GET_HELP, operation: method(:get), formatter: method(:format_cards)),
           ["create", "card"] => Command.new(aliases: [["create", "cards"]], reference: false, mutation: true, resource: "card", collection: "cards",
                                             flags: { "--list LIST" => :list, "--board BOARD" => :board, "--name NAME" => :name,
