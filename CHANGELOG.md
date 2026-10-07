@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+Added native card resource commands with singular/plural aliases and offline
+root/group/leaf help: `get cards --board BOARD|--list LIST` (exact `--name`,
+repeated AND `--label`/`--member`, `--limit`, complete reads that page archive
+and trash lists), `get card CARD`, `create card --list LIST --name NAME`,
+`update card CARD`, `move card CARD --list LIST`, and `delete card CARD`. Creates
+use the board's default card type and append unless positioned; updates send
+only supplied, changed name/description fields; moves stay on the card's board;
+deletes issue one native deletion. Unknown outcomes report `readback-cards` or
+`readback-card` recovery without retries or invented IDs. These replace legacy
+`update-card`, `move-card`, and the list view of `snapshot`, which remain
+available unchanged; their help names the replacements. Card operations live
+under `Planka::Boards::Cards` and `CLI::Resources::Cards`. `Resource#create`
+now takes validated attributes and a creation scope, create/update requests
+receive the desired state, and catalog preparation receives the resolved
+positional reference.
+
 Added card-scoped `update task TASK --completed|--no-completed` with a plural
 alias, offline help, and the same card scope, reference failures and write
 outcome classification as card members and labels. TASK is a task ID or exact

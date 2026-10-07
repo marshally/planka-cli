@@ -17,7 +17,8 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow branch-name CARD`; the fifth adds
 `planka workflow claim-status`; the sixth adds
 `planka workflow guide`; the seventh adds
-`planka workflow next`; the eighth adds `planka workflow claim CARD`. All legacy entry
+`planka workflow next`; the eighth adds `planka workflow claim CARD`; the tenth
+adds native card `get`, `create`, `update`, `move`, and `delete`. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -567,6 +568,91 @@ uncertain writes/readback, failure categories, cleanup, and offline help. Packag
 checks exercise installed commands outside the checkout. No live writes were
 authorized or performed; subscription/activity effects are source evidence only.
 
+## Implemented tenth slice: cards
+
+Issue [#17](https://github.com/marshally/planka-cli/issues/17) implements `get cards`
+(`--board` or `--list`, exact `--name`, repeated AND `--label`/`--member`,
+`--limit`), `get card CARD`, `create card`, `update card`, `move card`, and
+`delete card`. Singular/plural aliases share behavior. The
+[README contract](../README.md#canonical-cards) owns usage, fields, ordering,
+filters, scopes, clearing semantics, and recovery. Legacy `snapshot`,
+`update-card`, and `move-card` keep their arguments, output, JSON, and exits;
+their help now names the implemented replacements. `describe card/board` and
+`show` are unchanged.
+
+Core `Boards::Cards` owns card reads and writes on `Resource`; card-scoped
+relationships stay under `Cards::*`. It exposes `all`, `find`, `create`,
+`update`, `move`, and `delete`. `update` and `move` both run Resource's update
+algorithm (aliased privately as `change`), so their no-op, write, and outcome
+handling is shared. A move resolves its destination on the card's own board
+inside `updated_data`, the one hook that reads after `read_record`, because the
+destination depends on the observed card. `CLI::Resources::Cards` owns command
+definitions, pre-session inputs (including the description file), and human text.
+
+The shared catalog changed in three ways. Preparation callbacks receive the
+already-resolved positional `reference:`, so scope policy can apply the default
+board to names but not IDs; existing callbacks accept and ignore it. Group help is
+assembled from each module's verb-keyed `GROUP_HELP`, adding `create`, `move`,
+and `delete` groups. `Resource#create` takes validated attributes and observes a
+creation scope, and create/update requests receive the desired state (see the hook
+table below).
+
+Planka 2.x pages archive and trash ("endless") lists; board reads omit their
+cards. Completeness therefore needs one board read plus, for each such list, cursor
+pages until one is empty. The CLI does not rely on the server's internal page size.
+Name/label/member filters are applied client-side while reading, with the same
+exact AND semantics as the contract, before `--limit`. Native server-side
+`search`/`labelIds`/`userIds` filters on list pages are not used: `search` is a
+substring/regex match, and `userIds` also matches task assignees.
+
+### Card API evidence
+
+Inspected official Community source at v2.0.0 (`bda32e0`), 2.1.1 (`a8dcd7c`), and
+v2.2.1 (`266246e`). The card controllers, card query methods, create/update
+helpers, list model and list show are byte-identical across all three; the board
+model differs only by the unrelated `displayCardAges` field.
+
+- [`GET /api/boards/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js)
+  returns the board `item` (including `defaultCardType`) and all lists, labels,
+  board memberships, users, card labels, and card memberships, but cards only from
+  [finite lists](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/is-finite.js)
+  (`active`, `closed`), sorted by position then ID, without a limit.
+- [`GET /api/lists/:listId/cards`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/index.js)
+  accepts `before[listChangedAt]` and `before[id]` and returns `items` with
+  included card labels and memberships. [Query methods](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/Card.js)
+  order by `listChangedAt DESC, id DESC` with a limit of 50 per page.
+- [`GET /api/lists/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/lists/show.js)
+  answers only finite lists; archive/trash IDs are `LIST_NOT_FOUND`.
+- [`POST /api/lists/:listId/cards`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/create.js)
+  requires `type` (`project`/`story`) and `name` (at most 1024), accepts a nonempty
+  `description` (at most 1048576) and a nonnegative `position`, and requires board
+  editor membership. The [create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/cards/create-one.js)
+  requires a position for finite lists, normalizes it among existing positions,
+  and drops it for endless lists.
+- [`PATCH /api/cards/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/update.js)
+  accepts nonempty `name`, nonempty-or-null `description`, `listId`, and
+  `position`; the [update helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/cards/update-one.js)
+  keeps the list on the card's board, requires a position when moving into a
+  finite list, nulls it for endless lists, and normalizes it.
+- [`DELETE /api/cards/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/delete.js)
+  requires board editor membership and returns the deleted card under `item`;
+  [cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/cards/delete-related.js)
+  removes subscriptions, memberships, labels, task lists/tasks, and attachments,
+  and sets `linkedCardId` to null on other tasks.
+
+Context7 was unavailable. The installed locked `net-http` 0.9.1 source shows its
+automatic retry excludes POST and PATCH and includes DELETE; card deletion passes
+`idempotent: false`, disabling both that retry and the client's. Name/description
+PATCH requests keep the client's existing idempotent retry policy. Development
+checks use Bundler 4.0.14 with the unchanged lockfile.
+
+Public subprocess/local HTTP tests cover every command, aliases, offline help at
+all levels, ID/URL/name scopes and mismatches, finite and paged reads, filters
+before limits, page failures with partial data, local validation before requests,
+exact single writes, supplied-only updates, no-ops, rejected and unknown outcomes
+without retries or invented IDs, and legacy parity. This is pinned-source and fixture
+evidence, not live acceptance; no live writes were authorized or performed.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -592,6 +678,7 @@ Legacy executables retain their existing argument/output adapters.
 | [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable operation arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, catalog-selected human/JSON presentation, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
+| [Boards::Cards](../lib/planka/boards/cards.rb), [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb) | Own native card reads, creation, updates, moves, and deletion, and their command definitions. |
 | [Resource](../lib/planka/resource.rb) | Own protected create/update/delete algorithms: input preparation, current-state lookup, change detection, request execution, response validation, and result construction. Concrete resources supply operation hooks and expose supported verbs. |
 | [Relationship](../lib/planka/relationship.rb) | Expose association `add`/`remove` through Resource create/delete, query inclusion, and project observed/created/deleted relationship state without inspecting resource fields. |
 | [Write](../lib/planka/write.rb) | Run one resource write, returning its confirmed result or preserving unchanged/unknown data and recovery references on failure. |
@@ -599,16 +686,19 @@ Legacy executables retain their existing argument/output adapters.
 
 ### Resource operation algorithms
 
-Card-label relationships, card memberships, and task completion inherit from
-`Resource`. Its protected `create(reference)`, `update(reference, **attributes)`,
-and `delete(reference)` own operation sequencing. `Tasks` makes the inherited
-`update` public without replacing its algorithm. Relationship resources keep
+Card-label relationships, card memberships, task completion, and native cards
+inherit from `Resource`. Its protected `create(reference, **attributes)`,
+`update(reference, **attributes)`, and `delete(reference)` own operation
+sequencing. `Tasks` makes the inherited `update` public without replacing its
+algorithm; `Boards::Cards` exposes create/update/delete with card arguments and
+routes `move` through the same update algorithm. Relationship resources keep
 CRUD methods protected and expose `add`/`remove` through the `Relationship` role.
 No unsupported public verbs or endpoint conventions are inferred.
 
-Create/delete resolve validated current state, then prepare the requested
-creation/deletion state. Update first validates and translates input attributes,
-then resolves current state and applies those attributes to its public data.
+Create and update first validate and translate input attributes. Create then
+observes its creation scope and prepares the requested state; delete resolves
+validated current state and prepares the deletion state; update resolves current
+state and applies the attributes to its public data.
 All three compare observed and requested data, returning `changed: false` before
 any write when equal. Otherwise the selected request runs inside `Write`, and
 Resource validates its response before constructing confirmed data.
@@ -618,10 +708,12 @@ The private hook contract separates stable algorithms from resource details:
 | Hook | Responsibility |
 | --- | --- |
 | `read_record(reference)` | Validate the reference and load a fresh scoped observation. For relationships, resolve the existing target even when its association is absent. |
+| `creation_attributes(**attributes)` | Validate public creation input before reads; defaults to none (relationships). |
+| `read_creation_scope(reference)` | Observe where a creation happens; defaults to `read_record`. Cards observe the destination list and project a card with only its board/list known. |
 | `record_data(observation)` | Project current public state; defaults to the observation itself. |
-| `creation_data(observation)`, `deletion_data(observation)` | Project the requested state for the supported operation. Relationship supplies these from presence semantics. |
+| `creation_data(observation, attributes)`, `deletion_data(observation)` | Project the requested state for the supported operation. Relationship supplies these from presence semantics. |
 | `update_attributes(**attributes)` | Validate public update input before reads and translate it into changed fields. Required only for resources exposing update. |
-| `create_record(observation)`, `update_record(observation, attributes)`, `delete_record(observation)` | Execute the corresponding request through Client and return its unvalidated record. Implement only the supported operations. |
+| `create_record(observation, desired)`, `update_record(observation, desired)`, `delete_record(observation)` | Execute the corresponding request through Client and return its unvalidated record; requests derive from the desired state. Implement only the supported operations. |
 | `validate_record!(record, desired)` | Validate returned identity, scope, and requested effects before success is reported. |
 | `confirmed_data(record, desired)` | Return confirmed public data; defaults to desired state. Members incorporate server-assigned membership identity and timestamps on creation. |
 | `recovery(observation)` | Describe resource-specific readback. |
@@ -965,7 +1057,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, and card-member operations are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, and native card operations are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,
