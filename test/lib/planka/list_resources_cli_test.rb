@@ -170,4 +170,94 @@ class ListResourcesCLITest < Minitest::Test
     doc, _err, status = json("create", "list", "--board", BOARD, "--name", "Forbidden")
     assert_equal [1, "authorization_error", false], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
   end
+
+  def test_update_sends_only_supplied_changed_fields_and_identical_updates_are_noops
+    doc, err, status = json("update", "list", READY, "--name", "Ready")
+    assert status.success?, err
+    assert_equal({ "data" => expected_list("name" => "Ready"), "meta" => { "changed" => true }, "error" => nil }, doc)
+    assert_equal [["PATCH", "/api/lists/#{READY}", { "name" => "Ready" }]], writes
+    @server.requests.clear
+    out, err, status = planka("update", "lists", "Ready", "--board", BOARD, "--name", "Ready", "--color", "lagoon-blue", "--position", "5")
+    assert status.success?, err
+    assert_equal "Updated list Ready (#{READY}) active on board #{BOARD}", out.chomp
+    assert_equal [["PATCH", "/api/lists/#{READY}", { "color" => "lagoon-blue", "position" => 5 }]], writes, "unchanged name is not sent"
+    @server.requests.clear
+    doc, err, status = json("update", "list", READY, "--clear-color")
+    assert status.success?, err
+    assert_equal expected_list("name" => "Ready", "position" => 5), doc["data"]
+    assert_equal [["PATCH", "/api/lists/#{READY}", { "color" => nil }]], writes, "clearing sends an explicit null"
+    @server.requests.clear
+    doc, err, status = json("update", "list", READY, "--clear-color", "--type", "active", "--position", "5")
+    assert status.success?, err
+    assert_equal false, doc.dig("meta", "changed")
+    assert_empty writes
+    assert_equal [BOARD, "active"], @server.lists.find { |list| list["id"] == READY }.values_at("boardId", "type")
+  end
+
+  def test_type_changes_issue_one_write_and_keep_native_linked_task_effects
+    card = @server.add_card("Blocker", PROGRESS)
+    blocked = @server.add_card("Blocked", READY)
+    @server.task_lists << { "id" => "910", "cardId" => blocked, "name" => "Blockers" }
+    @server.tasks << { "id" => "911", "taskListId" => "910", "name" => "Blocker", "linkedCardId" => card, "isCompleted" => false }
+    doc, err, status = json("update", "list", PROGRESS, "--type", "closed")
+    assert status.success?, err
+    assert_equal "closed", doc.dig("data", "type")
+    assert_equal [["PATCH", "/api/lists/#{PROGRESS}", { "type" => "closed" }]], writes, "no client-side card or task writes"
+    assert_equal true, @server.tasks.last["isCompleted"], "Planka completes tasks linked to the list's cards"
+    @server.requests.clear
+    doc, err, status = json("update", "list", PROGRESS, "--type", "active")
+    assert status.success?, err
+    assert_equal "active", doc.dig("data", "type")
+    assert_equal [["PATCH", "/api/lists/#{PROGRESS}", { "type" => "active" }]], writes
+    assert_equal false, @server.tasks.last["isCompleted"]
+  end
+
+  def test_update_inputs_are_validated_before_any_request
+    [["update", "list", READY],
+     ["update", "list", READY, "--board", BOARD],
+     ["update", "list", "--name", "x"],
+     ["update", "list", READY, "--color", "berry-red", "--clear-color"],
+     ["update", "list", READY, "--color", "red"],
+     ["update", "list", READY, "--name", ""],
+     ["update", "list", READY, "--name", "x" * 129],
+     ["update", "list", READY, "--type", "archive"],
+     ["update", "list", READY, "--position", "-1"],
+     ["update", "list", READY, "--position", "NaN"],
+     ["update", "list", "ready-for-agent", "--name", "x"]].each do |args|
+      doc, err, status = json(*args)
+      assert_equal 2, status.exitstatus, "#{args.inspect}: #{err}"
+      assert_equal "invalid_input", doc.dig("error", "code"), args.inspect
+      refute_match(/unknown command/, err, args.inspect)
+    end
+    assert_equal 0, @server.requests.size
+  end
+
+  def test_archive_and_trash_lists_are_not_updated
+    archive = @server.add_list(nil, "archive")
+    trash = @server.add_list("Trash", "trash")
+    [archive, "Trash"].each do |list|
+      doc, _err, status = json("update", "list", list, "--board", BOARD, "--name", "Kept")
+      assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")], list
+      assert_match(/archive and trash/i, doc.dig("error", "message"))
+    end
+    doc, _err, status = json("update", "list", trash, "--name", "Kept")
+    assert_equal [1, "not_found"], [status.exitstatus, doc.dig("error", "code")]
+    assert_match(/archive and trash lists need --board/, doc.dig("error", "message"))
+    assert_empty writes
+  end
+
+  def test_update_failures_distinguish_rejected_from_unknown_outcomes
+    @server.inject("PATCH", %r{/api/lists/}, 403)
+    doc, _err, status = json("update", "list", READY, "--name", "Renamed")
+    assert_equal [1, "authorization_error", false, expected_list], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed"), doc["data"]]
+    @server.inject("PATCH", %r{/api/lists/}, { "item" => { "id" => READY } })
+    doc, _err, status = json("update", "list", READY, "--name", "Renamed", "--clear-color")
+    assert_equal [1, "unknown_outcome", nil], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+    assert_equal expected_list("name" => nil), doc["data"], "only the changed name is unknown"
+    assert_equal({ "action" => "readback-list", "resources" => [{ "type" => "list", "id" => READY }] }, doc.dig("error", "recovery"))
+    @server.inject("PATCH", %r{/api/lists/}, :apply_then_drop)
+    doc, _err, status = json("update", "list", READY, "--position", "9")
+    assert_equal [1, "unknown_outcome"], [status.exitstatus, doc.dig("error", "code")]
+    assert_equal 3, @server.counts("PATCH", %r{/api/lists/}), "unknown updates are not retried"
+  end
 end

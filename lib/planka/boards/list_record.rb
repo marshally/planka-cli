@@ -22,8 +22,14 @@ module Planka
         raise ArgumentError, "type must be one of #{KANBAN_TYPES.join(", ")}"
       end
 
+      def self.color!(color)
+        return color if color.nil? || COLORS.include?(color)
+
+        raise ArgumentError, "color must be one of #{COLORS.join(", ")}"
+      end
+
       def self.position!(position)
-        return position if position.nil? || Records.position?(position)
+        return position if Records.position?(position)
 
         raise ArgumentError, "position must be finite and nonnegative"
       end

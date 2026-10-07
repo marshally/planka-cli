@@ -34,6 +34,10 @@ module Planka
       # and closed lists unless a position is given.
       def create(name:, type: "active", position: nil) = super(@board_id, name: name, type: type, position: position)
 
+      # Changes only the supplied fields; color: nil clears the color. The list
+      # stays on its board, and Planka applies a type change's effects itself.
+      def update(reference, **attributes) = super
+
       private
 
       def validate_options!(name:, limit:)
@@ -52,8 +56,31 @@ module Planka
 
       def record_data(known) = known.list
 
+      def update_attributes(**attributes)
+        raise ArgumentError, "supply a name, color, position, or type" if attributes.empty?
+
+        rules = { name: ListRecord.method(:name!), color: ListRecord.method(:color!), type: ListRecord.method(:type!),
+                  position: ListRecord.method(:position!) }
+        attributes.to_h { |field, value| [field.to_s, rules.fetch(field) { raise ArgumentError, "unknown list field #{field}" }.call(value)] }
+      end
+
+      def updated_data(known, attributes) = kanban!(known).list.merge(attributes)
+
+      # Only supplied fields whose values differ are sent; a cleared color is null.
+      def update_record(known, desired)
+        changed = desired.slice("name", "color", "position", "type").reject { |field, value| known.list[field] == value }
+        client.update_list(known.list["id"], **changed.transform_keys(&:to_sym))
+      end
+
+      # Archive and trash are system lists that Planka does not let callers change.
+      def kanban!(known)
+        return known if @scope.finite?(known.list)
+
+        raise ReferenceError, "Archive and trash lists cannot be updated or deleted"
+      end
+
       def creation_attributes(name:, type:, position:)
-        { "name" => ListRecord.name!(name), "type" => ListRecord.type!(type), "position" => ListRecord.position!(position) }
+        { "name" => ListRecord.name!(name), "type" => ListRecord.type!(type), "position" => position && ListRecord.position!(position) }
       end
 
       def creation_data(known, attributes) = known.list.merge(attributes, "position" => attributes["position"] || known.append_position)
