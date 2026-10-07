@@ -592,7 +592,16 @@ Legacy executables retain their existing argument/output adapters.
 | [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable reader arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, catalog-selected human/JSON presentation, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
+| [Write](../lib/planka/write.rb) | Run one resource write, returning its confirmed result or preserving unchanged/unknown data and recovery references on failure. |
 | Canonical readers | Read and validate only the records their operation needs. Return resource data or existing workflow reports; catalogs select result projections. |
+
+Card-label relationships, card memberships, and task completion share
+`Write.perform(unchanged:, unknown:, recovery:)`. Resource operations resolve
+scope and return no-ops before calling it. The block performs exactly one write,
+validates its response, and returns the successful result data. Resources own
+their validation and result/recovery shapes; Write owns mutation result and
+failure construction, retaining the original failure as its cause. HTTP retry
+policy remains with Client. Multi-step workflow progress remains separate.
 
 The coordinator now follows parse → prepare → open session when required →
 execute → render. Help returns after parsing. Offline guide preparation captures

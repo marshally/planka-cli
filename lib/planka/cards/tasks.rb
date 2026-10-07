@@ -2,8 +2,6 @@ module Planka
   module Cards
     # Observes a card's tasks, then sets one ordinary task's verified completion.
     class Tasks
-      OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
-
       class << self
         def read(client, reference, card_id:, completed:, base_url:, board_id: nil) # rubocop:disable Lint/UnusedMethodArgument -- base_url is part of the shared prepared-reader contract.
           card = Scope.card(client, card_id: card_id, board_id: board_id)
@@ -42,10 +40,10 @@ module Planka
         end
 
         def mutate(client, data, completed)
-          confirm_write!(client.update_task(data["id"], isCompleted: completed), data, completed)
-          MutationResult.new(data: data.merge("isCompleted" => completed), changed: true)
-        rescue *OPERATION_ERRORS => error
-          raise write_failure(error, data, completed)
+          Write.perform(unchanged: data, unknown: data.merge("isCompleted" => nil), recovery: recovery(data)) do
+            confirm_write!(client.update_task(data["id"], isCompleted: completed), data, completed)
+            data.merge("isCompleted" => completed)
+          end
         end
 
         def confirm_write!(updated, data, completed)
@@ -54,11 +52,8 @@ module Planka
           end
         end
 
-        def write_failure(error, data, completed)
-          uncertain = !Client.unapplied?(error)
-          MutationFailure.new(data: data.merge("isCompleted" => uncertain ? nil : !completed),
-                              changed: uncertain ? nil : false, uncertain: uncertain,
-                              recovery: { "action" => "readback-task", "resources" => [{ "type" => "card", "id" => data["cardId"] }, { "type" => "task", "id" => data["id"] }] })
+        def recovery(data)
+          { "action" => "readback-task", "resources" => [{ "type" => "card", "id" => data["cardId"] }, { "type" => "task", "id" => data["id"] }] }
         end
       end
     end
