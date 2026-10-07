@@ -1,5 +1,11 @@
 # Public behavior shared by card-member and card-label relationships.
 module RelationshipContract
+  def test_relationships_expose_association_operations_without_generic_crud
+    with_relationship do |relationships|
+      %i[create update delete].each { |operation| refute_respond_to relationships, operation }
+    end
+  end
+
   def test_relationship_changes_are_visible_and_repeated_changes_are_noops
     with_relationship do |relationships, id, name|
       assert_equal false, relationships.include?(id)

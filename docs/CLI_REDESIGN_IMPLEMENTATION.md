@@ -592,40 +592,62 @@ Legacy executables retain their existing argument/output adapters.
 | [CLI::PreparedCommand](../lib/planka/cli/prepared_command.rb) | `build` validates configuration, resolves explicit references, invokes catalog preparation, and captures executable operation arguments before authentication. Offline commands require no connection settings. `execute` accepts the session client. |
 | [CLI::Output](../lib/planka/cli/output.rb), [CLI::Failure](../lib/planka/cli/failure.rb) | Render canonical envelopes, catalog-selected human/JSON presentation, safe diagnostics, and statuses. Expected failures can carry known data/metadata. |
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
-| [Resource](../lib/planka/resource.rb) | Retain the supplied client and provide protected mutation mechanics: compare observed/requested data, return no-ops, and execute confirmed writes through Write. Concrete resources expose supported public operations. |
-| [Relationship](../lib/planka/relationship.rb) | Share `add`, `remove`, and `include?` across card members and labels through explicit observation, presence, projection, write, and recovery messages. |
+| [Resource](../lib/planka/resource.rb) | Own protected create/update/delete algorithms: input preparation, current-state lookup, change detection, request execution, response validation, and result construction. Concrete resources supply operation hooks and expose supported verbs. |
+| [Relationship](../lib/planka/relationship.rb) | Expose association `add`/`remove` through Resource create/delete, query inclusion, and project observed/created/deleted relationship state without inspecting resource fields. |
 | [Write](../lib/planka/write.rb) | Run one resource write, returning its confirmed result or preserving unchanged/unknown data and recovery references on failure. |
 | Canonical readers | Read and validate only the records their operation needs. Return resource data or existing workflow reports; catalogs select result projections. |
 
-Card-label relationships, card memberships, and task completion inherit from
-`Resource`. Its protected `mutate(unchanged:, desired:, unknown:, recovery:)`
-compares public state projections, returns `changed: false` without executing
-the block when the desired state is already satisfied, and otherwise invokes
-`Write.perform(unchanged:, unknown:, recovery:)`. The block performs exactly one
-write, validates its response, and returns confirmed data, including any new
-server identity or metadata. Concrete resources resolve scope and validate reads
-before entering this lifecycle. They own result/recovery shapes; Write owns
-confirmed mutation results and failure classification, retaining the original
-failure as its cause. HTTP retry policy remains with Client. Multi-step workflow
-progress remains separate.
+### Resource operation algorithms
 
-`Cards::Members` and `Cards::Labels` include `Relationship`. The role observes
-fresh state for every call and treats that observation as opaque. Its private
-host contract is `observe_relationship(reference)`,
-`relationship_present?(observation)`, `relationship_data(observation, present:)`,
-`relationship_recovery(observation)`, and
-`write_relationship(observation, present:)`, alongside inherited `mutate`.
-Presence is Boolean; projection accepts true, false, or nil for uncertain state.
-The write hook returns validated public data. The mixin owns the operation
-sequence without inspecting host instance variables or membership/label fields.
+Card-label relationships, card memberships, and task completion inherit from
+`Resource`. Its protected `create(reference)`, `update(reference, **attributes)`,
+and `delete(reference)` own operation sequencing. `Tasks` makes the inherited
+`update` public without replacing its algorithm. Relationship resources keep
+CRUD methods protected and expose `add`/`remove` through the `Relationship` role.
+No unsupported public verbs or endpoint conventions are inferred.
+
+Create/delete resolve validated current state, then prepare the requested
+creation/deletion state. Update first validates and translates input attributes,
+then resolves current state and applies those attributes to its public data.
+All three compare observed and requested data, returning `changed: false` before
+any write when equal. Otherwise the selected request runs inside `Write`, and
+Resource validates its response before constructing confirmed data.
+
+The private hook contract separates stable algorithms from resource details:
+
+| Hook | Responsibility |
+| --- | --- |
+| `read_record(reference)` | Validate the reference and load a fresh scoped observation. For relationships, resolve the existing target even when its association is absent. |
+| `record_data(observation)` | Project current public state; defaults to the observation itself. |
+| `creation_data(observation)`, `deletion_data(observation)` | Project the requested state for the supported operation. Relationship supplies these from presence semantics. |
+| `update_attributes(**attributes)` | Validate public update input before reads and translate it into changed fields. Required only for resources exposing update. |
+| `create_record(observation)`, `update_record(observation, attributes)`, `delete_record(observation)` | Execute the corresponding request through Client and return its unvalidated record. Implement only the supported operations. |
+| `validate_record!(record, desired)` | Validate returned identity, scope, and requested effects before success is reported. |
+| `confirmed_data(record, desired)` | Return confirmed public data; defaults to desired state. Members incorporate server-assigned membership identity and timestamps on creation. |
+| `recovery(observation)` | Describe resource-specific readback. |
+
+Public state projections are flat hashes. Desired state retains known fields
+and changes requested ones. For an uncertain write, Resource retains the
+observed projection and marks differing requested fields nil; confirmed response
+metadata is incorporated only after validation. `Write` remains the single owner
+of confirmed result/failure construction and certainty classification, preserving
+the original error as cause. Client retains HTTP retry policy. Read/input failures
+occur before Write; malformed write responses require readback. Multi-step
+workflow progress remains separate.
+
+`Relationship` owns presence semantics through two resource-specific messages:
+`relationship_present?(observation)` returns a Boolean, and
+`relationship_data(observation, present:)` projects public state. It supplies
+Resource's observed, creation, and deletion projections using those messages;
+`add` invokes create and `remove` invokes delete. The mixin treats observations as
+opaque and reads no host instance variables or membership/label fields.
 
 `include?` returns false only for a known target with no relationship. Unknown
 or ambiguous references and failed/malformed reads raise. Adding an existing
 relationship and removing an absent one are no-ops; removal preserves both
-endpoints. The shared public role tests run against members and labels using
-the real client and local HTTP fixture. Resource-specific and CLI acceptance
-tests retain validation, result, and uncertain-write coverage. The hierarchy
-does not infer endpoints or add unsupported public CRUD methods.
+endpoints. Shared public role tests run against members and labels using the
+real client and local HTTP fixture. Resource-specific and CLI acceptance tests
+retain validation, result, and uncertain-write coverage.
 
 Commands select an `operation` callable. PreparedCommand invokes `call` with
 its prepared arguments; it does not require every operation to implement `read`.

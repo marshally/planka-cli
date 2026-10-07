@@ -7,19 +7,17 @@ module Planka
         @card_id, @board_id = card_id, board_id
       end
 
-      def update(reference, completed:)
-        validate_completion!(completed)
-        data = task_data(reference)
-        set_completion(data, completed)
-      end
+      public :update
 
       private
 
-      def validate_completion!(completed)
+      def update_attributes(completed:)
         raise ArgumentError, "completed must be true or false" unless [true, false].include?(completed)
+
+        { "isCompleted" => completed }
       end
 
-      def task_data(reference)
+      def read_record(reference)
         card = Scope.card(client, card_id: @card_id, board_id: @board_id)
         task = ordinary_task(card, reference)
         task.slice("id", "name", "taskListId", "isCompleted").merge("cardId" => Scope.card_id(card))
@@ -50,16 +48,10 @@ module Planka
         tasks
       end
 
-      def set_completion(data, completed)
-        desired = data.merge("isCompleted" => completed)
-        mutate(unchanged: data, desired: desired, unknown: data.merge("isCompleted" => nil), recovery: recovery(data)) do
-          confirm_write!(client.update_task(data["id"], isCompleted: completed), data, completed)
-          desired
-        end
-      end
+      def update_record(known, attributes) = client.update_task(known["id"], **attributes)
 
-      def confirm_write!(updated, data, completed)
-        unless updated.is_a?(Hash) && updated["id"] == data["id"] && updated["taskListId"] == data["taskListId"] && updated["isCompleted"] == completed
+      def validate_record!(updated, desired)
+        unless updated.is_a?(Hash) && updated["id"] == desired["id"] && updated["taskListId"] == desired["taskListId"] && updated["isCompleted"] == desired["isCompleted"]
           raise InvalidResponse, "Invalid task update response"
         end
       end
