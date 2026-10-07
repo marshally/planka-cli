@@ -41,7 +41,7 @@ record. Use an isolated implementation branch and preserve unrelated work.
 | [exe/](../exe/) | Existing leaf parsers and direct `planka-<command>` entry points. |
 | [lib/planka/cli.rb](../lib/planka/cli.rb) | Legacy option parsing, human formatters, scope helpers, and recovery/error plumbing. |
 | [lib/planka/canonical_cli.rb](../lib/planka/canonical_cli.rb), [lib/planka/cli/](../lib/planka/cli/) | Canonical coordinator, parsed invocations, validated configuration, output/status handling, and expected failures. |
-| [lib/planka/client.rb](../lib/planka/client.rb) | HTTP endpoints, session lifecycle, retries, and unknown-write-outcome detection. |
+| [lib/planka/client.rb](../lib/planka/client.rb) | HTTP endpoints, session lifecycle, and unknown-write-outcome detection; every request is sent once. |
 | [lib/planka/cards/detail.rb](../lib/planka/cards/detail.rb), [lib/planka/boards/snapshot.rb](../lib/planka/boards/snapshot.rb) | Existing detailed card and board/list read models. |
 | [lib/planka/workflow/publishing.rb](../lib/planka/workflow/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and resource operations. |
 | [lib/planka/workflow/prime.rb](../lib/planka/workflow/prime.rb) | Built-in, credential-free agent guide. |
@@ -557,9 +557,8 @@ read back before retrying.
 
 Context7 was unavailable. Inspected the installed locked `net-http` 0.9.1 source
 (`lib/net/http.rb`, `max_retries=` and `transport_request`) instead: its default
-one retry includes DELETE. Membership removal disables both that retry and blind
-client retries using `idempotent: false`. Existing idempotent requests retain their
-policy. Development checks use Bundler 4.0.14 with the unchanged lockfile;
+one retry includes DELETE. The client now disables it for every request and
+performs no retries of its own (see the card slice). Development checks use Bundler 4.0.14 with the unchanged lockfile;
 supported dependency/Ruby ranges still come from the gemspec and CI.
 
 Public subprocess/local HTTP tests cover reads, exact target writes, no-ops,
@@ -642,9 +641,15 @@ model differs only by the unrelated `displayCardAges` field.
   and sets `linkedCardId` to null on other tasks.
 
 Context7 was unavailable. The installed locked `net-http` 0.9.1 source shows its
-automatic retry excludes POST and PATCH and includes DELETE; card deletion passes
-`idempotent: false`, disabling both that retry and the client's. Name/description
-PATCH requests keep the client's existing idempotent retry policy. Development
+automatic retry (`IDEMPOTENT_METHODS_`) covers GET, HEAD, PUT, DELETE, OPTIONS,
+and TRACE. `Client#request` sets `max_retries = 0` for every request and has no
+retry loop: each request is sent exactly once, reads and writes alike, across the
+whole library including legacy commands. A write that fails after reaching
+Planka (5xx, reset, read timeout, EOF) raises `UnknownOutcome` for read-back;
+failures before it is sent and HTTP rejections remain known-unapplied. This
+replaces the earlier three-attempt policy and per-call `idempotent:` flags, whose
+premise of a flaky proxy was never observed; Planka runs on the caller's network.
+Development
 checks use Bundler 4.0.14 with the unchanged lockfile.
 
 Public subprocess/local HTTP tests cover every command, aliases, offline help at
@@ -724,7 +729,7 @@ and changes requested ones. For an uncertain write, Resource retains the
 observed projection and marks differing requested fields nil; confirmed response
 metadata is incorporated only after validation. `Write` remains the single owner
 of confirmed result/failure construction and certainty classification, preserving
-the original error as cause. Client retains HTTP retry policy. Read/input failures
+the original error as cause. Client sends each request once. Read/input failures
 occur before Write; malformed write responses require readback. Multi-step
 workflow progress remains separate.
 
@@ -830,7 +835,7 @@ adds no new commands or endpoints.
 
 For every mutation slice, verify supplied-fields-only updates, idempotent
 relationships where applicable, unknown outcomes, partial completion, and readback.
-Do not rewrite retry behavior merely as a side effect of reorganizing commands.
+Requests are never retried; change that only as an explicit, documented decision.
 
 ## Settled decisions and implementation deliverables
 

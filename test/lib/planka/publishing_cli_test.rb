@@ -243,7 +243,7 @@ class Planka::PublishingCLITest < Minitest::Test
      [404, "GET", %r{cards/#{PARENT}$}, "not_found"],
      [500, "GET", %r{cards/#{PARENT}/comments$}, "api_error"]].each do |code, method, path, expected|
       @server.requests.clear
-      @server.inject(method, path, code, times: code >= 500 ? 3 : 1)
+      @server.inject(method, path, code)
       out, err, status = planka("describe", "card", PARENT, "-o", "json")
       assert_equal 1, status.exitstatus
       document = JSON.parse(out)
@@ -278,8 +278,7 @@ class Planka::PublishingCLITest < Minitest::Test
   end
 
   def test_describe_network_failure_retains_primary_error_when_cleanup_also_fails
-    # Net::HTTP retries a GET internally before the client retry loop.
-    @server.inject("GET", %r{cards/#{PARENT}$}, :drop, times: 6)
+    @server.inject("GET", %r{cards/#{PARENT}$}, :drop)
     @server.inject("DELETE", %r{access-tokens/me$}, 403)
     out, err, status = planka("describe", "card", PARENT, "-o", "json")
     assert_equal 1, status.exitstatus
@@ -1302,16 +1301,29 @@ class Planka::PublishingCLITest < Minitest::Test
     assert_equal 2, @server.tasks.count { |t| t["taskListId"] == list_id }, "no duplicate task was created"
   end
 
-  def test_transient_failures_retry_then_succeed
-    @server.inject("GET", %r{/api/boards/}, :server_error, times: 2)
-    ok("snapshot")
-    assert_equal 3, @server.counts("GET", %r{/api/boards/}), "two retries then success"
-  end
-
-  def test_transient_failures_give_up_after_three_attempts
-    @server.inject("GET", %r{/api/boards/}, :server_error, times: 5)
+  def test_failed_reads_are_attempted_once
+    @server.inject("GET", %r{/api/boards/}, :server_error)
+    _out, err, status = planka("snapshot")
+    refute status.success?
+    assert_equal 1, @server.counts("GET", %r{/api/boards/}), "no client retry"
+    refute_match(/retrying/, err)
+    @server.inject("GET", %r{/api/boards/}, :drop)
     _out, _err, status = planka("snapshot")
     refute status.success?
-    assert_equal 3, @server.counts("GET", %r{/api/boards/}), "capped at three attempts"
+    assert_equal 2, @server.counts("GET", %r{/api/boards/}), "no Net::HTTP retry either"
+  end
+
+  def test_failed_updates_are_sent_once_and_report_an_unknown_outcome
+    @server.inject("PATCH", %r{/api/cards/#{PARENT}\z}, :server_error)
+    out, err, status = planka("update-card", PARENT, "--title", "Renamed", "--output", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal 1, @server.counts("PATCH", %r{/api/cards/}), "the update was not re-sent"
+    assert_equal false, JSON.parse(out)["completed"]
+    assert JSON.parse(out)["reconcile"], err
+    @server.inject("PATCH", %r{/api/cards/#{PARENT}\z}, :apply_then_drop)
+    out, _err, status = planka("update", "card", PARENT, "--name", "Renamed", "-o", "json")
+    assert_equal 1, status.exitstatus
+    assert_equal "unknown_outcome", JSON.parse(out).dig("error", "code")
+    assert_equal 2, @server.counts("PATCH", %r{/api/cards/})
   end
 end

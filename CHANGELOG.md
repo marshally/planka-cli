@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+Removed all HTTP retries. Every request, read or write, canonical or legacy, is
+sent exactly once: the three-attempt client loop, its stderr retry warnings and
+sleeps, net-http's internal retry, and the per-call `idempotent:` flags are gone.
+A write that fails after reaching Planka reports an unknown outcome for
+read-back, so legacy `update-card`, `move-card` and `rename-task-list` now print
+their reconcile message instead of silently re-sending.
+
 Added native card resource commands with singular/plural aliases and offline
 root/group/leaf help: `get cards --board BOARD|--list LIST` (exact `--name`,
 repeated AND `--label`/`--member`, `--limit`, reading active and closed lists

@@ -36,7 +36,7 @@ module Planka
           return if scope.in_progress?
 
           @progress.move do
-            scope.moved_card(@client.move_card(@id, scope.in_progress_list_id, position: Position::MOVE_DEFAULT, idempotent: false))
+            scope.moved_card(@client.move_card(@id, scope.in_progress_list_id, position: Position::MOVE_DEFAULT))
           end
         end
       end
