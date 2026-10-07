@@ -16,6 +16,7 @@ parser = OptionParser.new do |o|
   o.banner = "usage: planka move-card <card> --list ID|NAME [--position N] [--output human|json]"
   o.on("--list LIST", "target list, by id or name") { |v| options[:list] = v }
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
+  o.separator "Canonical replacement: planka move card CARD --list LIST [--position N] (new JSON envelope)."
   Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka move-card")

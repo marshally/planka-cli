@@ -329,4 +329,39 @@ class CardResourcesCLITest < Minitest::Test
     assert_equal({ "action" => "readback-card", "resources" => [{ "type" => "card", "id" => CARD }] }, doc.dig("error", "recovery"))
     assert_equal 2, @server.counts("DELETE", %r{/api/cards/}), "the unknown delete is not retried"
   end
+
+  def test_help_is_offline_at_root_group_and_leaf_levels
+    offline = { "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil, "PLANKA_AGENT_PASSWORD" => nil }
+    { [] => "get cards --board BOARD|--list LIST", %w[--help] => "delete card CARD",
+      %w[get --help] => "cards --board BOARD|--list LIST", %w[create --help] => "card --list LIST --name NAME",
+      %w[update --help] => "card CARD  Change only supplied card fields", %w[move --help] => "card CARD --list LIST",
+      %w[delete --help] => "card CARD  Delete one card", %w[get cards --help] => "usage: planka get cards",
+      %w[get card -h] => "planka get card CARD", %w[create cards --help] => "usage: planka create card",
+      %w[update card --help] => "usage: planka update card CARD", %w[move cards -h] => "usage: planka move card CARD",
+      %w[delete card --help] => "usage: planka delete card CARD" }.each do |args, text|
+      out, err, status = planka(*args, env: offline)
+      assert status.success?, "#{args.inspect}: #{err}"
+      assert_includes out, text, args.inspect
+    end
+    assert_equal 0, @server.requests.size
+  end
+
+  def test_legacy_card_commands_name_implemented_replacements_and_keep_their_contracts
+    { "planka-update-card" => "planka update card CARD", "planka-move-card" => "planka move card CARD --list LIST",
+      "planka-snapshot" => "planka get cards --list LIST" }.each do |executable, replacement|
+      out, err, status = planka("--help", executable: executable)
+      assert status.success?, err
+      assert_includes out, replacement
+      refute_includes out, "not yet implemented"
+    end
+    out, err, status = planka("update-card", CARD, "--title", "Legacy", "--output", "json")
+    assert status.success?, err
+    assert_equal({ "card" => { "id" => CARD, "name" => "Legacy", "description" => "Original description.", "listId" => READY, "position" => 65_536 } }, JSON.parse(out))
+    out, err, status = planka("move-card", CARD, "--list", "in-progress", "--output", "json")
+    assert status.success?, err
+    assert_equal PROGRESS, JSON.parse(out).dig("card", "listId")
+    out, err, status = planka("snapshot", "--board", BOARD, "--list", "in-progress", "--output", "json")
+    assert status.success?, err
+    assert_equal [BOARD, PROGRESS, [CARD]], [JSON.parse(out)["boardId"], JSON.parse(out)["listId"], JSON.parse(out)["cards"].map { |card| card["id"] }]
+  end
 end

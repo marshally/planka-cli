@@ -11,23 +11,22 @@ module Planka
 
         ## Connection and output
         API commands require PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, and
-        PLANKA_AGENT_PASSWORD from the caller's environment. Canonical card/board
-        reads require an explicit numeric ID or same-instance URL. Guide, help,
-        and version work offline. Keep credential values out of reports.
+        PLANKA_AGENT_PASSWORD from the caller's environment. References accept IDs
+        or same-instance URLs; names need board scope. Guide, help, and version
+        work offline. Keep credential values out of reports.
 
         Add `-o json` for canonical results: one document with data, meta, and
         error. Inspect the exit status before consuming stdout: 0 is success,
         2 is invalid input, and 1 is another failure. Diagnostics go to stderr.
-        Commands below marked legacy retain their bare JSON and existing exits;
-        they are deprecated and retained indefinitely, without runtime warnings.
+        Legacy commands below keep their bare JSON and exits; they are deprecated
+        but retained indefinitely.
 
         ## Find and work a ticket
         1. `planka describe board BOARD -o json`: inspect lists, cards, and tasks.
         2. `planka workflow next --board BOARD -o json`: select an unclaimed,
            unblocked, unquarantined ticket in ready-for-agent. Add `--label feature:SLUG` for
            ticket order or `--label effort:SLUG` for map/frontier; repeated labels
-           AND-match. Without --board, PLANKA_BOARD_ID supplies scope. No available
-           card is normal.
+           AND-match; PLANKA_BOARD_ID is the default scope. No available card is normal.
         3. `planka describe card CARD -o json`: inspect description, criteria,
            blockers, comments, and memberships before acting.
         4. `planka workflow claim-status -o json`: inspect your first open claim
@@ -47,10 +46,11 @@ module Planka
            with `Branch: BRANCH` and `PR: URL` on separate lines in TEXT.
 
         ## Publish and recover
-        Card assignments use `planka get members --card CARD`,
-        `planka get member USER --card CARD`, `planka add member USER --card CARD`,
-        and `planka remove member USER --card CARD`. Add/remove preserve placement
-        and skip satisfied assignments; read back unknown outcomes.
+        Cards use `planka get cards --board BOARD`, `get card`, `create card
+        --list LIST --name NAME`, `update card`, `move card CARD --list LIST`, and
+        `delete card`, without workflow conventions. Card assignments use
+        `planka get|add|remove member USER --card CARD` and `get members --card CARD`;
+        add/remove skip satisfied assignments.
 
         Publishing still uses legacy commands. Specs have no
         Acceptance criteria list; tickets have one. Share feature:SLUG labels.
@@ -59,7 +59,7 @@ module Planka
         --description-file FILE accepts multiline text; either file accepts -
         for stdin. Omitted positions append. `planka link BLOCKED BLOCKER`
         records linked tasks in Blocked by; repeating a link is safe. Use IDs
-        for ambiguous names. Read command help before making an authorized write.
+        for ambiguous names. Read help before an authorized write.
 
         For an unknown outcome, read the board back before retrying: the write
         may already have applied. Legacy recovery JSON can contain completed=false,
