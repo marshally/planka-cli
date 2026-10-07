@@ -31,12 +31,12 @@ module Planka
           usage: planka get cards (--board BOARD | --list LIST [--board BOARD]) [--name NAME]
                                   [--label LABEL]... [--member USER]... [--limit N] [-o human|json]
                  planka get card CARD [--board BOARD] [-o human|json]
-          Read-only. Without CARD, read the complete board or list collection: active/closed lists in board
-          order by card position, then archive/trash lists paged newest list change first.
+          Read-only. Without CARD, read the cards in the board's active/closed lists, in board list order
+          by card position, or in one such list. Archive/trash cards are not read; such a LIST is rejected.
           Exact --name, every --label (board label ID/name), and every --member (board user ID/name) must
           all match before a positive --limit; filters and limits require an omitted CARD.
-          Collection data is an array with meta.complete, false when truncated or a page fails; failures keep
-          matching cards read so far. Pages are not a consistent snapshot of concurrent changes.
+          Collection data is an array with meta.complete, false when truncated or the read fails; failures
+          keep matching cards read so far.
           With CARD, data is one card object and meta is empty; card names resolve on active/closed lists.
         HELP
         CREATE_HELP = <<~HELP + LIST_HELP + COMMON_HELP

@@ -1,7 +1,6 @@
 require "socket"
 require "json"
 require "openssl"
-require "uri"
 
 # A small in-memory Planka that speaks the REST endpoints the CLI uses, so the
 # publishing commands can be driven end to end over real HTTP without a live
@@ -20,8 +19,6 @@ class FakePlanka
   PARENT_CARD = "400000000000000001".freeze
   FINITE_TYPES = %w[active closed].freeze
   attr_reader :requests
-  # Endless (archive/trash) list pages hold this many cards, as Planka's 50.
-  attr_accessor :page_size
 
   def initialize(tls_failure_after: nil)
     @tls_failure_after = tls_failure_after
@@ -32,7 +29,6 @@ class FakePlanka
     @seq = 1_900_000_000_000_000_000
     @requests = []
     @faults = []
-    @page_size = 50
     @lock = Mutex.new
     seed
     @server = TCPServer.new("127.0.0.1", 0)
@@ -67,9 +63,9 @@ class FakePlanka
 
   def add_board(id) = @boards << { "id" => id }
 
-  def add_card(name, list_id, position: 65_536, list_changed_at: "2026-09-01T00:00:00.000Z")
+  def add_card(name, list_id, position: 65_536)
     board_id = @state[:lists].find { |entry| entry["id"] == list_id }.fetch("boardId")
-    record = card(next_id, name, list_id, nil).merge("boardId" => board_id, "position" => position, "listChangedAt" => list_changed_at)
+    record = card(next_id, name, list_id, nil).merge("boardId" => board_id, "position" => position)
     @state[:cards] << record
     record["id"]
   end
@@ -208,7 +204,6 @@ class FakePlanka
     when :malformed_board_reference then return write(socket, 200, { "item" => { "boardId" => "not-an-id" } })
     when :malformed_board_path then return write(socket, 200, { "item" => { "boardId" => "../cards/123" } })
     when :malformed_description then return write(socket, 200, { "item" => { "id" => PARENT_CARD, "description" => 42 }, "included" => {} })
-    when :malformed_card_page then return write(socket, 200, { "items" => [{ "id" => 42 }], "included" => {} })
     when :malformed_included then return write(socket, 200, { "item" => find_card(PARENT_CARD), "included" => [] })
     when :drop then return
     when :server_error then return write(socket, 500, { "message" => "injected failure" })
@@ -240,8 +235,6 @@ class FakePlanka
 
   def route(method, path, body)
     data = body.to_s.empty? ? {} : JSON.parse(body)
-    path, query = path.split("?", 2)
-    query = URI.decode_www_form(query.to_s).to_h
     seg = path.split("/").reject(&:empty?)
     case [method, seg]
     in ["PATCH", ["api", "tasks", id]]
@@ -255,7 +248,7 @@ class FakePlanka
     in ["GET", ["api", "projects"]] then [200, { "included" => { "boards" => @boards } }]
     in ["GET", ["api", "cards", id, "comments"]] then [200, { "items" => comments_for(id) }]
     in ["GET", ["api", "cards", id]] then [200, card_payload(id)]
-    in ["GET", ["api", "lists", id, "cards"]] then [200, list_cards_page(id, query)]
+    in ["GET", ["api", "lists", id, "cards"]] then [200, { "items" => @state[:cards].select { |c| c["listId"] == id }, "included" => {} }]
     in ["GET", ["api", "lists", id]] then list_payload(id)
     in ["DELETE", ["api", "cards", id]] then [200, { "item" => delete_card(id) }]
     in ["POST", ["api", "boards", id, "lists"]] then [200, { "item" => make_list(id, data) }]
@@ -282,8 +275,7 @@ class FakePlanka
     [500, { "message" => e.message }]
   end
 
-  # Board reads include only cards in finite (active/closed) lists; archive and
-  # trash cards are paged through GET /api/lists/:id/cards.
+  # Board reads include only cards in finite (active/closed) lists, as Planka's do.
   def board_payload(id)
     endless = @state[:lists].reject { |list| FINITE_TYPES.include?(list["type"]) }.map { |list| list["id"] }
     cards = @state[:cards].select { |card| card["boardId"] == id && !endless.include?(card["listId"]) }
@@ -307,20 +299,6 @@ class FakePlanka
     return [404, { "message" => "List not found" }] unless record && FINITE_TYPES.include?(record["type"])
 
     [200, { "item" => record, "included" => {} }]
-  end
-
-  # Pages by listChangedAt then id, newest first, as Planka's endless lists do.
-  def list_cards_page(id, query)
-    cards = @state[:cards].select { |card| card["listId"] == id }
-                          .sort_by { |card| [card["listChangedAt"].to_s, card["id"].to_i] }.reverse
-    if query["before[id]"]
-      cursor = [query.fetch("before[listChangedAt]"), query.fetch("before[id]").to_i]
-      cards = cards.select { |card| ([card["listChangedAt"].to_s, card["id"].to_i] <=> cursor).negative? }
-    end
-    cards = cards.first(@page_size)
-    ids = cards.map { |card| card["id"] }
-    { "items" => cards, "included" => { "cardLabels" => @state[:cardLabels].select { |record| ids.include?(record["cardId"]) },
-                                        "cardMemberships" => @state[:cardMemberships].select { |record| ids.include?(record["cardId"]) } } }
   end
 
   def delete_card(id)
@@ -358,7 +336,7 @@ class FakePlanka
     list = @state[:lists].find { |entry| entry["id"] == list_id }
     card = { "id" => next_id, "name" => data["name"], "description" => data["description"], "type" => data["type"], "listId" => list_id,
              "boardId" => list ? list["boardId"] : BOARD_ID, "position" => FINITE_TYPES.include?(list&.dig("type") || "active") ? data["position"] : nil,
-             "createdAt" => "2026-10-01T00:00:00.000Z", "listChangedAt" => "2026-10-01T00:00:00.000Z" }
+             "createdAt" => "2026-10-01T00:00:00.000Z" }
     @state[:cards] << card
     card
   end

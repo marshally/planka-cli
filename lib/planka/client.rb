@@ -69,16 +69,6 @@ module Planka
       response.fetch("item")
     end
 
-    # One page of a list's cards, newest list change first. Pass the last card of
-    # the previous page as before: to continue; an empty page ends the list.
-    def list_card_page(list_id, before: nil)
-      query = before && "?#{URI.encode_www_form("before[listChangedAt]" => before.fetch("listChangedAt"), "before[id]" => before.fetch("id"))}"
-      document = request(:get, "/api/lists/#{list_id}/cards#{query}")
-      raise InvalidResponse, "Invalid list cards response" if @validate_responses && !(document["items"].is_a?(Array) && document["included"].is_a?(Hash))
-
-      document
-    end
-
     def comments(card_id)
       response = request(:get, "/api/cards/#{card_id}/comments")
       if @validate_responses && !response["items"].is_a?(Array)
