@@ -3,7 +3,7 @@ module Planka
     # Observes a card's labels, then sets one verified card-label relationship.
     class Labels
       class << self
-        def read(client, label, card_id:, present:, base_url:, board_id: nil) # rubocop:disable Lint/UnusedMethodArgument -- base_url is part of the shared prepared-reader contract.
+        def set(client, label, card_id:, present:, board_id: nil)
           card, board = Scope.read(client, card_id: card_id, board_id: board_id)
           label_id = resolve_label(label, board, card)
           applied = applied?(card, label_id)

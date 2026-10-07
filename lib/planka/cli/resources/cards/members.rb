@@ -47,12 +47,17 @@ module Planka
                  .merge(name: flags[:name]&.first, limit: flags[:limit]&.first&.to_i)
           end
 
-          def self.prepare_add(env, instance:, flags:)
-            prepare(env, instance: instance, flags: flags).merge(operation: :add)
+          def self.get(client, reference = nil, name: nil, limit: nil, **scope)
+            members = Planka::Cards::Members.new(client, **scope)
+            reference ? members.find(reference) : members.all(name: name, limit: limit)
           end
 
-          def self.prepare_remove(env, instance:, flags:)
-            prepare(env, instance: instance, flags: flags).merge(operation: :remove)
+          def self.add(client, reference, **scope)
+            Planka::Cards::Members.new(client, **scope).add(reference)
+          end
+
+          def self.remove(client, reference, **scope)
+            Planka::Cards::Members.new(client, **scope).remove(reference)
           end
 
           def self.format(data)
@@ -74,18 +79,18 @@ module Planka
           COMMANDS = {
             ["remove", "member"] => Command.new(aliases: [["remove", "members"]], names: true, mutation: true,
                                                 resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-                                                validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_remove),
-                                                help: REMOVE_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
+                                                validate_flags: Cards.method(:validate_scope_flags), prepare: Cards.method(:prepare_scope),
+                                                help: REMOVE_HELP, operation: method(:remove), formatter: method(:format)),
             ["add", "member"] => Command.new(aliases: [["add", "members"]], names: true, mutation: true,
                                              resource: "user", collection: "users", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-                                             validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_add),
-                                             help: ADD_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
+                                             validate_flags: Cards.method(:validate_scope_flags), prepare: Cards.method(:prepare_scope),
+                                             help: ADD_HELP, operation: method(:add), formatter: method(:format)),
             ["get", "member"] => Command.new(aliases: [["get", "members"]], optional_reference: true, names: true,
                                              collection_read: true,
                                              resource: "user", collection: "users",
                                              collection_flags: [:name, :limit],
                                              flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit }, validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare),
-                                             help: GET_HELP, reader: Planka::Cards::Members, formatter: method(:format)),
+                                             help: GET_HELP, operation: method(:get), formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS

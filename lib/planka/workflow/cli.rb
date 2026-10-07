@@ -93,8 +93,8 @@ module Planka
         Example: planka workflow claim 123 -o json
       HELP
 
-      def self.branch_preparation(env, **)
-        { prefix: Configuration.from_env(env).branch_prefix }
+      def self.branch_preparation(env, instance:, **)
+        { base_url: instance.base_url, prefix: Configuration.from_env(env).branch_prefix }
       rescue ConfigurationError => error
         raise Planka::CLI::Failure.new(code: "configuration_error", message: error.message)
       end
@@ -105,7 +105,7 @@ module Planka
           raise Planka::CLI::Failure.new(code: "configuration_error", message: "Missing required environment: PLANKA_BOARD_ID (or supply --board BOARD)")
         end
 
-        { board_id: instance.resolve(board, resource: "board", collection: "boards"), labels: flags.fetch(:labels, []).uniq }
+        { base_url: instance.base_url, board_id: instance.resolve(board, resource: "board", collection: "boards"), labels: flags.fetch(:labels, []).uniq }
       rescue Planka::CLI::Instance::InvalidReference => error
         if flags.fetch(:board, []).empty?
           raise Planka::CLI::Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a numeric board ID or same-instance board URL")
@@ -124,12 +124,12 @@ module Planka
       end
 
       COMMANDS = {
-        ["workflow", "claim"] => Planka::CLI::Command.new(resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, reader: Claim::Card, formatter: Format.method(:claim)),
-        ["workflow", "next"] => Planka::CLI::Command.new(reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, reader: NextSelection, projector: :as_json.to_proc, formatter: Format.method(:next_selection)),
-        ["workflow", "guide"] => Planka::CLI::Command.new(reference: false, session: false, help: GUIDE_HELP, reader: Guide, formatter: Format.method(:guide)),
-        ["workflow", "claim-status"] => Planka::CLI::Command.new(resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, reader: ClaimStatus, formatter: Format.method(:loop_lock)),
-        ["workflow", "pending-criteria"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, reader: PendingCriteria, formatter: Format.method(:pending_criteria)),
-        ["workflow", "branch-name"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: BRANCH_NAME_HELP, reader: BranchName, formatter: Format.method(:branch_name), prepare: method(:branch_preparation)),
+        ["workflow", "claim"] => Planka::CLI::Command.new(resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, operation: Claim::Card.method(:read), formatter: Format.method(:claim)),
+        ["workflow", "next"] => Planka::CLI::Command.new(reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, operation: NextSelection.method(:read), projector: :as_json.to_proc, formatter: Format.method(:next_selection)),
+        ["workflow", "guide"] => Planka::CLI::Command.new(reference: false, session: false, help: GUIDE_HELP, operation: Guide.method(:read), formatter: Format.method(:guide)),
+        ["workflow", "claim-status"] => Planka::CLI::Command.new(resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, operation: ClaimStatus.method(:read), formatter: Format.method(:loop_lock)),
+        ["workflow", "pending-criteria"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: PENDING_CRITERIA_HELP, operation: PendingCriteria.method(:read), formatter: Format.method(:pending_criteria)),
+        ["workflow", "branch-name"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: BRANCH_NAME_HELP, operation: BranchName.method(:read), formatter: Format.method(:branch_name), prepare: method(:branch_preparation)),
       }.freeze
       def self.commands = COMMANDS
       def self.groups = { "workflow" => GROUP_HELP }

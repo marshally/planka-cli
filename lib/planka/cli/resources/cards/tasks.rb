@@ -33,13 +33,17 @@ module Planka
 
           def self.format(data) = "#{data["name"]} (#{data["id"]}) on card #{data["cardId"]}\ncompleted: #{data["isCompleted"]}"
 
+          def self.update(client, reference, completed:, **scope)
+            Planka::Cards::Tasks.new(client, **scope).update(reference, completed: completed)
+          end
+
           GROUP_HELP = { "update" => "  task TASK --card CARD  Set one ordinary task's completion\n" }.freeze
 
           COMMANDS = {
             ["update", "task"] => Command.new(aliases: [["update", "tasks"]], names: true, mutation: true,
                                               resource: "task", collection: "tasks", flags: { "--card CARD" => :card, "--board BOARD" => :board, "--[no-]completed" => :completed },
                                               validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare),
-                                              help: UPDATE_HELP, reader: Planka::Cards::Tasks, formatter: method(:format)),
+                                              help: UPDATE_HELP, operation: method(:update), formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS

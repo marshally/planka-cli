@@ -81,7 +81,7 @@ module Planka
         end
 
         COMMANDS = {
-          ["describe", "card"] => Command.new(aliases: [["describe", "cards"]], resource: "card", collection: "cards", help: HELP, reader: Planka::Cards::Detail, formatter: method(:format)),
+          ["describe", "card"] => Command.new(aliases: [["describe", "cards"]], resource: "card", collection: "cards", help: HELP, operation: Planka::Cards::Detail.method(:read), formatter: method(:format)),
         }.freeze
 
         def self.commands = COMMANDS
