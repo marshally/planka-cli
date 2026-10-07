@@ -37,4 +37,11 @@ class CardTasksResourceTest < Minitest::Test
       assert_equal false, tasks.update("700", completed: false).changed
     end
   end
+
+  def test_task_completion_does_not_expose_unsupported_creation_or_deletion
+    with_tasks do |tasks|
+      refute_respond_to tasks, :create
+      refute_respond_to tasks, :delete
+    end
+  end
 end

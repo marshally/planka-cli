@@ -24,7 +24,7 @@ module Planka
         raise CollectionFailure.new(data: collection(data, name: name, limit: limit).data)
       end
 
-      def find(reference) = assigned!(observe_relationship(reference))
+      def find(reference) = assigned!(read_record(reference))
 
       private
 
@@ -33,7 +33,7 @@ module Planka
         raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
       end
 
-      def observe_relationship(reference)
+      def read_record(reference)
         card, board = Scope.read(client, card_id: @card_id, board_id: @board_id)
         users = identities(board)
         user = resolve_user(reference, users, board, Scope.board_id(card))
@@ -118,25 +118,20 @@ module Planka
       def relationship_present?(known) = !known["membershipId"].nil?
       def relationship_data(known, present:) = known.merge("assigned" => present)
 
-      def write_relationship(known, present:)
-        record = confirmed_write(present, known)
-        assignment_data(known, record, present)
+      def create_record(known) = client.add_card_member(known["cardId"], known["id"])["item"]
+      def delete_record(known) = client.remove_card_member(known["cardId"], known["id"])["item"]
+
+      def validate_record!(record, desired)
+        validate_membership!(record, card_id: desired["cardId"], user_id: desired["id"], membership_id: desired["membershipId"])
       end
 
-      def confirmed_write(assigned, known)
-        card_id, user_id = known.values_at("cardId", "id")
-        response = assigned ? client.add_card_member(card_id, user_id) : client.remove_card_member(card_id, user_id)
-        record = response["item"]
-        validate_membership!(record, card_id: card_id, user_id: user_id, membership_id: known["membershipId"])
-        record
+      def confirmed_data(record, desired)
+        return desired unless desired["assigned"]
+
+        member_data(desired, desired["cardId"], record).merge("assigned" => true)
       end
 
-      def assignment_data(known, record, assigned)
-        data = assigned ? member_data(known, known["cardId"], record) : known
-        data.merge("assigned" => assigned)
-      end
-
-      def relationship_recovery(known)
+      def recovery(known)
         { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => known["cardId"] },
                                                              { "type" => "user", "id" => known["id"] }] }
       end

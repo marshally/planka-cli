@@ -677,10 +677,13 @@ Only a known target with no association returns `false` from `include?`. Unknown
 or ambiguous targets raise `ReferenceError`; failed or malformed reads raise
 their original errors. Removing an association preserves its target and card.
 
-These resources inherit protected operation mechanics from `Planka::Resource`;
-each exposes only its supported public operations. The base does not add public
-CRUD verbs to resources that cannot implement them. Resource-specific lookup,
-validation, result fields, and readback guidance remain with the concrete class.
+`Planka::Resource` implements protected `create`, `update`, and `delete`
+algorithms: prepare input, resolve current state, skip satisfied changes, execute
+the request, validate its response, and construct the result. `Tasks` exposes
+the inherited `update` publicly. `Relationship#add` and `#remove` use inherited
+create/delete operations on associations. Each resource supplies its lookup,
+request, validation, projection, and readback details, and exposes only supported
+public operations.
 
 Mutation failures raise `Planka::MutationFailure` with `data`, `changed`,
 `uncertain`, and `recovery`; use readback before retrying an uncertain write.

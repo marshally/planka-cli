@@ -11,7 +11,7 @@ module Planka
 
       private
 
-      def observe_relationship(reference)
+      def read_record(reference)
         card, board = Scope.read(client, card_id: @card_id, board_id: @board_id)
         label_id = resolve_label(reference, board, card)
         { "cardId" => Scope.card_id(card), "labelId" => label_id, "present" => applied?(card, label_id) }
@@ -54,24 +54,16 @@ module Planka
       def relationship_present?(known) = known.fetch("present")
       def relationship_data(known, present:) = known.merge("present" => present)
 
-      def write_relationship(known, present:)
-        card, id = known.values_at("cardId", "labelId")
-        confirm_write!(write(card, id, present), card, id)
-        relationship_data(known, present: present)
-      end
+      def create_record(known) = client.add_card_label(known["cardId"], known["labelId"])["item"]
+      def delete_record(known) = client.remove_card_label(known["cardId"], known["labelId"])["item"]
 
-      def write(card, id, present)
-        present ? client.add_card_label(card, id) : client.remove_card_label(card, id)
-      end
-
-      def confirm_write!(response, card, id)
-        item = response["item"]
-        unless item.is_a?(Hash) && item["cardId"] == card && item["labelId"] == id
+      def validate_record!(item, desired)
+        unless item.is_a?(Hash) && item["cardId"] == desired["cardId"] && item["labelId"] == desired["labelId"]
           raise InvalidResponse, "Invalid relationship write response"
         end
       end
 
-      def relationship_recovery(known)
+      def recovery(known)
         { "action" => "readback-card-labels", "resources" => [{ "type" => "card", "id" => known["cardId"] }] }
       end
     end
