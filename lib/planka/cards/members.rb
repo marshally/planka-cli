@@ -10,6 +10,7 @@ module Planka
       end
 
       def all(name: nil, limit: nil)
+        validate_options!(name: name, limit: limit)
         data = []
         card, board = Scope.read(@client, card_id: @card_id, board_id: @board_id)
         hydrate_members!(data, card, identities(board), Scope.card_id(card))
@@ -25,6 +26,11 @@ module Planka
       def remove(reference) = mutate(reference, assigned: false)
 
       private
+
+      def validate_options!(name:, limit:)
+        raise ArgumentError, "name must be a string" unless name.nil? || name.is_a?(String)
+        raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
+      end
 
       def observe_member(reference)
         card, board = Scope.read(@client, card_id: @card_id, board_id: @board_id)

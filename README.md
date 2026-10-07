@@ -661,7 +661,8 @@ end
 Member and task references accept IDs or exact scoped names. Constructors also
 accept `board_id:` to assert the card's board or resolve a card name within it;
 they do not read environment defaults or open a session. `Members#all` accepts
-an exact `name:` filter and positive integer `limit:`. `Tasks#update` changes
+an exact string `name:` filter and positive integer `limit:`; invalid option
+values raise `ArgumentError` before resource reads. `Tasks#update` changes
 only completion, requires a Boolean, and refuses linked tasks. Repeated
 already-satisfied mutations return `changed: false`.
 
