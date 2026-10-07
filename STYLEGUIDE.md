@@ -4,7 +4,7 @@ This document defines the target interface for a general Planka resource
 CLI. It is a design contract for staged changes; the current executable supports
 `describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
 `workflow claim-status`, `workflow guide`, `workflow next`, `workflow claim`,
-card-scoped `get members`, `get member`, `add member`, `remove member`, native card
+`workflow resume ticket`, card-scoped `get members`, `get member`, `add member`, `remove member`, native card
 `get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
 native list `get lists`, `get list`, `create list`, `update list`, `delete list`,
 and nested help alongside all flat commands in
@@ -654,6 +654,14 @@ native position 65535 and report the returned position. See
 [the claim schema and recovery contract](README.md#canonical-claim) for data,
 changed/uncertain outcomes, error codes, and readback recovery.
 The guide is built in and works without credentials, a checkout, or network.
+
+Implemented `workflow resume ticket CARD --criteria-file FILE|-` fills the missing
+criteria of an existing ticket without creating a card. It reuses the card's one
+`Acceptance criteria` list (creating it when absent), keeps existing criteria's
+completion, text, and order, and appends missing ones in file order. Duplicate
+criteria lists fail before writes. Failures keep known IDs and recover with
+`resume-ticket`; see [the resume contract](README.md#canonical-resume-ticket).
+Workflow commands may use three-word paths such as `workflow resume ticket`.
 
 Implemented `workflow next` accepts `--board BOARD`, falling back to
 `PLANKA_BOARD_ID` only when omitted. Repeated `--label` filters AND-match before

@@ -655,6 +655,55 @@ authorization/not-found/API/network codes. Success exits 0, local input 2, other
 failures 1. Cleanup failure warns on stderr and preserves the primary outcome.
 See the [claim contract and API evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-eighth-slice-claim-a-card).
 
+### Canonical resume ticket
+
+```sh
+planka workflow resume ticket CARD --criteria-file criteria.json
+planka workflow resume ticket CARD --criteria-file - -o json < criteria.json
+planka workflow resume --help
+planka workflow resume ticket --help
+```
+
+Finishes an existing ticket by adding the acceptance criteria missing from its
+`Acceptance criteria` task list. It never creates a card. `CARD` is a numeric ID
+or same-instance card URL; `ticket`/`tickets` are aliases. The three connection
+environment variables are required, without a board setting.
+
+`--criteria-file FILE` (`-` for stdin) is required: a nonempty JSON array of
+distinct criteria, each a nonblank string of at most 1024 characters (Planka's
+task-name limit). The file is read and validated before any request; an
+unreadable file, malformed JSON, or a bad shape exits 2 with `invalid_input`.
+Missing connection settings are checked first and exit 1.
+
+The card's single criteria list is reused and created only when absent, so a
+card without one becomes a ticket. A criterion already present by exact text is
+kept with its completion, text, and position. Missing criteria are appended
+after the list's existing tasks in file order. Other tasks are never changed or
+deleted. When every criterion is present the command makes no writes and
+reports `meta.changed: false`. Two or more criteria lists fail before any write
+with `ambiguous_criteria_list`, naming the candidate list IDs.
+
+Human output reports `resumed`, `criteria list created`, `criteria added`, and
+`criteria kept`. JSON `data` contains `card: {id, name, url}`,
+`taskList: {id, name, created}`, and `tasks: [{id, name, isCompleted, created}]`
+in criteria order. `meta.changed` is true when anything was created.
+
+Failures preserve known results. An uncertain write is reported with a null
+`id`, `created`, and (for tasks) `isCompleted`; no ID is invented. `error.code`
+is `partial_failure` when a write is rejected after an earlier confirmed change,
+or `unknown_outcome` when a write cannot be confirmed. `meta.changed` stays true
+after a confirmed effect; otherwise it is null for an uncertain write and false
+for a known unchanged failure. Recovery is
+`{action: "resume-ticket", resources: [{type: "card", id: CARD}, {type: "task-list", id: LIST}]}`,
+with the task list only when its ID is known. Inspect with
+`planka describe card CARD -o json`, then rerun the same command: it reads the
+card first and adds only what is still missing. Writes are never retried or
+rolled back. Other failures keep the canonical input/configuration/
+authentication/authorization/not-found/API/network codes. Success exits 0,
+local input 2, other failures 1. Cleanup failure warns on stderr and preserves
+the primary outcome. See the
+[resume contract and API evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-twelfth-slice-resume-a-ticket).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -670,7 +719,8 @@ release notes, with no automatic runtime warnings. `describe card` replaces
 `workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
 replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
 `workflow guide` replaces `prime`, `workflow next` replaces `next-card`, and
-`workflow claim` replaces `claim`, `update card` replaces `update-card`,
+`workflow claim` replaces `claim`, `workflow resume ticket` replaces
+`create-ticket --card`, `update card` replaces `update-card`,
 `move card` replaces `move-card`, `get cards --list LIST` replaces the list
 view of `snapshot`, and `create list` replaces `create-list`; remaining
 canonical replacements are not yet implemented.
@@ -765,10 +815,11 @@ JSON failure output retains created resources and reconciliation instructions.
 If a ticket was created but some criteria are missing, resume it with:
 
 ```sh
-planka create-ticket --card CARD --criteria-file criteria.json --output json
+planka workflow resume ticket CARD --criteria-file criteria.json -o json
 ```
 
-This adds only missing criteria. `claim`, `link`, and `apply-label` may be safely
+This adds only missing criteria and never creates another card; the legacy
+`planka create-ticket --card CARD --criteria-file criteria.json` remains available. `claim`, `link`, and `apply-label` may be safely
 repeated, and `create-label` reuses an existing label with the same name.
 
 ## Library
