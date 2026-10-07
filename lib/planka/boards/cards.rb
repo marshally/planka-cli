@@ -173,7 +173,8 @@ module Planka
          board["item"]["id"]]
       end
 
-      def list_cards(board, list, excluding)
+      # A finite list's validated cards from the board read.
+      def list_cards(board, list, excluding = nil)
         cards = board["included"]["cards"]
         raise InvalidResponse, "Invalid board cards" unless cards.is_a?(Array) && cards.all?(Hash)
 
@@ -272,14 +273,8 @@ module Planka
       def each_card(board, list, &)
         return each_paged_card(list, &) unless FINITE_LIST_TYPES.include?(list["type"])
 
-        included = board["included"]
-        cards = included["cards"]
-        raise InvalidResponse, "Invalid board cards" unless cards.is_a?(Array) && cards.all?(Hash)
-
-        relations = relation_index(included)
-        cards.select { |card| card["listId"] == list["id"] }
-             .sort_by { |card| [card["position"].to_f, card["id"].to_i] }
-             .each { |card| yield scoped_card(card, list), relations }
+        relations = relation_index(board["included"])
+        list_cards(board, list).sort_by { |card| [card["position"].to_f, card["id"].to_i] }.each { |card| yield card, relations }
       end
 
       # Follows the native listChangedAt/id cursor until a page comes back empty.
