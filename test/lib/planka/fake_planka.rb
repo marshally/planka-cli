@@ -355,7 +355,10 @@ class FakePlanka
     # Planka rejects an empty-string description; the field must be absent or set.
     raise "empty description" if data["description"] == ""
 
-    card = { "id" => next_id, "name" => data["name"], "description" => data["description"], "type" => data["type"], "listId" => list_id, "boardId" => BOARD_ID, "position" => data["position"], "createdAt" => "2026-10-01T00:00:00.000Z" }
+    list = @state[:lists].find { |entry| entry["id"] == list_id }
+    card = { "id" => next_id, "name" => data["name"], "description" => data["description"], "type" => data["type"], "listId" => list_id,
+             "boardId" => list ? list["boardId"] : BOARD_ID, "position" => FINITE_TYPES.include?(list&.dig("type") || "active") ? data["position"] : nil,
+             "createdAt" => "2026-10-01T00:00:00.000Z", "listChangedAt" => "2026-10-01T00:00:00.000Z" }
     @state[:cards] << card
     card
   end

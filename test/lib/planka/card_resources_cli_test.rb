@@ -148,4 +148,117 @@ class CardResourcesCLITest < Minitest::Test
     assert_equal "api_error", doc.dig("error", "code")
     assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
   end
+
+  def writes = resource_writes.map { |method, path, body| [method, path, body.empty? ? nil : JSON.parse(body)] }
+
+  def test_create_appends_a_native_card_with_the_board_default_type_and_file_description
+    @server.add_card("Below", READY, position: 131_072)
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "description.md")
+      File.write(path, "Ünïcode \"quoted\"\nsecond line\n")
+      doc, err, status = json("create", "card", "--list", "ready-for-agent", "--board", BOARD, "--name", "Fix login", "--description-file", path)
+      assert status.success?, err
+      card = doc["data"]
+      assert_equal({ "changed" => true }, doc["meta"])
+      assert_equal @server.cards.last["id"], card["id"]
+      assert_equal ["Fix login", "Ünïcode \"quoted\"\nsecond line\n", "project", BOARD, READY, 131_072 + 65_536],
+                   card.values_at("name", "description", "type", "boardId", "listId", "position")
+      assert_equal [["POST", "/api/lists/#{READY}/cards",
+                     { "type" => "project", "name" => "Fix login", "position" => 196_608, "description" => "Ünïcode \"quoted\"\nsecond line\n" }]], writes
+    end
+    @server.requests.clear
+    out, err, status = planka("create", "cards", "--list", READY, "--name", "Top", "--position", "1", "--description-file", "-", stdin: "From stdin")
+    assert status.success?, err
+    assert_match(/\ACreated card Top \(\d+\) in list #{READY}/, out)
+    assert_equal [["POST", "/api/lists/#{READY}/cards", { "type" => "project", "name" => "Top", "position" => 1, "description" => "From stdin" }]], writes
+    assert_equal [], @server.task_lists, "no workflow criteria"
+    assert_equal [], @server.memberships, "no claim"
+  end
+
+  def test_create_into_archive_omits_position_and_rejects_explicit_positions
+    archive = @server.add_list(nil, "archive")
+    doc, err, status = json("create", "card", "--list", archive, "--board", BOARD, "--name", "Shelved")
+    assert status.success?, err
+    assert_nil doc.dig("data", "position")
+    assert_equal [["POST", "/api/lists/#{archive}/cards", { "type" => "project", "name" => "Shelved" }]], writes
+    doc, _err, status = json("create", "card", "--list", archive, "--board", BOARD, "--name", "Shelved", "--position", "5")
+    assert_equal 2, status.exitstatus
+    assert_equal "invalid_input", doc.dig("error", "code")
+    assert_equal 1, writes.size
+  end
+
+  def test_create_and_update_validate_local_input_before_any_request
+    Dir.mktmpdir do |dir|
+      empty = File.join(dir, "empty.md").tap { |path| File.write(path, "") }
+      [["create", "card", "--list", READY],
+       ["create", "card", "--name", "x"],
+       ["create", "card", "--list", READY, "--name", ""],
+       ["create", "card", "--list", READY, "--name", "x" * 1025],
+       ["create", "card", "--list", READY, "--name", "x", "--position", "-1"],
+       ["create", "card", "--list", READY, "--name", "x", "--position", "Infinity"],
+       ["create", "card", "--list", READY, "--name", "x", "--description-file", empty],
+       ["create", "card", "--list", READY, "--name", "x", "--description-file", File.join(dir, "missing.md")],
+       ["create", "card", CARD, "--list", READY, "--name", "x"],
+       ["update", "card", CARD],
+       ["update", "card", CARD, "--name", ""],
+       ["update", "card", CARD, "--description-file", empty],
+       ["update", "card", "--name", "x"]].each do |args|
+        doc, err, status = json(*args)
+        assert_equal 2, status.exitstatus, "#{args.inspect}: #{err}"
+        assert_equal "invalid_input", doc.dig("error", "code"), args.inspect
+        refute_match(/unknown command/, err, args.inspect)
+      end
+    end
+    assert_equal 0, @server.requests.size
+  end
+
+  def test_unknown_create_outcome_reports_no_invented_id_and_is_not_retried
+    @server.inject("POST", %r{/api/lists/.+/cards\z}, :apply_then_drop)
+    doc, _err, status = json("create", "card", "--list", READY, "--name", "Fix login")
+    assert_equal 1, status.exitstatus
+    assert_equal "unknown_outcome", doc.dig("error", "code")
+    assert_nil doc.dig("meta", "changed")
+    assert_nil doc.dig("data", "id")
+    assert_equal [BOARD, READY], doc["data"].values_at("boardId", "listId")
+    assert_equal({ "action" => "readback-cards", "resources" => [{ "type" => "list", "id" => READY }] }, doc.dig("error", "recovery"))
+    assert_equal 1, @server.counts("POST", %r{/api/lists/.+/cards\z})
+    @server.inject("POST", %r{/api/lists/.+/cards\z}, { "item" => { "id" => "1" } })
+    doc, _err, status = json("create", "card", "--list", READY, "--name", "Malformed")
+    assert_equal 1, status.exitstatus
+    assert_equal "unknown_outcome", doc.dig("error", "code")
+  end
+
+  def test_update_sends_only_supplied_changed_fields_and_identical_updates_are_noops
+    @server.card_labels << { "id" => "91", "cardId" => CARD, "labelId" => FakePlanka::LABEL_ENHANCEMENT }
+    doc, err, status = json("update", "card", CARD, "--name", "Renamed")
+    assert status.success?, err
+    assert_equal expected_card("name" => "Renamed"), doc["data"]
+    assert_equal({ "changed" => true }, doc["meta"])
+    assert_equal [["PATCH", "/api/cards/#{CARD}", { "name" => "Renamed" }]], writes
+    @server.requests.clear
+    out, err, status = planka("update", "cards", "Renamed", "--board", BOARD, "--description-file", "-", stdin: "New\ntext")
+    assert status.success?, err
+    assert_equal "Updated card Renamed (#{CARD}) in list #{READY}", out.chomp
+    assert_equal [["PATCH", "/api/cards/#{CARD}", { "description" => "New\ntext" }]], writes
+    @server.requests.clear
+    doc, err, status = json("update", "card", CARD, "--name", "Renamed", "--description-file", "-", stdin: "New\ntext")
+    assert status.success?, err
+    assert_equal false, doc.dig("meta", "changed")
+    assert_empty writes
+    assert_equal [READY, 65_536], @server.find_card(CARD).values_at("listId", "position")
+    assert_equal 1, @server.card_labels.size, "unrelated card data is preserved"
+  end
+
+  def test_update_failures_distinguish_rejected_from_unknown_outcomes
+    @server.inject("PATCH", %r{/api/cards/}, 403)
+    doc, _err, status = json("update", "card", CARD, "--name", "Renamed")
+    assert_equal 1, status.exitstatus
+    assert_equal ["authorization_error", false, expected_card], [doc.dig("error", "code"), doc.dig("meta", "changed"), doc["data"]]
+    @server.inject("PATCH", %r{/api/cards/}, { "item" => { "id" => CARD } })
+    doc, _err, status = json("update", "card", CARD, "--name", "Renamed")
+    assert_equal 1, status.exitstatus
+    assert_equal ["unknown_outcome", nil], [doc.dig("error", "code"), doc.dig("meta", "changed")]
+    assert_equal expected_card("name" => nil), doc["data"]
+    assert_equal({ "action" => "readback-card", "resources" => [{ "type" => "card", "id" => CARD }] }, doc.dig("error", "recovery"))
+  end
 end

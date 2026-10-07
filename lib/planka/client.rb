@@ -96,9 +96,11 @@ module Planka
     # Creates return the new record under "item". A create is not idempotent:
     # a retry after an unknown outcome would make a second copy, so these pass
     # idempotent: false and leave reconciliation to a read-back.
-    def create_card(list_id, **attrs) = request(:post, "/api/lists/#{list_id}/cards", attrs, idempotent: false).fetch("item")
+    def create_card(list_id, **attrs) = item(request(:post, "/api/lists/#{list_id}/cards", attrs, idempotent: false), "card")
 
-    def update_card(card_id, **attrs) = request(:patch, "/api/cards/#{card_id}", attrs).fetch("item")
+    def update_card(card_id, **attrs) = item(request(:patch, "/api/cards/#{card_id}", attrs), "card")
+
+    def delete_card(card_id) = item(request(:delete, "/api/cards/#{card_id}", idempotent: false), "card")
 
     def create_list(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/lists", attrs, idempotent: false).fetch("item")
 
@@ -195,6 +197,13 @@ module Planka
     end
 
     private
+
+    # The record a write returns; canonical sessions reject a missing record.
+    def item(response, kind)
+      raise InvalidResponse, "Invalid #{kind} response" if @validate_responses && !response["item"].is_a?(Hash)
+
+      response.fetch("item")
+    end
 
     def send_request(method, path, body, idempotent:)
       http = Net::HTTP.new(@base.host, @base.port)
