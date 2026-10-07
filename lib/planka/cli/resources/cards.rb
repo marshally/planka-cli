@@ -12,6 +12,7 @@ module Planka
           get card CARD  Read one concise card (read-only)
           create card --list LIST --name NAME  Create one native card
           update card CARD  Change only supplied card fields
+          move card CARD --list LIST  Move a card to a list on its board
         HELP
         COMMON_HELP = <<~HELP
           CARD is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID.
@@ -54,6 +55,7 @@ module Planka
           "get" => "  cards --board BOARD|--list LIST  List cards with exact filters (read-only)\n  card CARD  Read one concise card (read-only)\n",
           "create" => "  card --list LIST --name NAME  Create one native card\n",
           "update" => "  card CARD  Change only supplied card fields\n",
+          "move" => "  card CARD --list LIST  Move a card to a list on its board\n",
         }.freeze
         HELP = <<~HELP
           usage: planka describe card CARD [--output human|json]
@@ -123,6 +125,14 @@ module Planka
           prepare_card(env, instance: instance, flags: flags, reference: reference)
             .merge(name: flags[:name]&.first, description: description(flags))
         end
+
+        def self.prepare_move(env, instance:, flags:, reference:)
+          raise Failure.new(code: "invalid_input", status: 2, message: "move card requires --list") unless flags[:list]
+
+          prepare_card(env, instance: instance, flags: flags, reference: reference)
+            .merge(list: instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true),
+                   position: flags[:position] && Float(flags[:position].first))
+        end
         private_class_method :prepare_collection, :list_scope, :description
 
         # An explicit --board always asserts the parent; card names fall back to
@@ -182,6 +192,10 @@ module Planka
           Planka::Boards::Cards.new(client, board_id: board_id).update(reference, **attributes)
         end
 
+        def self.move(client, reference, board_id: nil, **destination)
+          Planka::Boards::Cards.new(client, board_id: board_id).move(reference, **destination)
+        end
+
         def self.format_card(card) = "#{card["name"]} (#{card["id"]}) in list #{card["listId"]}"
 
         def self.format_cards(data)
@@ -198,6 +212,17 @@ module Planka
           most 1048576 characters; empty input is rejected, and clearing a description is not supported.
           JSON data is the resulting card; meta.changed is true/false/null. A rejected write keeps the unchanged
           card; an unknown or malformed response marks requested fields null with readback-card recovery.
+        HELP
+
+        MOVE_HELP = <<~HELP + COMMON_HELP
+          usage: planka move card CARD --list LIST [--board BOARD] [--position N] [-o human|json]
+          Move to LIST on the card's own board, appending to an active/closed list unless --position gives a
+          finite nonnegative native ordering value; archive/trash lists take no position. LIST is an ID,
+          same-instance URL, or exact name on the card's board. The current list without --position is a
+          no-op. Only list and position change: members, labels, tasks, and comments are preserved, and moving
+          neither claims nor releases work. JSON data is the resulting card; meta.changed is true/false/null.
+          A rejected write keeps the unchanged card; an unknown or malformed response marks the list and
+          position null with readback-card recovery. Read back with planka get card CARD before retrying.
         HELP
 
         def self.format(detail)
@@ -245,6 +270,10 @@ module Planka
                                             flags: { "--board BOARD" => :board, "--name NAME" => :name, "--description-file FILE" => :description_file },
                                             validate_flags: method(:validate_card_values), prepare: method(:prepare_update),
                                             help: UPDATE_HELP, operation: method(:update), formatter: ->(card) { "Updated card #{format_card(card)}" }),
+          ["move", "card"] => Command.new(aliases: [["move", "cards"]], names: true, mutation: true, resource: "card", collection: "cards",
+                                          flags: { "--list LIST" => :list, "--board BOARD" => :board, "--position N" => :position },
+                                          validate_flags: method(:validate_card_values), prepare: method(:prepare_move),
+                                          help: MOVE_HELP, operation: method(:move), formatter: ->(card) { "Moved card #{format_card(card)}" }),
           ["describe", "card"] => Command.new(aliases: [["describe", "cards"]], resource: "card", collection: "cards", help: HELP, operation: Planka::Cards::Detail.method(:read), formatter: method(:format)),
         }.freeze
 

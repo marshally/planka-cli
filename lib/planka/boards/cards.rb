@@ -53,6 +53,10 @@ module Planka
         change(reference, **{ name: name, description: description }.compact)
       end
 
+      # Moves the card to LIST on its own board, appending unless positioned.
+      # Its current list without a position is already satisfied.
+      def move(reference, list:, position: nil) = change(reference, list: list, position: position)
+
       # Validates text the way Planka does: lengths count UTF-16 code units.
       def self.text?(value, limit) = value.is_a?(String) && !value.empty? && value.encode("UTF-16LE").bytesize / 2 <= limit
 
@@ -63,20 +67,45 @@ module Planka
         unless description.nil? || self.class.text?(description, DESCRIPTION_LIMIT)
           raise ArgumentError, "description must be nonempty and at most #{DESCRIPTION_LIMIT} characters"
         end
-        unless position.nil? || (position.is_a?(Numeric) && position.finite? && position >= 0)
-          raise ArgumentError, "position must be finite and nonnegative"
-        end
 
-        { "name" => name, "description" => description, "position" => position }
+        { "name" => name, "description" => description, "position" => validated_position(position) }
+      end
+
+      def validated_position(position)
+        return position if position.nil? || (position.is_a?(Numeric) && position.finite? && position >= 0)
+
+        raise ArgumentError, "position must be finite and nonnegative"
       end
 
       def update_attributes(**attributes)
+        return move_attributes(**attributes) if attributes.key?(:list)
+
         attributes.to_h do |key, value|
           limit = { name: NAME_LIMIT, description: DESCRIPTION_LIMIT }.fetch(key)
           raise ArgumentError, "#{key} must be nonempty and at most #{limit} characters" unless self.class.text?(value, limit)
 
           [key.to_s, value]
         end
+      end
+
+      def move_attributes(list:, position:)
+        raise ArgumentError, "list must be a nonempty reference" unless list.is_a?(String) && !list.strip.empty?
+
+        { "list" => list, "position" => validated_position(position) }
+      end
+
+      def updated_data(known, attributes)
+        return super unless attributes.key?("list")
+
+        card = known.card
+        destination, = destination(attributes["list"], board_id: card["boardId"], excluding: card["id"], scope: "the card's board")
+        card.merge("listId" => destination.list_id, "position" => moved_position(card, destination, attributes["position"]))
+      end
+
+      def moved_position(card, destination, requested)
+        return card["position"] if requested.nil? && destination.finite && card["listId"] == destination.list_id
+
+        position(destination, requested)
       end
 
       # Only changed fields are sent; a list change always carries its position.
@@ -129,9 +158,9 @@ module Planka
       end
 
       # The verified destination list and the position that appends to it.
-      def destination(list, excluding: nil)
-        board = scoped_board(list)
-        record = scoped_lists(board, list).first
+      def destination(list, board_id: @board_id, excluding: nil, scope: "--board")
+        board = scoped_board(list, board_id)
+        record = scoped_lists(board, list, scope: scope).first
         finite = FINITE_LIST_TYPES.include?(record["type"])
         [Destination.new(list_id: record["id"], finite: finite, card_type: card_type(board),
                          append_position: (Position.after(list_cards(board, record, excluding)) if finite)),
@@ -164,8 +193,8 @@ module Planka
       end
 
       # The asserted board, or the board an explicit list ID belongs to.
-      def scoped_board(list)
-        board_id = @board_id || list_board(list)
+      def scoped_board(list, board_id = @board_id)
+        board_id ||= list_board(list)
         board = client.board_document(board_id)
         raise InvalidResponse, "Invalid board record" unless board["item"]["id"] == board_id
 
@@ -181,12 +210,12 @@ module Planka
         record["boardId"]
       end
 
-      def scoped_lists(board, list)
+      def scoped_lists(board, list, scope: "--board")
         lists = board_lists(board)
         return lists unless list
 
         if Records.id?(list) && lists.none? { |record| record["id"] == list }
-          raise ReferenceError, "List does not belong to --board"
+          raise ReferenceError, "List does not belong to #{scope}"
         end
 
         [Reference.resolve(lists, list, resource: "list", scope: "the board")]

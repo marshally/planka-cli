@@ -261,4 +261,41 @@ class CardResourcesCLITest < Minitest::Test
     assert_equal expected_card("name" => nil), doc["data"]
     assert_equal({ "action" => "readback-card", "resources" => [{ "type" => "card", "id" => CARD }] }, doc.dig("error", "recovery"))
   end
+
+  def test_move_appends_within_the_cards_own_board_and_preserves_card_data
+    @server.add_card("Doing", PROGRESS, position: 200_000)
+    @server.memberships << { "id" => "81", "cardId" => CARD, "userId" => "600000000000000001" }
+    doc, err, status = json("move", "card", CARD, "--list", "in-progress", env: { "PLANKA_BOARD_ID" => OTHER_BOARD })
+    assert status.success?, err
+    assert_equal expected_card("listId" => PROGRESS, "position" => 265_536), doc["data"]
+    assert_equal({ "changed" => true }, doc["meta"])
+    assert_equal [["PATCH", "/api/cards/#{CARD}", { "listId" => PROGRESS, "position" => 265_536 }]], writes
+    assert_equal 1, @server.memberships.size, "moving does not claim or unclaim"
+    @server.requests.clear
+    doc, err, status = json("move", "cards", CARD, "--list", PROGRESS)
+    assert status.success?, err
+    assert_equal false, doc.dig("meta", "changed"), "moving to the current list without --position is a no-op"
+    assert_empty writes
+    out, err, status = planka("move", "card", CARD, "--list", PROGRESS, "--position", "1")
+    assert status.success?, err
+    assert_equal "Moved card Spec: Work-next refinement (#{CARD}) in list #{PROGRESS}", out.chomp
+    assert_equal [["PATCH", "/api/cards/#{CARD}", { "position" => 1 }]], writes, "a same-list reposition sends only position"
+  end
+
+  def test_move_to_archive_sends_no_position_and_scope_mismatches_fail
+    archive = @server.add_list(nil, "archive")
+    doc, err, status = json("move", "card", CARD, "--list", archive)
+    assert status.success?, err
+    assert_equal [archive, nil], doc["data"].values_at("listId", "position")
+    assert_equal [["PATCH", "/api/cards/#{CARD}", { "listId" => archive, "position" => nil }]], writes
+    @server.add_board(OTHER_BOARD)
+    elsewhere = @server.add_list("elsewhere", board_id: OTHER_BOARD)
+    [[CARD, "--list", elsewhere], [CARD, "--list", READY, "--board", OTHER_BOARD], [CARD, "--list", READY, "--position", "-2"],
+     [CARD], [CARD, "--list", archive, "--position", "3"]].each do |args|
+      doc, _err, status = json("move", "card", *args)
+      assert_equal 2, status.exitstatus, args.inspect
+      assert_equal "invalid_input", doc.dig("error", "code"), args.inspect
+    end
+    assert_equal 1, writes.size
+  end
 end
