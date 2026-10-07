@@ -17,7 +17,7 @@ parser = OptionParser.new do |o|
   o.on("--board ID", "board id (default PLANKA_BOARD_ID)") { |v| options[:board] = v }
   o.on("--type TYPE", "active or closed (default active)") { |v| options[:type] = v }
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
-  o.separator "Canonical replacement: planka create list --board BOARD --name NAME [--type active|closed] (new JSON envelope)."
+  o.separator "Canonical replacement: planka create list --board BOARD --name NAME [--type active|closed] [--position N] (new JSON envelope)."
   Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka create-list")

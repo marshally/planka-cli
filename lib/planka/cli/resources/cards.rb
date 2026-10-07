@@ -2,6 +2,7 @@ require "planka"
 require "planka/cli/command"
 require "planka/cli/failure"
 require "planka/cli/resources/board_scope"
+require "planka/cli/resources/scalar_flags"
 
 module Planka
   module CLI
@@ -192,11 +193,8 @@ module Planka
           validate_scope_flags(flags.except(:labels, :members))
         end
 
-        def self.validate_scope_flags(flags)
-          return "Conflicting scalar flags" if flags.values.any? { |values| values.uniq.size > 1 }
-          return "Flags must have nonempty values" if flags.values.any? { |values| values.first.to_s.strip.empty? }
-          return "--limit must be a positive integer" if flags[:limit] && !flags[:limit].first.match?(/\A[1-9]\d*\z/)
-        end
+        # The flag checks shared by cards and card-scoped commands.
+        def self.validate_scope_flags(flags) = ScalarFlags.error(flags)
 
         def self.get(client, reference = nil, board_id: nil, **collection)
           cards = Planka::Boards::Cards.new(client, board_id: board_id)

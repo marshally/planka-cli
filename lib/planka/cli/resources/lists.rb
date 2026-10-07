@@ -2,6 +2,7 @@ require "planka"
 require "planka/cli/command"
 require "planka/cli/failure"
 require "planka/cli/resources/board_scope"
+require "planka/cli/resources/scalar_flags"
 
 module Planka
   module CLI
@@ -112,7 +113,7 @@ module Planka
         private_class_method :position
 
         def self.validate_list_values(flags)
-          error = Cards.validate_scope_flags(flags)
+          error = ScalarFlags.error(flags)
           return error if error
           if flags[:name] && !Records.text?(flags[:name].first, Planka::Boards::ListRecord::NAME_LIMIT)
             return "--name must be at most #{Planka::Boards::ListRecord::NAME_LIMIT} characters"
@@ -154,7 +155,7 @@ module Planka
           ["get", "list"] => Command.new(aliases: [["get", "lists"]], names: true, optional_reference: true, collection_read: true,
                                          resource: "list", collection: "lists", collection_flags: [:name, :limit],
                                          flags: { "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit },
-                                         validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_get),
+                                         validate_flags: ScalarFlags.method(:error), prepare: method(:prepare_get),
                                          help: GET_HELP, operation: method(:get), formatter: method(:format_lists)),
           ["create", "list"] => Command.new(aliases: [["create", "lists"]], reference: false, mutation: true, resource: "list", collection: "lists",
                                             flags: { "--board BOARD" => :board, "--name NAME" => :name, "--type TYPE" => :type, "--position N" => :position },
@@ -166,7 +167,7 @@ module Planka
                                             validate_flags: method(:validate_list_values), prepare: method(:prepare_update),
                                             help: UPDATE_HELP, operation: method(:update), formatter: ->(list) { "Updated list #{format_list(list)}" }),
           ["delete", "list"] => Command.new(aliases: [["delete", "lists"]], names: true, mutation: true, resource: "list", collection: "lists",
-                                            flags: { "--board BOARD" => :board }, validate_flags: Cards.method(:validate_scope_flags),
+                                            flags: { "--board BOARD" => :board }, validate_flags: ScalarFlags.method(:error),
                                             prepare: method(:prepare_list), help: DELETE_HELP, operation: method(:delete),
                                             formatter: ->(list) { "Deleted list #{list["name"] || "(unnamed)"} (#{list["id"]}) from board #{list["boardId"]}" }),
         }.freeze
