@@ -6,6 +6,7 @@ CLI. It is a design contract for staged changes; the current executable supports
 `workflow claim-status`, `workflow guide`, `workflow next`, `workflow claim`,
 card-scoped `get members`, `get member`, `add member`, `remove member`, native card
 `get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
+native list `get lists`, `get list`, `create list`, `update list`, `delete list`,
 and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
@@ -358,7 +359,7 @@ create/update commands are not implemented.
 
 ### List updates
 
-Planned `update list LIST` accepts optional `--name`, `--color` or mutually
+Implemented `update list LIST` accepts optional `--name`, `--color` or mutually
 exclusive `--clear-color`, `--position`, and `--type active|closed`. Change only
 supplied fields and reject empty updates. Names are nonempty and obey the verified
 server length limit; colors use the verified native enum, `--clear-color` sends
@@ -366,7 +367,9 @@ null, and positions are finite and nonnegative. Keep the list on its current boa
 Type changes preserve native server effects; document and test their effect on
 linked tasks and workflow eligibility without additional client-side card/task
 writes. See [lists issue #18](https://github.com/marshally/planka-cli/issues/18)
-for the accepted field contract and pinned version-specific evidence.
+for the accepted field contract, and the [README lists
+contract](README.md#canonical-lists) and implementation handoff for implemented
+behavior and pinned version-specific evidence.
 
 ## References and scope
 

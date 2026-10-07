@@ -18,8 +18,8 @@ module Planka
         Add `-o json` for canonical results: one document with data, meta, and
         error. Inspect the exit status before consuming stdout: 0 is success,
         2 is invalid input, and 1 is another failure. Diagnostics go to stderr.
-        Legacy commands below keep their bare JSON and exits; they are deprecated
-        but retained indefinitely.
+        Legacy commands below are deprecated, retained, and keep bare JSON and
+        exits.
 
         ## Find and work a ticket
         1. `planka describe board BOARD -o json`: inspect lists, cards, and tasks.
@@ -46,10 +46,11 @@ module Planka
            with `Branch: BRANCH` and `PR: URL` on separate lines in TEXT.
 
         ## Publish and recover
-        Cards use `planka get cards --board BOARD`, `get card`, `create card
-        --list LIST --name NAME`, `update card`, `move card CARD --list LIST`, and
-        `delete card`, without workflow conventions. Card assignments use
-        `planka get|add|remove member USER --card CARD` and `get members --card CARD`;
+        Resources: `planka get cards|lists --board BOARD`,
+        `get|update|delete card|list REF`, `create card --list LIST --name NAME`,
+        `create list --board BOARD --name NAME`, `move card CARD --list LIST`.
+        Closing a list completes tasks linking its cards. Assignments use
+        `get|add|remove member USER --card CARD` and `get members --card CARD`;
         add/remove skip satisfied assignments.
 
         Publishing still uses legacy commands. Specs have no

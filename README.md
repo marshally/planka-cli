@@ -48,6 +48,7 @@ card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CAR
 `planka workflow guide`, `planka workflow next`, `planka workflow claim CARD`,
 card-scoped `get members`, `get member`, `add member`, `remove member`,
 `get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
+`get lists`, `get list`, `create list`, `update list`, `delete list`,
 and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -301,6 +302,77 @@ limited output adds a truncation notice. Mutations print `Created card`,
 exits 0, local input 2, other failures 1. Writes require native board editor
 permission. See the [source evidence and verification
 limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-tenth-slice-cards).
+
+### Canonical lists
+
+```sh
+planka get lists --board BOARD [--name NAME] [--limit N] -o json
+planka get list LIST [--board BOARD] -o json
+planka create list --board BOARD --name NAME [--type active|closed] [--position N] -o json
+planka update list LIST [--name NAME] [--color COLOR | --clear-color] [--position N] [--type active|closed] -o json
+planka delete list LIST -o json
+```
+
+`list` and `lists` are aliases. LIST is an ID, same-instance URL, or exact name
+with `--board BOARD` or `PLANKA_BOARD_ID`; explicit list IDs/URLs determine their
+own board and ignore the default board, and an explicit `--board` must match.
+Planka reads only active and closed lists individually, so an archive or trash
+list ID without `--board` is `not_found`; with `--board` it resolves on the
+board. Ambiguous names report candidate IDs.
+
+List `data` contains `id`, nullable `name` (archive lists may be unnamed),
+`type` (`active`, `closed`, `archive`, or `trash`), nullable `color`, `boardId`,
+nullable `position`, and nullable `createdAt`/`updatedAt`. Individual reads
+return an object with empty `meta`.
+
+`get lists` requires an explicit `--board`; `PLANKA_BOARD_ID` is not a collection
+scope. It returns every list on the board, of every native type, from the single
+native board read without paging: active and closed lists by position, then
+archive and trash lists. Exact `--name` matches before a positive `--limit`;
+`--label` and `--member` are unsupported. `complete` describes matching lists,
+and a malformed read exits 1 with `complete: false`. Reads make no resource writes.
+
+`create list` always creates a native list, even when the name exists. `--board`
+is required, `--type` is `active` (default) or `closed`, and archive/trash
+system lists cannot be created. It appends after the board's active and closed
+lists, ignoring archive and trash, unless `--position N` gives a finite
+nonnegative native ordering value. Planka may renumber list positions. Names are
+nonempty and at most 128 characters. Colors cannot be set on creation.
+
+`update list` changes only supplied fields, sends only values that differ, and
+requires at least one of `--name`, `--color`, `--clear-color`, `--position`, or
+`--type`; identical values are a no-op. `--color` takes one of `berry-red`,
+`pumpkin-orange`, `lagoon-blue`, `pink-tulip`, `light-mud`, `orange-peel`,
+`bright-moss`, `antique-blue`, `dark-granite`, or `turquoise-sea`;
+`--clear-color` sends an explicit null and conflicts with `--color`. The list
+stays on its board. Changing `--type` between `active` and `closed` is one
+write: Planka itself closes or reopens the list's cards and completes or reopens
+the tasks linked to them. Blockers on those cards therefore clear or return, and
+`workflow next` eligibility changes, without client-side card or task writes.
+
+`delete list` issues one native deletion of an explicit target without prompts.
+Planka moves the list's cards to the board's trash list, with no position; they
+are not deleted, and `get cards` no longer reads them. Deleting a board instead
+removes its lists and cards. Archive and trash lists cannot be updated or
+deleted: with `--board` that is `invalid_input` before any write.
+
+Mutation `data` is the resulting list; delete adds `deleted: true`.
+`meta.changed` is true, false for a no-op, or null when unknown. A rejected write
+keeps the unchanged list (`changed: false`) with the native failure code. An
+unknown or malformed write response returns `error.code: unknown_outcome`,
+`changed: null`, and marks changed fields null (`deleted: null` for delete).
+Unknown creates never invent a list ID and report `readback-lists` recovery for
+the board: inspect `get lists --board BOARD` before retrying. Other mutations
+report `readback-list`: inspect `get list LIST`. No request is retried
+automatically.
+
+Human reads print `NAME (LIST_ID) TYPE on board BOARD_ID` per list, with
+`(unnamed)` for unnamed lists, or `No lists.`; limited output adds a truncation
+notice. Mutations print `Created list`, `Updated list`, or
+`Deleted list ... from board BOARD_ID`. Success exits 0, local input 2, other
+failures 1. Writes require native board editor permission. See the [source
+evidence and verification
+limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-eleventh-slice-lists).
 
 ### Canonical card members
 
@@ -599,8 +671,9 @@ release notes, with no automatic runtime warnings. `describe card` replaces
 replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
 `workflow guide` replaces `prime`, `workflow next` replaces `next-card`, and
 `workflow claim` replaces `claim`, `update card` replaces `update-card`,
-`move card` replaces `move-card`, and `get cards --list LIST` replaces the list
-view of `snapshot`; remaining canonical replacements are not yet implemented.
+`move card` replaces `move-card`, `get cards --list LIST` replaces the list
+view of `snapshot`, and `create list` replaces `create-list`; remaining
+canonical replacements are not yet implemented.
 
 ### Configuration
 
@@ -744,6 +817,13 @@ Planka::Client.session(validate_responses: true) do |client|
   cards.update("123", name: "Fix session expiry")
   cards.move("123", list: "Done")
   cards.delete("123")
+
+  lists = Planka::Boards::Lists.new(client, board_id: "100")   # board_id optional for IDs
+  lists.all(name: "Ready", limit: 5)                           # CollectionResult; needs board_id
+  lists.find("Ready")                                          # One list's public fields
+  lists.create(name: "Review", type: "active")                 # MutationResult; needs board_id
+  lists.update("200", name: "Done", type: "closed", color: nil) # color: nil clears it
+  lists.delete("200")
 end
 ```
 
