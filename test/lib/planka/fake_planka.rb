@@ -252,6 +252,8 @@ class FakePlanka
     in ["GET", ["api", "lists", id]] then list_payload(id)
     in ["DELETE", ["api", "cards", id]] then [200, { "item" => delete_card(id) }]
     in ["POST", ["api", "boards", id, "lists"]] then [200, { "item" => make_list(id, data) }]
+    in ["PATCH", ["api", "lists", id]] then kanban_list(id) { |list| [200, { "item" => patch_list(list, data) }] }
+    in ["DELETE", ["api", "lists", id]] then kanban_list(id) { |list| [200, delete_list(list)] }
     in ["POST", ["api", "lists", id, "cards"]] then [200, { "item" => make_card(id, data) }]
     in ["PATCH", ["api", "cards", id]] then [200, { "item" => patch_card(id, data) }]
     in ["POST", ["api", "boards", id, "labels"]] then [200, { "item" => make_label(id, data) }]
@@ -327,6 +329,34 @@ class FakePlanka
     list = { "id" => next_id, "boardId" => board_id, "name" => data["name"], "type" => data["type"], "position" => data["position"] }
     @state[:lists] << list
     list
+  end
+
+  # Planka refuses to change or delete archive and trash lists.
+  def kanban_list(id)
+    list = fetch(@state[:lists], id)
+    FINITE_TYPES.include?(list["type"]) ? yield(list) : [403, { "message" => "Not enough rights" }]
+  end
+
+  # A change between active and closed closes or reopens the list's cards and
+  # completes or reopens the tasks linked to them, as Planka's update does.
+  def patch_list(list, data)
+    previous = list["type"]
+    %w[name color position type].each { |key| list[key] = data[key] if data.key?(key) }
+    if previous != list["type"]
+      card_ids = @state[:cards].select { |card| card["listId"] == list["id"] }.map { |card| card["id"] }
+      @state[:tasks].each { |task| task["isCompleted"] = list["type"] == "closed" if card_ids.include?(task["linkedCardId"]) }
+    end
+    list
+  end
+
+  # Planka moves a deleted list's cards to the board's trash list.
+  def delete_list(list)
+    trash = @state[:lists].find { |entry| entry["boardId"] == list["boardId"] && entry["type"] == "trash" } ||
+            list(next_id, nil, "trash").merge("boardId" => list["boardId"], "position" => nil).tap { |record| @state[:lists] << record }
+    cards = @state[:cards].select { |card| card["listId"] == list["id"] }
+    cards.each { |card| card.merge!("listId" => trash["id"], "position" => nil) }
+    @state[:lists].delete(list)
+    { "item" => list, "included" => { "cards" => cards } }
   end
 
   def make_card(list_id, data)

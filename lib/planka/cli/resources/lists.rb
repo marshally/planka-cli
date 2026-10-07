@@ -11,6 +11,7 @@ module Planka
           get lists --board BOARD  List a board's lists of every type (read-only)
           get list LIST  Read one board list (read-only)
           create list --board BOARD --name NAME  Create one kanban list
+          update list LIST  Change only supplied list fields
         HELP
         COMMON_HELP = <<~HELP
           LIST is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID. A list ID
@@ -41,9 +42,25 @@ module Planka
           An unknown or malformed write response gives readback-lists recovery for the board and no list ID.
           Read back with planka get lists --board BOARD before retrying; creates are never retried.
         HELP
+        UPDATE_HELP = <<~HELP + COMMON_HELP
+          usage: planka update list LIST [--board BOARD] [--name NAME] [--color COLOR | --clear-color]
+                                         [--position N] [--type active|closed] [-o human|json]
+          Change only supplied fields; at least one is required. Omitted fields, cards, and the board are
+          preserved; lists never move to another board. Identical values are a no-op (meta.changed false).
+          NAME is nonempty, at most 128 characters. COLOR is one of #{Planka::Boards::ListRecord::COLORS.join(", ")};
+          --clear-color sends an explicit null. --position is a finite nonnegative native ordering value that
+          Planka may renumber. Archive and trash lists cannot be updated.
+          Changing --type between active and closed is one write. Planka itself closes or reopens the list's
+          cards and completes or reopens tasks linked to them, so blockers on those cards clear or return and
+          workflow next eligibility changes. No other card or task writes are made.
+          JSON data is the resulting list; meta.changed is true/false/null. A rejected write keeps the unchanged
+          list; an unknown or malformed response marks changed fields null with readback-list recovery.
+          Read back with planka get list LIST before retrying.
+        HELP
         GROUP_HELP = {
           "get" => "  lists --board BOARD  List a board's lists of every type (read-only)\n  list LIST  Read one board list (read-only)\n",
           "create" => "  list --board BOARD --name NAME  Create one kanban list\n",
+          "update" => "  list LIST  Change only supplied list fields\n",
         }.freeze
 
         # get reads one list with a reference, otherwise the board's lists.
@@ -67,6 +84,17 @@ module Planka
             type: flags[:type]&.first || "active", position: position(flags) }
         end
 
+        def self.prepare_update(env, instance:, flags:, reference:)
+          fields = { name: flags[:name]&.first, color: flags[:color]&.first, position: position(flags), type: flags[:type]&.first }.compact
+          fields[:color] = nil if flags[:clear_color]
+          if fields.empty?
+            raise Failure.new(code: "invalid_input", status: 2,
+                              message: "update list requires --name, --color, --clear-color, --position, or --type")
+          end
+
+          prepare_list(env, instance: instance, flags: flags, reference: reference).merge(fields)
+        end
+
         # Validated by validate_list_values before preparation.
         def self.position(flags) = flags[:position] && Float(flags[:position].first)
         private_class_method :position
@@ -76,6 +104,10 @@ module Planka
           return error if error
           if flags[:name] && !Records.text?(flags[:name].first, Planka::Boards::ListRecord::NAME_LIMIT)
             return "--name must be at most #{Planka::Boards::ListRecord::NAME_LIMIT} characters"
+          end
+          return "--color and --clear-color conflict" if flags[:color] && flags[:clear_color]
+          if flags[:color] && !Planka::Boards::ListRecord::COLORS.include?(flags[:color].first)
+            return "--color must be one of #{Planka::Boards::ListRecord::COLORS.join(", ")}"
           end
           if flags[:type] && !Planka::Boards::ListRecord::KANBAN_TYPES.include?(flags[:type].first)
             return "--type must be #{Planka::Boards::ListRecord::KANBAN_TYPES.join(" or ")}"
@@ -91,6 +123,10 @@ module Planka
         end
 
         def self.create(client, board_id:, **attributes) = Planka::Boards::Lists.new(client, board_id: board_id).create(**attributes)
+
+        def self.update(client, reference, board_id: nil, **attributes)
+          Planka::Boards::Lists.new(client, board_id: board_id).update(reference, **attributes)
+        end
 
         def self.format_list(list) = "#{list["name"] || "(unnamed)"} (#{list["id"]}) #{list["type"]} on board #{list["boardId"]}"
 
@@ -110,6 +146,11 @@ module Planka
                                             flags: { "--board BOARD" => :board, "--name NAME" => :name, "--type TYPE" => :type, "--position N" => :position },
                                             validate_flags: method(:validate_list_values), prepare: method(:prepare_create),
                                             help: CREATE_HELP, operation: method(:create), formatter: ->(list) { "Created list #{format_list(list)}" }),
+          ["update", "list"] => Command.new(aliases: [["update", "lists"]], names: true, mutation: true, resource: "list", collection: "lists",
+                                            flags: { "--board BOARD" => :board, "--name NAME" => :name, "--color COLOR" => :color,
+                                                     "--clear-color" => :clear_color, "--position N" => :position, "--type TYPE" => :type },
+                                            validate_flags: method(:validate_list_values), prepare: method(:prepare_update),
+                                            help: UPDATE_HELP, operation: method(:update), formatter: ->(list) { "Updated list #{format_list(list)}" }),
         }.freeze
 
         def self.commands = COMMANDS
