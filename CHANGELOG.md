@@ -4,8 +4,8 @@
 
 Added native card resource commands with singular/plural aliases and offline
 root/group/leaf help: `get cards --board BOARD|--list LIST` (exact `--name`,
-repeated AND `--label`/`--member`, `--limit`, complete reads that page archive
-and trash lists), `get card CARD`, `create card --list LIST --name NAME`,
+repeated AND `--label`/`--member`, `--limit`, reading active and closed lists
+only), `get card CARD`, `create card --list LIST --name NAME`,
 `update card CARD`, `move card CARD --list LIST`, and `delete card CARD`. Creates
 use the board's default card type and append unless positioned; updates send
 only supplied, changed name/description fields; moves stay on the card's board;

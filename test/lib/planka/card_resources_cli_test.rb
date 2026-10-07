@@ -53,19 +53,25 @@ class CardResourcesCLITest < Minitest::Test
 
   def ids(doc) = doc["data"].map { |card| card["id"] }
 
-  def test_board_collection_includes_finite_and_paged_archive_cards_in_list_order
-    @server.page_size = 2
+  def test_board_collection_reads_active_and_closed_lists_only_in_list_order
     archive = @server.add_list(nil, "archive")
-    archived = %w[01 02 03].map { |day| @server.add_card("Old #{day}", archive, position: nil, list_changed_at: "2026-09-#{day}T00:00:00.000Z") }
+    @server.add_card("Shelved", archive, position: nil)
+    trash = @server.add_list("Trash", "trash")
+    @server.add_card("Discarded", trash, position: nil)
     later = @server.add_card("Later", READY, position: 131_072)
     first = @server.add_card("First", READY, position: 1)
     progress = @server.add_card("Doing", PROGRESS)
     doc, err, status = json("get", "cards", "--board", BOARD)
     assert status.success?, err
-    assert_equal [first, CARD, later, progress, *archived.reverse], ids(doc)
+    assert_equal [first, CARD, later, progress], ids(doc)
     assert_equal({ "complete" => true }, doc["meta"])
     assert_nil doc["error"]
-    assert_equal 2, @server.counts("GET", %r{\A/api/lists/#{archive}/cards\?before}), "pages follow the native cursor until empty"
+    [archive, "Trash"].each do |list|
+      doc, _err, status = json("get", "cards", "--list", list, "--board", BOARD)
+      assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")], list
+      assert_match(/archive and trash/i, doc.dig("error", "message"))
+    end
+    assert_equal 0, @server.counts("GET", %r{\A/api/lists/}), "no list card pages are read"
     assert_empty resource_writes
   end
 
@@ -136,15 +142,11 @@ class CardResourcesCLITest < Minitest::Test
     assert_empty resource_writes
   end
 
-  def test_page_failure_preserves_matching_partial_results_and_reports_incomplete
-    @server.page_size = 1
-    trash = @server.add_list("Trash", "trash")
-    kept = @server.add_card("Trashed", trash, position: nil, list_changed_at: "2026-09-02T00:00:00.000Z")
-    @server.add_card("Trashed", trash, position: nil, list_changed_at: "2026-09-01T00:00:00.000Z")
-    @server.inject("GET", %r{/api/lists/#{trash}/cards\?before}, :malformed_card_page)
-    doc, err, status = json("get", "cards", "--board", BOARD, "--name", "Trashed")
+  def test_malformed_card_preserves_matching_partial_results_and_reports_incomplete
+    @server.cards << { "id" => "400000000000000099", "name" => 42, "listId" => PROGRESS, "boardId" => BOARD, "type" => "project" }
+    doc, err, status = json("get", "cards", "--board", BOARD)
     assert_equal 1, status.exitstatus, err
-    assert_equal [kept], ids(doc)
+    assert_equal [CARD], ids(doc)
     assert_equal false, doc.dig("meta", "complete")
     assert_equal "api_error", doc.dig("error", "code")
     assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)

@@ -600,13 +600,12 @@ process locale and rejects invalid UTF-8 as local input; description files are
 read as UTF-8 bytes. An installed-gem run without `LANG` exposed the earlier
 locale-dependent failure.
 
-Planka 2.x pages archive and trash ("endless") lists; board reads omit their
-cards. Completeness therefore needs one board read plus, for each such list, cursor
-pages until one is empty. The CLI does not rely on the server's internal page size.
-Name/label/member filters are applied client-side while reading, with the same
-exact AND semantics as the contract, before `--limit`. Native server-side
-`search`/`labelIds`/`userIds` filters on list pages are not used: `search` is a
-substring/regex match, and `userIds` also matches task assignees.
+Card collections are deliberately scoped to active and closed lists: the one
+native board read returns every card in those lists, without paging, and
+`meta.complete` describes that scope. Archive and trash cards are excluded, and
+`--list` naming an archive or trash list is rejected as `invalid_input` rather
+than reported as an empty collection. Name/label/member filters are applied
+client-side with the contract's exact AND semantics before `--limit`.
 
 ### Card API evidence
 
@@ -620,10 +619,9 @@ model differs only by the unrelated `displayCardAges` field.
   board memberships, users, card labels, and card memberships, but cards only from
   [finite lists](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/is-finite.js)
   (`active`, `closed`), sorted by position then ID, without a limit.
-- [`GET /api/lists/:listId/cards`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/index.js)
-  accepts `before[listChangedAt]` and `before[id]` and returns `items` with
-  included card labels and memberships. [Query methods](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/Card.js)
-  order by `listChangedAt DESC, id DESC` with a limit of 50 per page.
+- Archive and trash cards are served only by the paged
+  [`GET /api/lists/:listId/cards`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/index.js),
+  which card collections do not use.
 - [`GET /api/lists/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/lists/show.js)
   answers only finite lists; archive/trash IDs are `LIST_NOT_FOUND`.
 - [`POST /api/lists/:listId/cards`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/create.js)
@@ -650,8 +648,8 @@ PATCH requests keep the client's existing idempotent retry policy. Development
 checks use Bundler 4.0.14 with the unchanged lockfile.
 
 Public subprocess/local HTTP tests cover every command, aliases, offline help at
-all levels, ID/URL/name scopes and mismatches, finite and paged reads, filters
-before limits, page failures with partial data, local validation before requests,
+all levels, ID/URL/name scopes and mismatches, active/closed-only reads, filters
+before limits, malformed reads with partial data, local validation before requests,
 exact single writes, supplied-only updates, no-ops, rejected and unknown outcomes
 without retries or invented IDs, and legacy parity. This is pinned-source and fixture
 evidence, not live acceptance; no live writes were authorized or performed.

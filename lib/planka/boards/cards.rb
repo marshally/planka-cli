@@ -20,15 +20,15 @@ module Planka
         @board_id = board_id
       end
 
-      # Every card on the board, or in one of its lists, matching all filters.
-      # Active/closed lists come from the board read; archive/trash lists are
-      # paged until empty. Lists keep board order; cards keep native list order.
+      # Every card in the board's active/closed lists, or in one of them,
+      # matching all filters. Archive/trash cards are not read. Lists keep board
+      # order; cards keep position order.
       def all(list: nil, name: nil, labels: [], members: [], limit: nil)
         validate_options!(name: name, labels: labels, members: members, limit: limit)
         data = []
         board = scoped_board(list)
         wanted = { "labelId" => label_ids(board, labels), "userId" => member_ids(board, members) }
-        scoped_lists(board, list).each { |record| collect!(data, board, record, name, wanted) }
+        readable_lists(board, list).each { |record| collect!(data, board, record, name, wanted) }
         collection(data, limit)
       rescue *OPERATION_ERRORS => error
         raise if error.is_a?(ReferenceError)
@@ -230,6 +230,14 @@ module Planka
         [Reference.resolve(lists, list, resource: "list", scope: "the board")]
       end
 
+      def readable_lists(board, list)
+        lists = scoped_lists(board, list)
+        finite = lists.select { |record| FINITE_LIST_TYPES.include?(record["type"]) }
+        raise ReferenceError, "get cards reads active and closed lists only, not archive and trash lists" if list && finite.empty?
+
+        finite
+      end
+
       def board_lists(board)
         lists = board["included"]["lists"]
         unless lists.is_a?(Array) && lists.all? { |record| list?(record, board["item"]["id"]) }
@@ -272,36 +280,9 @@ module Planka
         end
       end
 
-      def each_card(board, list, &)
-        return each_paged_card(list, &) unless FINITE_LIST_TYPES.include?(list["type"])
-
+      def each_card(board, list)
         relations = relation_index(board["included"])
         list_cards(board, list).sort_by { |card| [card["position"].to_f, card["id"].to_i] }.each { |card| yield card, relations }
-      end
-
-      # Follows the native listChangedAt/id cursor until a page comes back empty.
-      def each_paged_card(list)
-        seen, before = [], nil
-        loop do
-          page = client.list_card_page(list["id"], before: before)
-          break if page["items"].empty?
-
-          relations = relation_index(page["included"])
-          page["items"].each do |card|
-            scoped_card(card, list)
-            raise InvalidResponse, "Repeated card in list pages" if seen.include?(card["id"])
-
-            seen << card["id"]
-            yield card, relations
-          end
-          before = cursor(page["items"].last)
-        end
-      end
-
-      def cursor(card)
-        raise InvalidResponse, "Invalid card page cursor" unless Records.timestamp?(card["listChangedAt"])
-
-        card.slice("listChangedAt", "id")
       end
 
       def scoped_card(card, list)

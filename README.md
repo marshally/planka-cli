@@ -255,15 +255,15 @@ Card `data` contains `id`, `name`, nullable `description`, `type`, `boardId`,
 `createdAt`/`updatedAt`. Individual reads return an object with empty `meta`.
 
 `get cards` requires `--board` or `--list` and returns an array with
-`meta.complete`. A board read includes every list: active/closed lists in board
-order with cards by position, then archive/trash lists, which the CLI pages
-through the native `listChangedAt`/`id` cursor until a page is empty (newest list
-change first). Exact `--name`, every repeated `--label` (board label ID or
+`meta.complete`. It reads cards in the board's active and closed lists, in board
+list order with cards by position, from the single native board read. Cards in
+archive and trash lists are not included, and `--list` naming an archive or trash
+list is `invalid_input`. Exact `--name`, every repeated `--label` (board label ID or
 name), and every repeated `--member` (card member, by board user ID or name)
 must all match before a positive `--limit`; filters and limits are rejected with
 a CARD. `complete` describes matching cards. An unknown label or member is
-`not_found`. A failed page exits 1 with the matching cards read so far and
-`complete: false`. Pages are not a consistent snapshot under concurrent changes.
+`not_found`. A malformed read exits 1 with the matching cards read so far and
+`complete: false`.
 Reads make no resource writes.
 
 `create card` always creates a native card, even when the name exists, using the
