@@ -59,7 +59,7 @@ module Planka
 
       # Issues one native card deletion; Planka removes the card's own records
       # and clears other tasks' links to it without deleting those cards.
-      def delete(reference) = super
+      public :delete
 
       # Validates text the way Planka does: lengths count UTF-16 code units.
       def self.text?(value, limit) = value.is_a?(String) && !value.empty? && value.encode("UTF-16LE").bytesize / 2 <= limit
