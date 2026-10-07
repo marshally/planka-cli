@@ -2,17 +2,20 @@ module Planka
   module Cards
     # Reads and changes assignments within one card scope. Each operation observes
     # current state through the supplied authenticated client.
-    class Members
+    class Members < Resource
+      include Relationship
+
       OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
 
       def initialize(client, card_id:, board_id: nil)
-        @client, @card_id, @board_id = client, card_id, board_id
+        super(client)
+        @card_id, @board_id = card_id, board_id
       end
 
       def all(name: nil, limit: nil)
         validate_options!(name: name, limit: limit)
         data = []
-        card, board = Scope.read(@client, card_id: @card_id, board_id: @board_id)
+        card, board = Scope.read(client, card_id: @card_id, board_id: @board_id)
         hydrate_members!(data, card, identities(board), Scope.card_id(card))
         collection(data, name: name, limit: limit)
       rescue *OPERATION_ERRORS => error
@@ -21,9 +24,7 @@ module Planka
         raise CollectionFailure.new(data: collection(data, name: name, limit: limit).data)
       end
 
-      def find(reference) = assigned!(observe_member(reference))
-      def add(reference) = mutate(reference, assigned: true)
-      def remove(reference) = mutate(reference, assigned: false)
+      def find(reference) = assigned!(observe_relationship(reference))
 
       private
 
@@ -32,8 +33,8 @@ module Planka
         raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
       end
 
-      def observe_member(reference)
-        card, board = Scope.read(@client, card_id: @card_id, board_id: @board_id)
+      def observe_relationship(reference)
+        card, board = Scope.read(client, card_id: @card_id, board_id: @board_id)
         users = identities(board)
         user = resolve_user(reference, users, board, Scope.board_id(card))
         data = []
@@ -114,21 +115,17 @@ module Planka
         CollectionResult.new(data: limit ? data.first(limit) : data, complete: !limit || data.size <= limit)
       end
 
-      def mutate(reference, assigned:)
-        known = observe_member(reference)
-        if assigned == !known["membershipId"].nil?
-          return MutationResult.new(data: known.merge("assigned" => assigned), changed: false)
-        end
+      def relationship_present?(known) = !known["membershipId"].nil?
+      def relationship_data(known, present:) = known.merge("assigned" => present)
 
-        Write.perform(**write_outcomes(known, assigned)) do
-          record = confirmed_write(assigned, known)
-          assignment_data(known, record, assigned)
-        end
+      def write_relationship(known, present:)
+        record = confirmed_write(present, known)
+        assignment_data(known, record, present)
       end
 
       def confirmed_write(assigned, known)
         card_id, user_id = known.values_at("cardId", "id")
-        response = assigned ? @client.add_card_member(card_id, user_id) : @client.remove_card_member(card_id, user_id)
+        response = assigned ? client.add_card_member(card_id, user_id) : client.remove_card_member(card_id, user_id)
         record = response["item"]
         validate_membership!(record, card_id: card_id, user_id: user_id, membership_id: known["membershipId"])
         record
@@ -139,10 +136,9 @@ module Planka
         data.merge("assigned" => assigned)
       end
 
-      def write_outcomes(known, assigned)
-        { unchanged: known.merge("assigned" => !assigned), unknown: known.merge("assigned" => nil),
-          recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => known["cardId"] },
-                                                                         { "type" => "user", "id" => known["id"] }] } }
+      def relationship_recovery(known)
+        { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => known["cardId"] },
+                                                             { "type" => "user", "id" => known["id"] }] }
       end
     end
   end

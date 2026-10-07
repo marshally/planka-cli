@@ -32,12 +32,12 @@ module Planka
             A lost/malformed write response gives readback-card-labels recovery.
           HELP
 
-          def self.prepare_add(env, instance:, flags:)
-            Cards.prepare_scope(env, instance: instance, flags: flags).merge(present: true)
+          def self.add(client, reference, **scope)
+            Planka::Cards::Labels.new(client, **scope).add(reference)
           end
 
-          def self.prepare_remove(env, instance:, flags:)
-            Cards.prepare_scope(env, instance: instance, flags: flags).merge(present: false)
+          def self.remove(client, reference, **scope)
+            Planka::Cards::Labels.new(client, **scope).remove(reference)
           end
 
           def self.format(data) = "Label #{data["labelId"]} on card #{data["cardId"]}\npresent: #{data["present"]}"
@@ -50,12 +50,12 @@ module Planka
           COMMANDS = {
             ["remove", "label"] => Command.new(aliases: [["remove", "labels"]], names: true, mutation: true,
                                                resource: "label", collection: "labels", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-                                               validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_remove),
-                                               help: REMOVE_HELP, operation: Planka::Cards::Labels.method(:set), formatter: method(:format)),
+                                               validate_flags: Cards.method(:validate_scope_flags), prepare: Cards.method(:prepare_scope),
+                                               help: REMOVE_HELP, operation: method(:remove), formatter: method(:format)),
             ["add", "label"] => Command.new(aliases: [["add", "labels"]], names: true, mutation: true,
                                             resource: "label", collection: "labels", flags: { "--card CARD" => :card, "--board BOARD" => :board },
-                                            validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_add),
-                                            help: ADD_HELP, operation: Planka::Cards::Labels.method(:set), formatter: method(:format)),
+                                            validate_flags: Cards.method(:validate_scope_flags), prepare: Cards.method(:prepare_scope),
+                                            help: ADD_HELP, operation: method(:add), formatter: method(:format)),
           }.freeze
 
           def self.commands = COMMANDS

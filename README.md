@@ -650,21 +650,37 @@ Planka::Client.session(validate_responses: true) do |client|
   members = Planka::Cards::Members.new(client, card_id: "123")
   members.all                     # CollectionResult: data and complete
   members.find("456")              # One assigned user's public fields
+  members.include?("456")          # Boolean: is this user assigned?
   members.add("456")               # MutationResult: data and changed
   members.remove("456")            # MutationResult: data and changed
+
+  labels = Planka::Cards::Labels.new(client, card_id: "123")
+  labels.include?("enhancement")   # Boolean: is this board label attached?
+  labels.add("enhancement")
+  labels.remove("enhancement")
 
   tasks = Planka::Cards::Tasks.new(client, card_id: "123")
   tasks.update("789", completed: true)
 end
 ```
 
-Member and task references accept IDs or exact scoped names. Constructors also
+Member, label, and task references accept IDs or exact scoped names. Constructors also
 accept `board_id:` to assert the card's board or resolve a card name within it;
 they do not read environment defaults or open a session. `Members#all` accepts
 an exact string `name:` filter and positive integer `limit:`; invalid option
 values raise `ArgumentError` before resource reads. `Tasks#update` changes
 only completion, requires a Boolean, and refuses linked tasks. Repeated
 already-satisfied mutations return `changed: false`.
+
+Members and labels share the `Relationship` role: `add`, `remove`, and `include?`.
+Only a known target with no association returns `false` from `include?`. Unknown
+or ambiguous targets raise `ReferenceError`; failed or malformed reads raise
+their original errors. Removing an association preserves its target and card.
+
+These resources inherit protected operation mechanics from `Planka::Resource`;
+each exposes only its supported public operations. The base does not add public
+CRUD verbs to resources that cannot implement them. Resource-specific lookup,
+validation, result fields, and readback guidance remain with the concrete class.
 
 Mutation failures raise `Planka::MutationFailure` with `data`, `changed`,
 `uncertain`, and `recovery`; use readback before retrying an uncertain write.
