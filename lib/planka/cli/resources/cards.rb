@@ -8,6 +8,7 @@ module Planka
       module Cards
         ROOT_HELP = <<~HELP.gsub(/^/, "  ")
           describe card CARD  Read card details and related data (read-only)
+          get cards --board BOARD|--list LIST  List cards with exact filters (read-only)
           get card CARD  Read one concise card (read-only)
         HELP
         COMMON_HELP = <<~HELP
@@ -19,12 +20,22 @@ module Planka
           Card data: id, name, description, type, boardId, listId, position, createdAt, updatedAt.
         HELP
         GET_HELP = <<~HELP + COMMON_HELP
-          usage: planka get card CARD [--board BOARD] [-o human|json]
-          Read-only. JSON uses data/meta/error; data is one card object and meta is empty.
+          usage: planka get cards (--board BOARD | --list LIST [--board BOARD]) [--name NAME]
+                                  [--label LABEL]... [--member USER]... [--limit N] [-o human|json]
+                 planka get card CARD [--board BOARD] [-o human|json]
+          Read-only. Without CARD, read the complete board or list collection: active/closed lists in board
+          order by card position, then archive/trash lists paged newest list change first.
+          LIST is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID; a list ID
+          alone finds its own board for active/closed lists, while archive/trash lists need --board.
+          Exact --name, every --label (board label ID/name), and every --member (board user ID/name) must
+          all match before a positive --limit; filters and limits require an omitted CARD.
+          Collection data is an array with meta.complete, false when truncated or a page fails; failures keep
+          matching cards read so far. Pages are not a consistent snapshot of concurrent changes.
+          With CARD, data is one card object and meta is empty; card names resolve on active/closed lists.
         HELP
         GROUP_HELP = {
           "describe" => "  card CARD  Read card details and related data (read-only)\n",
-          "get" => "  card CARD  Read one concise card (read-only)\n",
+          "get" => "  cards --board BOARD|--list LIST  List cards with exact filters (read-only)\n  card CARD  Read one concise card (read-only)\n",
         }.freeze
         HELP = <<~HELP
           usage: planka describe card CARD [--output human|json]
@@ -44,8 +55,21 @@ module Planka
         end
 
         def self.prepare_card(env, instance:, flags:, reference:)
-          { board_id: scope_board(env, instance, reference, flags[:board]&.first) }
+          return { board_id: scope_board(env, instance, reference, flags[:board]&.first) } if reference
+
+          prepare_collection(env, instance, flags)
         end
+
+        def self.prepare_collection(env, instance, flags)
+          board, list = flags[:board]&.first, flags[:list]&.first
+          raise Failure.new(code: "invalid_input", status: 2, message: "get cards requires --board or --list") unless board || list
+
+          list &&= instance.resolve(list, resource: "list", collection: "lists", names: true)
+          { board_id: board ? instance.resolve(board, resource: "board", collection: "boards") : (default_board(env, instance) unless Records.id?(list)),
+            list: list, name: flags[:name]&.first, labels: flags.fetch(:labels, []), members: flags.fetch(:members, []),
+            limit: flags[:limit]&.first&.to_i }
+        end
+        private_class_method :prepare_collection
 
         # An explicit --board always asserts the parent; card names fall back to
         # PLANKA_BOARD_ID; IDs and URLs need no board.
@@ -67,17 +91,31 @@ module Planka
         end
         private_class_method :scope_board, :default_board
 
+        def self.validate_collection_flags(flags)
+          repeated = flags.slice(:labels, :members)
+          return "Flags must have nonempty values" if repeated.values.flatten.any? { |value| value.strip.empty? }
+
+          validate_scope_flags(flags.except(:labels, :members))
+        end
+
         def self.validate_scope_flags(flags)
           return "Conflicting scalar flags" if flags.values.any? { |values| values.uniq.size > 1 }
           return "Flags must have nonempty values" if flags.values.any? { |values| values.first.to_s.strip.empty? }
           return "--limit must be a positive integer" if flags[:limit] && !flags[:limit].first.match?(/\A[1-9]\d*\z/)
         end
 
-        def self.get(client, reference, board_id: nil)
-          Planka::Boards::Cards.new(client, board_id: board_id).find(reference)
+        def self.get(client, reference = nil, board_id: nil, **collection)
+          cards = Planka::Boards::Cards.new(client, board_id: board_id)
+          reference ? cards.find(reference) : cards.all(**collection)
         end
 
         def self.format_card(card) = "#{card["name"]} (#{card["id"]}) in list #{card["listId"]}"
+
+        def self.format_cards(data)
+          return format_card(data) if data.is_a?(Hash)
+
+          data.empty? ? "No cards." : data.map { |card| format_card(card) }.join("\n")
+        end
 
         def self.format(detail)
           lines = [
@@ -109,9 +147,12 @@ module Planka
         end
 
         COMMANDS = {
-          ["get", "card"] => Command.new(aliases: [["get", "cards"]], names: true, resource: "card", collection: "cards",
-                                         flags: { "--board BOARD" => :board }, validate_flags: method(:validate_scope_flags),
-                                         prepare: method(:prepare_card), help: GET_HELP, operation: method(:get), formatter: method(:format_card)),
+          ["get", "card"] => Command.new(aliases: [["get", "cards"]], names: true, optional_reference: true, collection_read: true,
+                                         resource: "card", collection: "cards", collection_flags: [:list, :name, :labels, :members, :limit],
+                                         flags: { "--board BOARD" => :board, "--list LIST" => :list, "--name NAME" => :name,
+                                                  "--label LABEL" => :labels, "--member USER" => :members, "--limit N" => :limit },
+                                         validate_flags: method(:validate_collection_flags), prepare: method(:prepare_card),
+                                         help: GET_HELP, operation: method(:get), formatter: method(:format_cards)),
           ["describe", "card"] => Command.new(aliases: [["describe", "cards"]], resource: "card", collection: "cards", help: HELP, operation: Planka::Cards::Detail.method(:read), formatter: method(:format)),
         }.freeze
 
