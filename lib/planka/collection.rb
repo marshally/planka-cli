@@ -8,7 +8,10 @@ module Planka
     end
   end
 
-  CollectionResult = Data.define(:data, :complete)
+  CollectionResult = Data.define(:data, :complete) do
+    # At most LIMIT matching records; complete unless more records matched.
+    def self.limited(data, limit) = new(data: limit ? data.first(limit) : data, complete: !limit || data.size <= limit)
+  end
 
   class CollectionFailure < Error
     attr_reader :data

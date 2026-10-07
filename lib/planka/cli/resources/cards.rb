@@ -1,6 +1,7 @@
 require "planka"
 require "planka/cli/command"
 require "planka/cli/failure"
+require "planka/cli/resources/board_scope"
 
 module Planka
   module CLI
@@ -133,8 +134,8 @@ module Planka
         def self.list_scope(env, instance, flags)
           board = flags[:board]&.first
           list = flags[:list] && instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true)
-          board_id = if board then instance.resolve(board, resource: "board", collection: "boards")
-                     elsif list && !Records.id?(list) then default_board(env, instance)
+          board_id = if board then BoardScope.resolve(instance, board)
+                     elsif list && !Records.id?(list) then BoardScope.default(env, instance, resource: "Card")
                      end
           { board_id: board_id, list: list }
         end
@@ -170,25 +171,8 @@ module Planka
         end
         private_class_method :prepare_collection, :list_scope, :position, :description
 
-        # An explicit --board always asserts the parent; card names fall back to
-        # PLANKA_BOARD_ID; IDs and URLs need no board.
-        def self.scope_board(env, instance, card, explicit)
-          return instance.resolve(explicit, resource: "board", collection: "boards") if explicit
-
-          default_board(env, instance) unless Records.id?(card)
-        end
-
-        def self.default_board(env, instance)
-          board = env["PLANKA_BOARD_ID"]
-          if board.nil? || board.empty?
-            raise Failure.new(code: "invalid_input", status: 2, message: "Card names require --board or PLANKA_BOARD_ID")
-          end
-
-          instance.resolve(board, resource: "board", collection: "boards")
-        rescue Instance::InvalidReference
-          raise Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a board ID or same-instance URL")
-        end
-        private_class_method :scope_board, :default_board
+        def self.scope_board(env, instance, card, explicit) = BoardScope.for_reference(env, instance, card, explicit, resource: "Card")
+        private_class_method :scope_board
 
         def self.validate_card_values(flags)
           error = validate_scope_flags(flags)
