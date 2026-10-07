@@ -65,7 +65,7 @@ module Planka
         For an unknown outcome, read the board back before retrying: the write
         may already have applied. Legacy recovery JSON can contain completed=false,
         error, reconcile, and created resources. Resume a partial ticket with
-        `planka create-ticket --card CARD --criteria-file FILE --output json`.
+        `planka workflow resume ticket CARD --criteria-file FILE`.
       MARKDOWN
 
       def self.read = { "instructions" => INSTRUCTIONS }

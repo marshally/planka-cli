@@ -3,7 +3,11 @@ require "planka/cli/resources"
 module Planka
   module CLI
     # Combines resource commands and explicitly attached command catalogs.
+    # Catalogs key commands and groups by their command paths: two or three
+    # words, such as ["get", "card"] or ["workflow", "resume", "ticket"].
     class Catalog
+      PATH_SIZES = [3, 2].freeze
+
       attr_reader :commands, :groups
 
       def initialize(legacy_commands:, extensions:)
@@ -17,16 +21,22 @@ module Planka
                       "\ncommands: #{legacy_commands.join(", ")}\n\nRun planka <command> --help for command usage and options."].join
       end
 
-      def resolve(path)
-        canonical = @aliases.fetch(path, path)
-        [canonical, @commands[canonical]]
+      # The longest command path that prefixes args, so a three-word command
+      # wins over a two-word command whose reference is the third word.
+      def resolve(args)
+        PATH_SIZES.each do |size|
+          canonical = @aliases.fetch(args.first(size), args.first(size))
+          return [canonical, @commands[canonical]] if @commands.key?(canonical)
+        end
+        [args.first(2), nil]
       end
+
+      def group?(path) = @groups.key?(path)
 
       def help_text(args, command)
         return @root_help if args.empty?
-        return @groups.fetch(args.first) if args.size == 1
 
-        command.help
+        command ? command.help : @groups.fetch(args)
       end
     end
   end
