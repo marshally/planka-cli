@@ -105,26 +105,29 @@ module Planka
             return MutationResult.new(data: known.merge("assigned" => assigned), changed: false)
           end
 
-          begin
-            record = write(client, assigned, card_id, user["id"])["item"]
-            validate_membership!(record, card_id: card_id, user_id: user["id"], membership_id: member&.fetch("membershipId"))
-            result = assigned ? member_data(user, card_id, record) : known
-            MutationResult.new(data: result.merge("assigned" => assigned), changed: true)
-          rescue *OPERATION_ERRORS => error
-            raise write_failure(error, known, member, card_id, user)
+          Write.perform(**write_outcomes(known, assigned)) do
+            record = confirmed_write(client, assigned, known)
+            assignment_data(known, record, assigned)
           end
         end
 
-        def write(client, assigned, card_id, user_id)
-          assigned ? client.add_card_member(card_id, user_id) : client.remove_card_member(card_id, user_id)
+        def confirmed_write(client, assigned, known)
+          card_id, user_id = known.values_at("cardId", "id")
+          response = assigned ? client.add_card_member(card_id, user_id) : client.remove_card_member(card_id, user_id)
+          record = response["item"]
+          validate_membership!(record, card_id: card_id, user_id: user_id, membership_id: known["membershipId"])
+          record
         end
 
-        def write_failure(error, known, member, card_id, user)
-          uncertain = !Client.unapplied?(error)
-          MutationFailure.new(data: known.merge("assigned" => uncertain ? nil : !member.nil?),
-                              changed: uncertain ? nil : false, uncertain: uncertain,
-                              recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => card_id },
-                                                                                             { "type" => "user", "id" => user["id"] }] })
+        def assignment_data(known, record, assigned)
+          data = assigned ? member_data(known, known["cardId"], record) : known
+          data.merge("assigned" => assigned)
+        end
+
+        def write_outcomes(known, assigned)
+          { unchanged: known.merge("assigned" => !assigned), unknown: known.merge("assigned" => nil),
+            recovery: { "action" => "readback-membership", "resources" => [{ "type" => "card", "id" => known["cardId"] },
+                                                                           { "type" => "user", "id" => known["id"] }] } }
         end
       end
     end

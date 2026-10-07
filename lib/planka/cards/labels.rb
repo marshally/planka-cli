@@ -2,8 +2,6 @@ module Planka
   module Cards
     # Observes a card's labels, then sets one verified card-label relationship.
     class Labels
-      OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
-
       class << self
         def read(client, label, card_id:, present:, base_url:, board_id: nil) # rubocop:disable Lint/UnusedMethodArgument -- base_url is part of the shared prepared-reader contract.
           card, board = Scope.read(client, card_id: card_id, board_id: board_id)
@@ -52,10 +50,11 @@ module Planka
         end
 
         def mutate(client, card, id, present, data)
-          confirm_write!(write(client, card, id, present), card, id)
-          MutationResult.new(data: data, changed: true)
-        rescue *OPERATION_ERRORS => error
-          raise write_failure(error, card, present, data)
+          Write.perform(unchanged: data.merge("present" => !present), unknown: data.merge("present" => nil),
+                        recovery: recovery(card)) do
+            confirm_write!(write(client, card, id, present), card, id)
+            data
+          end
         end
 
         def write(client, card, id, present)
@@ -69,11 +68,8 @@ module Planka
           end
         end
 
-        def write_failure(error, card, present, data)
-          uncertain = !Client.unapplied?(error)
-          MutationFailure.new(data: data.merge("present" => uncertain ? nil : !present),
-                              changed: uncertain ? nil : false, uncertain: uncertain,
-                              recovery: { "action" => "readback-card-labels", "resources" => [{ "type" => "card", "id" => card }] })
+        def recovery(card)
+          { "action" => "readback-card-labels", "resources" => [{ "type" => "card", "id" => card }] }
         end
       end
     end
