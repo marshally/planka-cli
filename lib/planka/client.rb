@@ -102,13 +102,13 @@ module Planka
 
     def remove_card_label(card_id, label_id) = request(:delete, "/api/cards/#{card_id}/card-labels/labelId:#{label_id}")
 
-    def create_task_list(card_id, **attrs) = request(:post, "/api/cards/#{card_id}/task-lists", attrs).fetch("item")
+    def create_task_list(card_id, **attrs) = item(request(:post, "/api/cards/#{card_id}/task-lists", attrs), "task list")
 
     def update_task_list(task_list_id, **attrs) = request(:patch, "/api/task-lists/#{task_list_id}", attrs).fetch("item")
 
     def update_task(id, **attrs) = request(:patch, "/api/tasks/#{id}", attrs)["item"]
 
-    def create_task(task_list_id, **attrs) = request(:post, "/api/task-lists/#{task_list_id}/tasks", attrs).fetch("item")
+    def create_task(task_list_id, **attrs) = item(request(:post, "/api/task-lists/#{task_list_id}/tasks", attrs), "task")
 
     def me
       response = request(:get, "/api/users/me")

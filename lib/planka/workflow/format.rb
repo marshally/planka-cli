@@ -10,6 +10,13 @@ module Planka
         "#{created_ticket(result.fetch("card"))}\nAcceptance criteria: #{Array(result["tasks"]).size}"
       end
 
+      def resumed_ticket(data)
+        card, tasks = data.fetch("card"), data.fetch("tasks")
+        added = tasks.count { |task| task.fetch("created") }
+        ["resumed: #{card.fetch("name")} (#{card.fetch("url")})", "criteria list created: #{data.fetch("taskList").fetch("created")}",
+         "criteria added: #{added}", "criteria kept: #{tasks.size - added}"].join("\n")
+      end
+
       def pending_criteria(data) = data.fetch("criteria").join("\n")
       def guide(data) = data.fetch("instructions")
       def next_selection(data) = data.to_s

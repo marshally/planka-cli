@@ -2,6 +2,8 @@ require "planka/workflow/format"
 require "planka/workflow/configuration"
 require "planka/cli/failure"
 require "planka/cli/command"
+require "planka/cli/resources/scalar_flags"
+require "json"
 
 module Planka
   module Workflow
@@ -10,6 +12,7 @@ module Planka
       ROOT_HELP = <<~HELP
         Workflows:
           workflow claim CARD  Add your membership and move the card to in-progress
+          workflow resume ticket CARD --criteria-file FILE  Add missing acceptance criteria to a ticket
           workflow guide  Read built-in agent guidance (offline)
           workflow next  Select queued work without claiming (read-only)
           workflow pending-criteria CARD  Read unfinished acceptance criteria (read-only)
@@ -19,6 +22,7 @@ module Planka
       GROUP_HELP = <<~HELP
         usage: planka workflow <operation> [arguments] [flags]
           claim CARD  Add your membership and move the card to in-progress
+          resume ticket CARD --criteria-file FILE  Add missing acceptance criteria to a ticket
           guide  Read built-in agent guidance (offline)
           next  Select queued work without claiming (read-only)
           pending-criteria CARD  Read unfinished acceptance criteria (read-only)
@@ -93,6 +97,27 @@ module Planka
         Example: planka workflow claim 123 -o json
       HELP
 
+      RESUME_GROUP_HELP = <<~HELP
+        usage: planka workflow resume <resource> REF [flags]
+          ticket CARD --criteria-file FILE  Add missing acceptance criteria to a ticket
+      HELP
+      RESUME_TICKET_HELP = <<~HELP
+        usage: planka workflow resume ticket CARD --criteria-file FILE|- [--output human|json]
+        Finishes an existing ticket: adds criteria missing from its "Acceptance criteria" task list. Never creates a card.
+        CARD is a numeric ID or same-instance card URL; no board setting required. ticket/tickets are aliases.
+        FILE (- for stdin) is a nonempty JSON array of distinct criteria: nonblank strings of at most 1024 characters.
+        It is read and validated before any request; missing connection settings are reported first.
+        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+        Reuses the card's one criteria list, creating it when absent; two or more such lists fail before writes.
+        Criteria already present by exact text are kept with their completion and order; missing ones are appended
+        in FILE order. Other tasks are never changed or deleted. All criteria present is a no-op (meta.changed false).
+        JSON data: card {id, name, url}, taskList {id, name, created}, tasks [{id, name, isCompleted, created}].
+        Failures keep known IDs; uncertain steps are null. Recovery is resume-ticket for the card (and task list):
+        inspect with planka describe card CARD -o json, then rerun this command; it adds only what is still missing.
+        Exit 0: success; 2: local input; 1: configuration, API, partial or unknown outcome.
+        Example: planka workflow resume ticket 123 --criteria-file criteria.json -o json
+      HELP
+
       def self.branch_preparation(env, instance:, **)
         { base_url: instance.base_url, prefix: Configuration.from_env(env).branch_prefix }
       rescue ConfigurationError => error
@@ -114,6 +139,32 @@ module Planka
         raise Planka::CLI::Failure.new(code: "invalid_input", status: 2, message: error.message)
       end
 
+      def self.resume_preparation(_env, instance:, flags:, **)
+        unless flags[:criteria_file]
+          raise Planka::CLI::Failure.new(code: "invalid_input", status: 2, message: "resume ticket requires --criteria-file")
+        end
+
+        { base_url: instance.base_url, criteria: criteria(flags.fetch(:criteria_file).first) }
+      end
+
+      # A nonempty JSON array of distinct criteria, each a valid task name.
+      def self.criteria(path)
+        text = (path == "-" ? $stdin.binmode.read : File.binread(path)).force_encoding(Encoding::UTF_8)
+        criteria = JSON.parse(text)
+        return criteria if criteria.is_a?(Array) && !criteria.empty? && criteria.uniq.size == criteria.size &&
+                           criteria.all? { |criterion| Records.text?(criterion, Resume::Ticket::CRITERION_LIMIT) && !criterion.strip.empty? }
+
+        invalid_criteria!("--criteria-file must be a nonempty JSON array of distinct nonblank strings " \
+                          "of at most #{Resume::Ticket::CRITERION_LIMIT} characters")
+      rescue JSON::ParserError
+        invalid_criteria!("--criteria-file must contain a JSON array")
+      rescue SystemCallError, IOError
+        invalid_criteria!("Could not read --criteria-file")
+      end
+
+      def self.invalid_criteria!(message) = raise(Planka::CLI::Failure.new(code: "invalid_input", status: 2, message: message))
+      private_class_method :criteria, :invalid_criteria!
+
       def self.validate_next_flags(flags)
         boards = flags.fetch(:board, [])
         labels = flags.fetch(:labels, []).uniq
@@ -125,6 +176,11 @@ module Planka
 
       COMMANDS = {
         ["workflow", "claim"] => Planka::CLI::Command.new(resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, operation: Claim::Card.method(:read), formatter: Format.method(:claim)),
+        ["workflow", "resume", "ticket"] => Planka::CLI::Command.new(aliases: [["workflow", "resume", "tickets"]], resource: "card", collection: "cards", mutation: true,
+                                                                     flags: { "--criteria-file FILE" => :criteria_file },
+                                                                     validate_flags: Planka::CLI::Resources::ScalarFlags.method(:error),
+                                                                     prepare: method(:resume_preparation), help: RESUME_TICKET_HELP,
+                                                                     operation: Resume::Ticket.method(:read), formatter: Format.method(:resumed_ticket)),
         ["workflow", "next"] => Planka::CLI::Command.new(reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, operation: NextSelection.method(:read), projector: :as_json.to_proc, formatter: Format.method(:next_selection)),
         ["workflow", "guide"] => Planka::CLI::Command.new(reference: false, session: false, help: GUIDE_HELP, operation: Guide.method(:read), formatter: Format.method(:guide)),
         ["workflow", "claim-status"] => Planka::CLI::Command.new(resource: "card", collection: "cards", reference: false, help: CLAIM_STATUS_HELP, operation: ClaimStatus.method(:read), formatter: Format.method(:loop_lock)),
@@ -132,7 +188,7 @@ module Planka
         ["workflow", "branch-name"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: BRANCH_NAME_HELP, operation: BranchName.method(:read), formatter: Format.method(:branch_name), prepare: method(:branch_preparation)),
       }.freeze
       def self.commands = COMMANDS
-      def self.groups = { "workflow" => GROUP_HELP }
+      def self.groups = { ["workflow"] => GROUP_HELP, ["workflow", "resume"] => RESUME_GROUP_HELP }
       def self.root_help = ROOT_HELP
     end
   end

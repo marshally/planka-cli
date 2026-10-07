@@ -21,7 +21,7 @@ module Planka
         requested = "json" if argv.include?("--output=json") || argv.include?("-ojson")
         @output = requested == "json" ? "json" : "human"
         @program = "planka"
-        group = argv.find { |arg| @catalog.groups.key?(arg) }
+        group = argv.find { |arg| @catalog.group?([arg]) }
         @program = "planka #{group}" if group
       end
 
@@ -51,17 +51,15 @@ module Planka
       end
 
       def resolve_command!
-        path, @command = @catalog.resolve(@args.first(2))
-        unless @args.empty? || (@catalog.groups.key?(@args.first) && (@args.size == 1 || @command))
-          invalid!("unknown command; see planka --help")
-        end
-        @program = "planka #{path.join(" ")}" if @command
+        @path, @command = @catalog.resolve(@args)
+        invalid!("unknown command; see planka --help") unless @args.empty? || @command || @catalog.group?(@args)
+        @program = "planka #{@path.join(" ")}" if @command
       end
 
       def validate_flags!
         allowed = @command ? @command.flag_keys : []
         invalid!("Unsupported flags; see #{@program} --help") unless (@flag_values.keys - allowed).empty?
-        if @command&.optional_reference? && @args.size > 2 &&
+        if @command&.optional_reference? && @args.size > @path.size &&
            !(@flag_values.keys & @command.collection_flags).empty?
           invalid!("Collection filters and limits require an omitted reference")
         end
@@ -70,8 +68,9 @@ module Planka
         end
       end
 
+      # A group path without a command is only valid with --help.
       def argument_count
-        @command && !@command.reference? ? 2 : 3
+        @command ? @path.size + (@command.reference? ? 1 : 0) : @args.size
       end
 
       def validate_extra_arguments!
@@ -87,7 +86,7 @@ module Planka
 
       def parse_reference!
         return unless @command.reference?
-        return if @command.optional_reference? && @args.size == 2
+        return if @command.optional_reference? && @args.size == @path.size
 
         @reference = @args.last
         if @command.names? && !@reference.strip.empty? && !@reference.match?(%r{\A(?:https?://|/|\.\./)})

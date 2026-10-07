@@ -32,6 +32,7 @@ parser = OptionParser.new do |o|
   o.on("--criteria-file F", "JSON array of criterion strings, or - for stdin") { |v| options[:criteria] = v }
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
   o.on("--card ID", "resume: fill criteria on this existing card") { |v| options[:card] = v }
+  o.separator "Canonical replacement for --card: planka workflow resume ticket CARD --criteria-file FILE|- (new JSON envelope)."
   Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka create-ticket")
