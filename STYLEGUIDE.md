@@ -4,7 +4,9 @@ This document defines the target interface for a general Planka resource
 CLI. It is a design contract for staged changes; the current executable supports
 `describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
 `workflow claim-status`, `workflow guide`, `workflow next`, `workflow claim`,
-card-scoped `get members`, `get member`, `add member`, `remove member`, and nested help alongside all flat commands in
+card-scoped `get members`, `get member`, `add member`, `remove member`, native card
+`get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
+and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 

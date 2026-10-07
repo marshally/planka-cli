@@ -46,8 +46,9 @@ planka workflow <operation> [arguments] [flags]
 card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CARD`,
 `planka workflow branch-name CARD`, `planka workflow claim-status`,
 `planka workflow guide`, `planka workflow next`, `planka workflow claim CARD`,
-card-scoped `get members`, `get member`, `add member`, `remove member`, and their
-root/group/leaf help are
+card-scoped `get members`, `get member`, `add member`, `remove member`,
+`get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
+and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
@@ -227,6 +228,79 @@ require no credentials or network. Unknown write outcomes must be reconciled
 before retrying; incomplete workflows retain recovery state in JSON output.
 
 ## Current interface
+
+### Canonical cards
+
+```sh
+planka get cards --board BOARD [--name NAME] [--label LABEL]... [--member USER]... [--limit N] -o json
+planka get cards --list LIST [--board BOARD] [filters] -o json
+planka get card CARD -o json
+planka create card --list LIST --name NAME [--description-file FILE|-] [--position N] -o json
+planka update card CARD [--name NAME] [--description-file FILE|-] -o json
+planka move card CARD --list LIST [--position N] -o json
+planka delete card CARD -o json
+```
+
+`card` and `cards` are aliases. CARD is an ID, same-instance URL, or exact name
+with `--board BOARD` or `PLANKA_BOARD_ID`; explicit card IDs/URLs determine their
+own board and ignore the default board, and an explicit `--board` must match.
+Card names resolve on the board's active/closed lists. LIST is an ID,
+same-instance URL, or exact name on `--board BOARD` or `PLANKA_BOARD_ID`; a list
+ID alone finds its own board for active/closed lists (Planka has no individual
+read for archive/trash lists, so those need `--board`). A list on another board
+than `--board` is `invalid_input`. Ambiguous names report candidate IDs.
+
+Card `data` contains `id`, `name`, nullable `description`, `type`, `boardId`,
+`listId`, nullable `position` (null in archive/trash lists), and nullable
+`createdAt`/`updatedAt`. Individual reads return an object with empty `meta`.
+
+`get cards` requires `--board` or `--list` and returns an array with
+`meta.complete`. A board read includes every list: active/closed lists in board
+order with cards by position, then archive/trash lists, which the CLI pages
+through the native `listChangedAt`/`id` cursor until a page is empty (newest list
+change first). Exact `--name`, every repeated `--label` (board label ID or
+name), and every repeated `--member` (card member, by board user ID or name)
+must all match before a positive `--limit`; filters and limits are rejected with
+a CARD. `complete` describes matching cards. An unknown label or member is
+`not_found`. A failed page exits 1 with the matching cards read so far and
+`complete: false`. Pages are not a consistent snapshot under concurrent changes.
+Reads make no resource writes.
+
+`create card` always creates a native card, even when the name exists, using the
+board's `defaultCardType`; it adds no criteria, claims, blockers, or members.
+It appends after the highest position in an active/closed list unless
+`--position N` gives a finite nonnegative native ordering value, which Planka may
+normalize. Archive/trash lists take no position, and `--position` there is
+`invalid_input`. `update card` changes only supplied fields, sends only values
+that differ, and requires at least one of `--name` or `--description-file`;
+identical values are a no-op. Names are nonempty and at most 1024 characters;
+descriptions are nonempty and at most 1048576 characters, read before any
+request, and `-` reads stdin. Empty description input is rejected; clearing a
+description is not supported. `move card` resolves LIST on the card's own board,
+appends to active/closed lists unless `--position` is given, sends a null
+position to archive/trash lists, and treats the current list without
+`--position` as a no-op. It changes only list and position. `delete card` issues
+one native deletion of an explicit target without prompts; Planka deletes the
+card's task lists, tasks, attachments, comments, memberships, label assignments,
+and subscriptions, and clears other tasks' links to it without deleting those
+cards.
+
+Mutation `data` is the resulting card; delete adds `deleted: true`.
+`meta.changed` is true, false for a no-op, or null when unknown. A rejected write
+keeps the unchanged card (`changed: false`) with the native failure code. An
+unknown or malformed write response returns `error.code: unknown_outcome`,
+`changed: null`, and marks requested fields null (`deleted: null` for delete).
+Unknown creates never invent a card ID and report `readback-cards` recovery for
+the list: inspect `get cards --list LIST` before retrying. Other mutations
+report `readback-card`: inspect `get card CARD`. Creates and deletes are never
+retried automatically.
+
+Human reads print `NAME (CARD_ID) in list LIST_ID` per card, or `No cards.`;
+limited output adds a truncation notice. Mutations print `Created card`,
+`Updated card`, `Moved card`, or `Deleted card ... from list LIST_ID`. Success
+exits 0, local input 2, other failures 1. Writes require native board editor
+permission. See the [source evidence and verification
+limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-tenth-slice-cards).
 
 ### Canonical card members
 
@@ -524,8 +598,9 @@ release notes, with no automatic runtime warnings. `describe card` replaces
 `workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
 replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
 `workflow guide` replaces `prime`, `workflow next` replaces `next-card`, and
-`workflow claim` replaces `claim`; remaining
-canonical replacements are not yet implemented.
+`workflow claim` replaces `claim`, `update card` replaces `update-card`,
+`move card` replaces `move-card`, and `get cards --list LIST` replaces the list
+view of `snapshot`; remaining canonical replacements are not yet implemented.
 
 ### Configuration
 
@@ -661,6 +736,14 @@ Planka::Client.session(validate_responses: true) do |client|
 
   tasks = Planka::Cards::Tasks.new(client, card_id: "123")
   tasks.update("789", completed: true)
+
+  cards = Planka::Boards::Cards.new(client, board_id: "100")  # board_id optional for IDs
+  cards.all(list: "Ready", labels: ["enhancement"])           # CollectionResult
+  cards.find("123")                                            # One card's public fields
+  cards.create("Ready", name: "Fix login", description: "...") # MutationResult
+  cards.update("123", name: "Fix session expiry")
+  cards.move("123", list: "Done")
+  cards.delete("123")
 end
 ```
 
