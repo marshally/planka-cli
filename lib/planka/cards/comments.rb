@@ -2,6 +2,8 @@ module Planka
   module Cards
     # Native comments, scoped to a card because there is no individual GET.
     class Comments < Resource
+      PAGE_SIZE = 50
+
       def initialize(client, card_id:, board_id: nil)
         super(client)
         @card_id, @board_id = card_id, board_id
@@ -34,8 +36,7 @@ module Planka
       def delete_record(known) = client.delete_comment(known["id"])
 
       def read_creation_scope(_reference)
-        card = Scope.card(client, card_id: @card_id, board_id: @board_id)
-        CommentRecord.placeholder(Scope.card_id(card))
+        CommentRecord.placeholder(read_card_id)
       end
 
       def creation_data(known, attributes) = known.merge(attributes)
@@ -59,24 +60,38 @@ module Planka
       end
 
       def each_comment
-        card = Scope.card(client, card_id: @card_id, board_id: @board_id)
-        card_id = Scope.card_id(card)
+        card_id = read_card_id
         before_id = nil
         loop do
-          page = client.comments_page(card_id, before_id: before_id)
-          raise InvalidResponse, "Invalid comment page size" if page.size > 50
-
+          page = read_page(card_id, before_id: before_id)
           page.each do |record|
-            comment = CommentRecord.data(record)
-            unless comment["cardId"] == card_id && (!before_id || comment["id"].to_i < before_id.to_i)
-              raise InvalidResponse, "Invalid comment scope or order"
-            end
-
+            comment = verified_comment(record, card_id: card_id, before_id: before_id)
             yield comment
             before_id = comment["id"]
           end
-          break if page.size < 50
+          break if page.size < PAGE_SIZE
         end
+      end
+
+      def read_card_id
+        card = Scope.card(client, card_id: @card_id, board_id: @board_id)
+        Scope.card_id(card)
+      end
+
+      def read_page(card_id, before_id:)
+        page = client.comments_page(card_id, before_id: before_id)
+        raise InvalidResponse, "Invalid comment page" unless page.is_a?(Array) && page.size <= PAGE_SIZE
+
+        page
+      end
+
+      def verified_comment(record, card_id:, before_id:)
+        comment = CommentRecord.data(record)
+        unless comment["cardId"] == card_id && (!before_id || comment["id"].to_i < before_id.to_i)
+          raise InvalidResponse, "Invalid comment scope or order"
+        end
+
+        comment
       end
     end
   end
