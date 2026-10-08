@@ -80,6 +80,14 @@ module Planka
       response.fetch("item")
     end
 
+    # A task list with its tasks; Planka answers 404 when it is missing or not visible.
+    def task_list(id)
+      response = request(:get, "/api/task-lists/#{id}")
+      raise InvalidResponse, "Invalid task list response" if @validate_responses && !response["item"].is_a?(Hash)
+
+      response.fetch("item")
+    end
+
     def comments(card_id)
       response = request(:get, "/api/cards/#{card_id}/comments")
       @responses.check!("Invalid comments response") { response["items"].is_a?(Array) }
