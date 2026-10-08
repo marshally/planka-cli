@@ -7,19 +7,72 @@ module Planka
     #
     # client answers #card(id), #comments(id) and #board(id).
     class Detail
+      class StrictValidation
+        def card!(response)
+          unless response.is_a?(Hash) && response["item"].is_a?(Hash) &&
+                 response["item"]["id"].is_a?(String) && !response["item"]["id"].empty? && response["included"].is_a?(Hash)
+            raise InvalidResponse, "Invalid card response"
+          end
+
+          description = response["item"]["description"]
+          unless description.nil? || description.is_a?(String)
+            raise InvalidResponse, "Invalid card description"
+          end
+
+          %w[cardLabels cardMemberships taskLists tasks].each do |key|
+            records = response["included"][key]
+            unless records.nil? || (records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) })
+              raise InvalidResponse, "Invalid card related records"
+            end
+          end
+          %w[taskLists tasks].each do |key|
+            Array(response["included"][key]).each do |record|
+              position = record["position"]
+              unless position.nil? || position.is_a?(Numeric) || position.is_a?(String)
+                raise InvalidResponse, "Invalid task position"
+              end
+            end
+          end
+        end
+
+        def board!(included)
+          Boards::Snapshot.validate!(included)
+        end
+
+        def related_board_key_error!(_error) = raise(InvalidResponse, "Invalid related board records")
+
+        def comments!(records)
+          if !records.is_a?(Array) || !records.all? { |record| record.is_a?(Hash) }
+            raise InvalidResponse, "Invalid comment records"
+          end
+        end
+      end
+
+      class LegacyValidation
+        def card!(_response); end
+
+        def board!(_included)
+          nil
+        end
+
+        def related_board_key_error!(error) = raise(error)
+
+        def comments!(_records); end
+      end
+
       def self.read(client, id, base_url:)
         new(client, base_url: base_url, validate: true).for(id)
       end
 
       def initialize(client, base_url: ENV.fetch("PLANKA_BASE_URL"), validate: false)
-        @validate = validate
+        @validation = validate ? StrictValidation.new : LegacyValidation.new
         @client = client
         @base_url = base_url.sub(%r{/+\z}, "")
       end
 
       def for(card_id)
         response = @client.card(card_id)
-        validate_response!(response) if @validate
+        @validation.card!(response)
         item = response.fetch("item")
         included = response.fetch("included")
         board = board_for(item["boardId"])
@@ -48,39 +101,10 @@ module Planka
         return unless board_id
 
         included = @client.board(board_id)
-        Boards::Snapshot.validate!(included) if @validate
+        @validation.board!(included)
         Board.new(included, base_url: @base_url)
-      rescue KeyError
-        raise InvalidResponse, "Invalid related board records" if @validate
-
-        raise
-      end
-
-      def validate_response!(response)
-        unless response.is_a?(Hash) && response["item"].is_a?(Hash) &&
-               response["item"]["id"].is_a?(String) && !response["item"]["id"].empty? && response["included"].is_a?(Hash)
-          raise InvalidResponse, "Invalid card response"
-        end
-
-        description = response["item"]["description"]
-        unless description.nil? || description.is_a?(String)
-          raise InvalidResponse, "Invalid card description"
-        end
-
-        %w[cardLabels cardMemberships taskLists tasks].each do |key|
-          records = response["included"][key]
-          unless records.nil? || (records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) })
-            raise InvalidResponse, "Invalid card related records"
-          end
-        end
-        %w[taskLists tasks].each do |key|
-          Array(response["included"][key]).each do |record|
-            position = record["position"]
-            unless position.nil? || position.is_a?(Numeric) || position.is_a?(String)
-              raise InvalidResponse, "Invalid task position"
-            end
-          end
-        end
+      rescue KeyError => error
+        @validation.related_board_key_error!(error)
       end
 
       def labels(included, board)
@@ -115,9 +139,7 @@ module Planka
 
       def comments(card_id)
         records = @client.comments(card_id)
-        if @validate && (!records.is_a?(Array) || !records.all? { |record| record.is_a?(Hash) })
-          raise InvalidResponse, "Invalid comment records"
-        end
+        @validation.comments!(records)
 
         records.map { |c| c.slice("id", "text", "userId", "createdAt") }
       end
