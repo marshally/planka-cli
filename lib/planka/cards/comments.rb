@@ -8,6 +8,7 @@ module Planka
       end
 
       def all(limit: nil)
+        validate_limit!(limit)
         collect(limit) do |data|
           each_comment { |comment| data << comment }
         end
@@ -19,6 +20,12 @@ module Planka
       public :update, :delete
 
       private
+
+      def validate_limit!(limit)
+        return if limit.nil? || (limit.is_a?(Integer) && limit.positive?)
+
+        raise ArgumentError, "limit must be a positive integer"
+      end
 
       def creation_attributes(text:) = { "text" => CommentRecord.text!(text) }
       def update_attributes(text:) = { "text" => CommentRecord.text!(text) }
