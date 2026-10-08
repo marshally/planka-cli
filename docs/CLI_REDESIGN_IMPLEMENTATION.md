@@ -892,8 +892,7 @@ exist in each.
   `item`; [cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/task-lists/delete-related.js)
   deletes its tasks. The card and its other task lists are untouched.
 
-PR #47's comment that Community v2.2.1 has no task-list GET endpoint does not
-match these sources. Context7 was not used; the evidence is the pinned upstream
+Context7 was not used; the evidence is the pinned upstream
 source above. Development checks use Bundler 4.0.14 with the unchanged lockfile.
 
 Public subprocess/local HTTP tests cover every command, aliases, offline help at
