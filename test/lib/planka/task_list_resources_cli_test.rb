@@ -171,6 +171,50 @@ class TaskListResourcesCLITest < Minitest::Test
     assert_equal [1, "authorization_error", false], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
   end
 
+  def test_update_renames_only_and_keeps_tasks_while_identical_names_are_noops
+    doc, err, status = json("update", "task-list", CRITERIA, "--name", "Verification")
+    assert status.success?, err
+    assert_equal({ "data" => expected("name" => "Verification"), "meta" => { "changed" => true }, "error" => nil }, doc)
+    assert_equal [["PATCH", "/api/task-lists/#{CRITERIA}", { "name" => "Verification" }]], writes
+    assert_equal [[CRITERIA, true]], @server.tasks.map { |task| task.values_at("taskListId", "isCompleted") }, "tasks and completion are kept"
+    @server.requests.clear
+    out, err, status = planka("update", "task-lists", "Verification", "--card", CARD, "--name", "Verification")
+    assert status.success?, err
+    assert_equal "Updated task list Verification (#{CRITERIA}) on card #{CARD}", out.chomp
+    doc, err, status = json("update", "task-list", CRITERIA, "--name", "Verification")
+    assert status.success?, err
+    assert_equal false, doc.dig("meta", "changed")
+    assert_empty writes
+  end
+
+  def test_update_inputs_are_validated_before_any_request
+    [["update", "task-list", CRITERIA], ["update", "task-list", CRITERIA, "--card", CARD],
+     ["update", "task-list", "--name", "x"], ["update", "task-list", CRITERIA, "--name", ""],
+     ["update", "task-list", CRITERIA, "--name", "x" * 129], ["update", "task-list", CRITERIA, "--position", "1"],
+     ["update", "task-list", "Acceptance criteria", "--name", "x"]].each do |args|
+      doc, err, status = json(*args)
+      assert_equal 2, status.exitstatus, "#{args.inspect}: #{err}"
+      assert_equal "invalid_input", doc.dig("error", "code"), args.inspect
+      refute_match(/unknown command/, err, args.inspect)
+    end
+    assert_equal 0, @server.requests.size
+  end
+
+  def test_update_failures_distinguish_rejected_from_unknown_outcomes
+    @server.inject("PATCH", %r{/api/task-lists/}, 403)
+    doc, _err, status = json("update", "task-list", CRITERIA, "--name", "Renamed")
+    assert_equal [1, "authorization_error", false, expected], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed"), doc["data"]]
+    @server.inject("PATCH", %r{/api/task-lists/}, { "item" => { "id" => CRITERIA } })
+    doc, _err, status = json("update", "task-list", CRITERIA, "--name", "Renamed")
+    assert_equal [1, "unknown_outcome", nil], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+    assert_equal expected("name" => nil), doc["data"], "only the changed name is unknown"
+    assert_equal({ "action" => "readback-task-list", "resources" => [{ "type" => "task-list", "id" => CRITERIA }] }, doc.dig("error", "recovery"))
+    @server.inject("PATCH", %r{/api/task-lists/}, :apply_then_drop)
+    doc, _err, status = json("update", "task-list", CRITERIA, "--name", "Renamed")
+    assert_equal [1, "unknown_outcome"], [status.exitstatus, doc.dig("error", "code")]
+    assert_equal 3, @server.counts("PATCH", %r{/api/task-lists/}), "unknown updates are not retried"
+  end
+
   def test_malformed_task_lists_report_an_incomplete_failed_read
     @server.task_lists << task_list("600000000000000009", 42, 1)
     doc, err, status = json("get", "task-lists", "--card", CARD)
