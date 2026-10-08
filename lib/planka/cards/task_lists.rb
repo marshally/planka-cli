@@ -37,6 +37,9 @@ module Planka
         super(@card_id, name: name, position: position)
       end
 
+      # Renames the task list; its tasks, completion, identity, and card are kept.
+      def update(reference, **attributes) = super
+
       private
 
       def validate_options!(name:, limit:)
@@ -56,6 +59,15 @@ module Planka
       end
 
       def record_data(known) = known.task_list
+
+      def update_attributes(**attributes)
+        raise ArgumentError, "supply a name" if attributes.empty?
+        raise ArgumentError, "only a task list's name can be updated" unless attributes.keys == [:name]
+
+        { "name" => TaskListRecord.name!(attributes[:name]) }
+      end
+
+      def update_record(known, desired) = client.update_task_list(known.task_list["id"], name: desired["name"])
 
       def creation_attributes(name:, position:)
         { "name" => TaskListRecord.name!(name), "position" => position && TaskListRecord.position!(position) }
