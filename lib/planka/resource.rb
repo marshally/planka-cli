@@ -1,5 +1,6 @@
 module Planka
-  # Template algorithms for creating, updating, and deleting scoped records.
+  # Template algorithms for creating, updating, deleting, and reading collections
+  # of scoped records.
   # Concrete resources expose supported verbs and supply lookup, request,
   # validation, and projection hooks; see the resource operations contract in
   # docs/CLI_REDESIGN_IMPLEMENTATION.md. Reads/input validation precede writes;
