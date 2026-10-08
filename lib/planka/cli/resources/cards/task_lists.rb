@@ -16,6 +16,52 @@ module Planka
             update task-list TASK_LIST --name NAME  Rename one task list
             delete task-list TASK_LIST  Delete one task list; Planka deletes its tasks
           HELP
+          COMMON_HELP = <<~HELP
+            TASK_LIST is an ID, or an exact name with --card CARD; Planka has no task-list URLs. A task-list ID
+            alone finds its own card; --card and --board assert the actual parents.
+            CARD is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID.
+            Ambiguous names report candidate IDs. BOARD is an ID or same-instance URL.
+            Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+            Success exits 0, local input 2, operational failures 1. task-list/task-lists are aliases.
+            Task-list data: id, cardId, name, position, showOnFrontOfCard, hideCompletedTasks, createdAt, updatedAt.
+          HELP
+          GET_HELP = <<~HELP + COMMON_HELP
+            usage: planka get task-lists --card CARD [--board BOARD] [--name NAME] [--limit N] [-o human|json]
+                   planka get task-list TASK_LIST [--card CARD] [--board BOARD] [-o human|json]
+            Read-only. Without TASK_LIST, read every task list on CARD from one card read (no paging), ordered
+            by position then ID. --card is required. An exact --name matches before a positive --limit;
+            filters and limits require an omitted TASK_LIST. Collection data is an array with meta.complete,
+            false when truncated or the read fails. Tasks are not embedded.
+            With TASK_LIST, data is one task-list object and meta is empty.
+          HELP
+          CREATE_HELP = <<~HELP + COMMON_HELP
+            usage: planka create task-list --card CARD [--board BOARD] --name NAME [--position N] [-o human|json]
+            Create a task list on CARD even when its name exists; no workflow names are implied. Appends after
+            the card's task lists unless --position gives a finite nonnegative native ordering value; Planka may
+            renumber positions. Only the name and position are sent, so Planka's own defaults apply to
+            showOnFrontOfCard (true) and hideCompletedTasks (false). NAME is nonempty, at most 128 characters.
+            JSON data is the created task list; meta.changed is true, or null with unknown_outcome.
+            An unknown or malformed write response gives readback-task-lists recovery for the card and no ID.
+            Read back with planka get task-lists --card CARD before retrying; creates are never retried.
+          HELP
+          UPDATE_HELP = <<~HELP + COMMON_HELP
+            usage: planka update task-list TASK_LIST [--card CARD] [--board BOARD] --name NAME [-o human|json]
+            Rename only; --name is required, and no other field is changed. Tasks, their completion, the task
+            list's identity, position, and card are preserved. An identical name is a no-op (meta.changed
+            false). NAME is nonempty, at most 128 characters. Native board editor permission is required.
+            JSON data is the resulting task list; meta.changed is true/false/null. A rejected write keeps the
+            unchanged task list; an unknown or malformed response sets the name null with readback-task-list
+            recovery. Read back with planka get task-list TASK_LIST before retrying.
+          HELP
+          DELETE_HELP = <<~HELP + COMMON_HELP
+            usage: planka delete task-list TASK_LIST [--card CARD] [--board BOARD] [-o human|json]
+            Issue one native deletion without prompts; an omitted TASK_LIST is an input error and never a bulk
+            delete. Planka deletes the task list's tasks with it and keeps the card and its other task lists;
+            the client deletes no task individually. Native board editor permission is required. JSON data is
+            the task list with deleted true; meta.changed is true/false/null. A rejected deletion keeps the
+            unchanged task list without deleted; an unknown or malformed response sets deleted null with
+            readback-task-list recovery. Read back with planka get task-lists --card CARD.
+          HELP
           GROUP_HELP = {
             "get" => "  task-lists --card CARD  List a card's task lists (read-only)\n  task-list TASK_LIST  Read one card task list (read-only)\n",
             "create" => "  task-list --card CARD --name NAME  Create one task list on a card\n",
@@ -98,18 +144,18 @@ module Planka
                                                 resource: "task list", collection_flags: [:name, :limit],
                                                 flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit },
                                                 validate_flags: ScalarFlags.method(:error), prepare: method(:prepare_get),
-                                                help: "", operation: method(:get), formatter: method(:format_task_lists)),
+                                                help: GET_HELP, operation: method(:get), formatter: method(:format_task_lists)),
             ["create", "task-list"] => Command.new(aliases: [["create", "task-lists"]], reference: false, mutation: true, resource: "task list",
                                                    flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--position N" => :position },
                                                    validate_flags: method(:validate_task_list_values), prepare: method(:prepare_create),
-                                                   help: "", operation: method(:create), formatter: ->(task_list) { "Created task list #{format_task_list(task_list)}" }),
+                                                   help: CREATE_HELP, operation: method(:create), formatter: ->(task_list) { "Created task list #{format_task_list(task_list)}" }),
             ["update", "task-list"] => Command.new(aliases: [["update", "task-lists"]], names: true, mutation: true, resource: "task list",
                                                    flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name },
                                                    validate_flags: method(:validate_task_list_values), prepare: method(:prepare_update),
-                                                   help: "", operation: method(:update), formatter: ->(task_list) { "Updated task list #{format_task_list(task_list)}" }),
+                                                   help: UPDATE_HELP, operation: method(:update), formatter: ->(task_list) { "Updated task list #{format_task_list(task_list)}" }),
             ["delete", "task-list"] => Command.new(aliases: [["delete", "task-lists"]], names: true, mutation: true, resource: "task list",
                                                    flags: { "--card CARD" => :card, "--board BOARD" => :board }, validate_flags: ScalarFlags.method(:error),
-                                                   prepare: method(:prepare_task_list), help: "", operation: method(:delete),
+                                                   prepare: method(:prepare_task_list), help: DELETE_HELP, operation: method(:delete),
                                                    formatter: ->(task_list) { "Deleted task list #{task_list["name"]} (#{task_list["id"]}) from card #{task_list["cardId"]}" }),
           }.freeze
 

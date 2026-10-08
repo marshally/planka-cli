@@ -245,6 +245,41 @@ class TaskListResourcesCLITest < Minitest::Test
     assert_equal 2, @server.counts("DELETE", %r{/api/task-lists/}), "the unknown delete is not retried"
   end
 
+  def test_help_is_offline_at_root_group_and_leaf_levels
+    offline = { "PLANKA_BASE_URL" => nil, "PLANKA_AGENT_EMAIL" => nil, "PLANKA_AGENT_PASSWORD" => nil }
+    { [] => "get task-lists --card CARD", %w[--help] => "delete task-list TASK_LIST",
+      %w[get --help] => "task-lists --card CARD", %w[create --help] => "task-list --card CARD --name NAME",
+      %w[update --help] => "task-list TASK_LIST --name NAME", %w[delete --help] => "task-list TASK_LIST  Delete one task list",
+      %w[get task-lists --help] => "usage: planka get task-lists --card CARD", %w[get task-list -h] => "planka get task-list TASK_LIST",
+      %w[create task-lists --help] => "Planka's own defaults", %w[update task-list --help] => "usage: planka update task-list TASK_LIST",
+      %w[update task-lists -h] => "Tasks, their completion", %w[delete task-list --help] => "Planka deletes the task list's tasks" }.each do |args, text|
+      out, err, status = planka(*args, env: offline)
+      assert status.success?, "#{args.inspect}: #{err}"
+      assert_includes out, text, args.inspect
+    end
+    out, = planka("get", "task-list", "--help", env: offline)
+    assert_includes out, "Task-list data: id, cardId, name, position, showOnFrontOfCard, hideCompletedTasks, createdAt, updatedAt."
+    assert_includes out, "Planka has no task-list URLs"
+    assert_equal 0, @server.requests.size
+  end
+
+  def test_legacy_task_list_commands_name_their_replacements_and_keep_their_contracts
+    { "planka-create-task-list" => "planka create task-list --card CARD --name NAME",
+      "planka-rename-task-list" => "planka update task-list TASK_LIST --name NAME" }.each do |executable, replacement|
+      out, err, status = planka("--help", executable: executable)
+      assert status.success?, err
+      assert_includes out, "Canonical replacement: #{replacement}"
+    end
+    out, err, status = planka("create-task-list", CARD, "--name", "Legacy", "--output", "json")
+    assert status.success?, err
+    created = @server.task_lists.last
+    assert_equal({ "taskList" => { "id" => created["id"], "cardId" => CARD, "name" => "Legacy", "position" => 196_608.0 }, "created" => true }, JSON.parse(out))
+    assert_equal [["POST", "/api/cards/#{CARD}/task-lists", { "name" => "Legacy", "position" => 196_608.0, "showOnFrontOfCard" => false }]], writes
+    out, err, status = planka("rename-task-list", "--id", created["id"], "--name", "Renamed", "--output", "json")
+    assert status.success?, err
+    assert_equal({ "taskList" => { "id" => created["id"], "cardId" => CARD, "name" => "Renamed", "position" => 196_608.0 }, "renamed" => true }, JSON.parse(out))
+  end
+
   def test_malformed_task_lists_report_an_incomplete_failed_read
     @server.task_lists << task_list("600000000000000009", 42, 1)
     doc, err, status = json("get", "task-lists", "--card", CARD)

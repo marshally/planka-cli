@@ -13,6 +13,7 @@ parser = OptionParser.new do |o|
   o.banner = "usage: planka rename-task-list --id TASK_LIST_ID --name NAME [--output human|json]"
   o.on("--id ID", "task list id") { |v| options[:id] = v }
   o.on("--name NAME", "new name") { |v| options[:name] = v }
+  o.separator "Canonical replacement: planka update task-list TASK_LIST --name NAME (new JSON envelope)."
   Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka rename-task-list")
