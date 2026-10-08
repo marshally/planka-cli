@@ -71,7 +71,7 @@ module Planka
           # get reads one task list with a reference, otherwise the card's task lists.
           def self.prepare_get(env, instance:, flags:, reference:)
             return prepare_task_list(env, instance: instance, flags: flags, reference: reference) if reference
-            raise Failure.new(code: "invalid_input", status: 2, message: "get task-lists requires --card") unless flags[:card]
+            raise Failure.invalid_input("get task-lists requires --card") unless flags[:card]
 
             Cards.prepare_scope(env, instance: instance, flags: flags).merge(name: flags[:name]&.first, limit: flags[:limit]&.first&.to_i)
           end
@@ -79,21 +79,21 @@ module Planka
           # A task-list ID finds its own card; names need --card.
           def self.prepare_task_list(env, instance:, flags:, reference:)
             return Cards.prepare_scope(env, instance: instance, flags: flags) if flags[:card]
-            raise Failure.new(code: "invalid_input", status: 2, message: "Task list names require --card") unless Records.id?(reference)
+            raise Failure.invalid_input("Task list names require --card") unless Records.id?(reference)
 
             { board_id: flags[:board] && BoardScope.resolve(instance, flags[:board].first) }
           end
 
           def self.prepare_create(env, instance:, flags:, **)
             unless flags[:card] && flags[:name]
-              raise Failure.new(code: "invalid_input", status: 2, message: "create task-list requires --card and --name")
+              raise Failure.invalid_input("create task-list requires --card and --name")
             end
 
             Cards.prepare_scope(env, instance: instance, flags: flags).merge(name: flags[:name].first, position: position(flags))
           end
 
           def self.prepare_update(env, instance:, flags:, reference:)
-            raise Failure.new(code: "invalid_input", status: 2, message: "update task-list requires --name") unless flags[:name]
+            raise Failure.invalid_input("update task-list requires --name") unless flags[:name]
 
             prepare_task_list(env, instance: instance, flags: flags, reference: reference).merge(name: flags[:name].first)
           end
