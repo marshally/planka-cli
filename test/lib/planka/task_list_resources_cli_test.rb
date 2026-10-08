@@ -85,6 +85,41 @@ class TaskListResourcesCLITest < Minitest::Test
     assert_empty writes
   end
 
+  def test_scope_references_and_filters_are_validated_before_requests
+    [["get", "task-lists"], ["get", "task-lists", "--board", BOARD],
+     ["get", "task-lists", "--card", CARD, "--label", "enhancement"], ["get", "task-lists", "--card", CARD, "--member", "ada"],
+     ["get", "task-lists", "--card", CARD, "--limit", "0"], ["get", "task-lists", "--card", CARD, "--name", "a", "--name", "b"],
+     ["get", "task-lists", "--card", CARD, "--card", "400000000000000002"], ["get", "task-list", CRITERIA, "--limit", "1"],
+     ["get", "task-list", "Acceptance criteria"], ["get", "task-list", "Acceptance criteria", "--board", BOARD],
+     ["get", "task-list", "#{@server.base_url}/task-lists/#{CRITERIA}", "--card", CARD],
+     ["get", "task-list", "#{@server.base_url}//#{CRITERIA}"], ["get", "task-list", "/#{CRITERIA}"]].each do |args|
+      doc, err, status = json(*args, env: { "PLANKA_BOARD_ID" => BOARD })
+      assert_equal 2, status.exitstatus, "#{args.inspect}: #{err}"
+      assert_equal "invalid_input", doc.dig("error", "code"), args.inspect
+    end
+    doc, = json("get", "task-list", "#{@server.base_url}/task-lists/#{CRITERIA}")
+    assert_equal "Expected a numeric task list ID or exact task list name", doc.dig("error", "message"), "no task-list URL form is promised"
+    assert_equal 0, @server.requests.size
+  end
+
+  def test_explicit_parent_mismatches_and_missing_task_lists_fail
+    other = @server.add_card("Other", FakePlanka::LIST_READY)
+    doc, _err, status = json("get", "task-list", CRITERIA, "--card", other)
+    assert_equal [2, "invalid_input", "Task list does not belong to --card"], [status.exitstatus, doc.dig("error", "code"), doc.dig("error", "message")]
+    @server.add_board(OTHER_BOARD)
+    doc, _err, status = json("get", "task-list", CRITERIA, "--board", OTHER_BOARD)
+    assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")]
+    assert_match(/does not belong to --board/, doc.dig("error", "message"))
+    doc, _err, status = json("get", "task-list", "Acceptance criteria", "--card", other)
+    assert_equal [1, "not_found"], [status.exitstatus, doc.dig("error", "code")]
+    doc, _err, status = json("get", "task-list", "600000000000000099")
+    assert_equal [1, "not_found"], [status.exitstatus, doc.dig("error", "code")]
+    @server.task_lists << task_list(NOTES, "Notes", 1)
+    doc, _err, status = json("get", "task-list", "Notes", "--card", CARD)
+    assert_equal [1, "api_error"], [status.exitstatus, doc.dig("error", "code")], "duplicate task-list IDs are malformed"
+    assert_empty writes
+  end
+
   def test_malformed_task_lists_report_an_incomplete_failed_read
     @server.task_lists << task_list("600000000000000009", 42, 1)
     doc, err, status = json("get", "task-lists", "--card", CARD)
