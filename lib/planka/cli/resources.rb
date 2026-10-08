@@ -4,12 +4,13 @@ require "planka/cli/resources/lists"
 require "planka/cli/resources/cards/members"
 require "planka/cli/resources/cards/labels"
 require "planka/cli/resources/cards/tasks"
+require "planka/cli/resources/cards/task_lists"
 
 module Planka
   module CLI
     # Combines resource-owned command definitions for the shared CLI catalog.
     module Resources
-      COMMAND_MODULES = [Cards, Boards, Lists, Cards::Members, Cards::Labels, Cards::Tasks].freeze
+      COMMAND_MODULES = [Cards, Boards, Lists, Cards::Members, Cards::Labels, Cards::TaskLists, Cards::Tasks].freeze
       ROOT_HELP = "usage: planka <verb> <resource> [reference] [flags]\nResource commands:\n".freeze
       COMMANDS = COMMAND_MODULES.flat_map { |catalog| catalog.commands.to_a }.to_h.freeze
       USAGE = {

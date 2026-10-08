@@ -269,6 +269,7 @@ class FakePlanka
       [200, { "item" => record }]
     in ["POST", ["api", "cards", id, "comments"]] then [200, { "item" => make_comment(id, data) }]
     in ["POST", ["api", "cards", id, "task-lists"]] then [200, { "item" => make_task_list(id, data) }]
+    in ["GET", ["api", "task-lists", id]] then task_list_payload(id)
     in ["PATCH", ["api", "task-lists", id]] then [200, { "item" => patch_task_list(id, data) }]
     in ["POST", ["api", "task-lists", id, "tasks"]] then [200, { "item" => make_task(id, data) }]
     else [404, { "message" => "no route for #{method} #{path}" }]
@@ -301,6 +302,14 @@ class FakePlanka
     return [404, { "message" => "List not found" }] unless record && FINITE_TYPES.include?(record["type"])
 
     [200, { "item" => record, "included" => {} }]
+  end
+
+  # Planka answers 404 for a task list that is missing or not visible.
+  def task_list_payload(id)
+    record = @state[:taskLists].find { |task_list| task_list["id"] == id }
+    return [404, { "message" => "Task list not found" }] unless record
+
+    [200, { "item" => record, "included" => { "tasks" => @state[:tasks].select { |task| task["taskListId"] == id } } }]
   end
 
   def delete_card(id)
