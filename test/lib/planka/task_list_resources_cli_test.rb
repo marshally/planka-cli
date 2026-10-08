@@ -57,4 +57,40 @@ class TaskListResourcesCLITest < Minitest::Test
     assert_equal "Acceptance criteria (#{CRITERIA}) on card #{CARD}", out.chomp
     assert_empty writes
   end
+
+  def ids(doc) = doc["data"].map { |task_list| task_list["id"] }
+
+  def test_card_collection_reads_task_lists_in_card_order_with_name_filters_before_limits
+    doc, err, status = json("get", "task-lists", "--card", CARD)
+    assert status.success?, err
+    assert_equal [CRITERIA, NOTES], ids(doc), "ordered by position, not insertion"
+    assert_equal({ "complete" => true }, doc["meta"])
+    duplicate = "600000000000000003"
+    @server.task_lists << task_list(duplicate, "Notes", 196_608)
+    doc, err, status = json("get", "task-list", "--card", "Spec: Work-next refinement", "--board", BOARD, "--name", "Notes", "--limit", "1")
+    assert status.success?, err
+    assert_equal [[NOTES], false], [ids(doc), doc.dig("meta", "complete")]
+    doc, err, status = json("get", "task-lists", "--card", CARD, "--name", "Notes", "--limit", "2")
+    assert status.success?, err
+    assert_equal [[NOTES, duplicate], true], [ids(doc), doc.dig("meta", "complete")]
+    out, err, status = planka("get", "task-lists", "--card", CARD, "--limit", "1")
+    assert status.success?, err
+    assert_equal "Acceptance criteria (#{CRITERIA}) on card #{CARD}\nResults truncated; use a larger --limit or omit it.\n", out
+    doc, err, status = json("get", "task-lists", "--card", CARD, "--name", "notes")
+    assert status.success?, err
+    assert_equal({ "data" => [], "meta" => { "complete" => true }, "error" => nil }, doc)
+    out, err, status = planka("get", "task-lists", "--card", CARD, "--name", "missing")
+    assert status.success?, err
+    assert_equal "No task lists.", out.chomp
+    assert_empty writes
+  end
+
+  def test_malformed_task_lists_report_an_incomplete_failed_read
+    @server.task_lists << task_list("600000000000000009", 42, 1)
+    doc, err, status = json("get", "task-lists", "--card", CARD)
+    assert_equal 1, status.exitstatus, err
+    assert_equal({ "data" => [], "meta" => { "complete" => false } }, doc.slice("data", "meta"))
+    assert_equal "api_error", doc.dig("error", "code")
+    assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+  end
 end
