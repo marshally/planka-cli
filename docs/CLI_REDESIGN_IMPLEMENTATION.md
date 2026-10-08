@@ -856,6 +856,11 @@ sequencing. `Tasks` makes the inherited `update` public without replacing its
 algorithm; `Boards::Cards` exposes create/update/delete with card arguments, and
 `Boards::CardMove` exposes a destination-scoped update as `move`. Relationship resources keep
 CRUD methods protected and expose `add`/`remove` through the `Relationship` role.
+Collection reads (`all` on cards, lists, and members) fill an accumulator inside
+the private `collect(limit, project:)` template, which owns the limit and the
+translation of operation failures into `CollectionFailure` with the projected
+records read so far; `project` applies a resource's filtering and order to
+partial reads too. Reference failures propagate unchanged.
 No unsupported public verbs or endpoint conventions are inferred.
 
 Create and update first validate and translate input attributes. Create then

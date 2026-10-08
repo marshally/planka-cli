@@ -56,8 +56,10 @@ class Planka::ClientTest < Minitest::Test
       loop do
         socket = server.accept
         headers = []
-        headers << socket.gets while headers.last != "\r\n"
-        length = headers.find { |line| line.downcase.start_with?("content-length:") }.to_s.split(":").last.to_i
+        while (line = socket.gets) && line != "\r\n"
+          headers << line
+        end
+        length = headers.find { |header| header.downcase.start_with?("content-length:") }.to_s.split(":").last.to_i
         socket.read(length)
         socket.write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: #{body.bytesize}\r\n" \
                      "Connection: close\r\n\r\n#{body}")
