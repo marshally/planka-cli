@@ -22,7 +22,7 @@ module Planka
           task_list_id = ensure_task_list(scope)
           fill(scope, task_list_id)
           @progress.result
-        rescue Planka::Error, *Client::NETWORK_ERRORS => error
+        rescue *OPERATION_ERRORS => error
           raise @progress.failure(error)
         end
 

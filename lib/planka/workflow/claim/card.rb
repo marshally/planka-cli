@@ -18,7 +18,7 @@ module Planka
           ensure_membership(scope)
           ensure_in_progress(scope)
           @progress.result
-        rescue Planka::Error, *Client::NETWORK_ERRORS => error
+        rescue *OPERATION_ERRORS => error
           raise @progress.failure(error)
         end
 
