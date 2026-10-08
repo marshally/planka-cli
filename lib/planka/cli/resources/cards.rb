@@ -101,7 +101,7 @@ module Planka
         # Card scope shared by card-scoped resource commands: --card is an ID, URL,
         # or exact name within --board BOARD or PLANKA_BOARD_ID.
         def self.prepare_scope(env, instance:, flags:, **)
-          raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --card is required") unless flags[:card]
+          raise Failure.invalid_input("Exactly one --card is required") unless flags[:card]
 
           card = instance.resolve(flags.fetch(:card).first, resource: "card", collection: "cards", names: true)
           { card_id: card, board_id: scope_board(env, instance, card, flags[:board]&.first) }
@@ -117,7 +117,7 @@ module Planka
         end
 
         def self.prepare_collection(env, instance, flags)
-          raise Failure.new(code: "invalid_input", status: 2, message: "get cards requires --board or --list") unless flags[:board] || flags[:list]
+          raise Failure.invalid_input("get cards requires --board or --list") unless flags[:board] || flags[:list]
 
           list_scope(env, instance, flags).merge(name: flags[:name]&.first, labels: flags.fetch(:labels, []),
                                                  members: flags.fetch(:members, []), limit: flags[:limit]&.first&.to_i)
@@ -125,7 +125,7 @@ module Planka
 
         def self.prepare_create(env, instance:, flags:, **)
           unless flags[:list] && flags[:name]
-            raise Failure.new(code: "invalid_input", status: 2, message: "create card requires --list and --name")
+            raise Failure.invalid_input("create card requires --list and --name")
           end
 
           list_scope(env, instance, flags).merge(name: flags[:name].first, description: description(flags), position: position(flags))
@@ -150,15 +150,14 @@ module Planka
           text = InputFile.read(path)
           return text if Planka::Boards::CardRecord.text?(text, Planka::Boards::CardRecord::DESCRIPTION_LIMIT)
 
-          raise Failure.new(code: "invalid_input", status: 2,
-                            message: "--description-file must be nonempty UTF-8 text of at most #{Planka::Boards::CardRecord::DESCRIPTION_LIMIT} characters")
+          raise Failure.invalid_input("--description-file must be nonempty UTF-8 text of at most #{Planka::Boards::CardRecord::DESCRIPTION_LIMIT} characters")
         rescue SystemCallError, IOError
-          raise Failure.new(code: "invalid_input", status: 2, message: "Could not read --description-file")
+          raise Failure.invalid_input("Could not read --description-file")
         end
 
         def self.prepare_update(env, instance:, flags:, reference:)
           unless flags[:name] || flags[:description_file]
-            raise Failure.new(code: "invalid_input", status: 2, message: "update card requires --name or --description-file")
+            raise Failure.invalid_input("update card requires --name or --description-file")
           end
 
           prepare_card(env, instance: instance, flags: flags, reference: reference)
@@ -166,7 +165,7 @@ module Planka
         end
 
         def self.prepare_move(env, instance:, flags:, reference:)
-          raise Failure.new(code: "invalid_input", status: 2, message: "move card requires --list") unless flags[:list]
+          raise Failure.invalid_input("move card requires --list") unless flags[:list]
 
           prepare_card(env, instance: instance, flags: flags, reference: reference)
             .merge(list: instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true), position: position(flags))

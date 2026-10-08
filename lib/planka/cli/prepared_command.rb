@@ -19,7 +19,7 @@ module Planka
         options = command.preparation(env, instance: instance, flags: invocation.flags, reference: arguments.first)
         new(command.operation, arguments, options, configuration: configuration)
       rescue Instance::InvalidReference => error
-        raise Failure.new(code: "invalid_input", status: 2, message: error.message)
+        raise Failure.invalid_input(error.message)
       end
 
       def initialize(operation, arguments, options, configuration: nil)

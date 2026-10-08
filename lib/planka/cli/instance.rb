@@ -12,12 +12,12 @@ module Planka
         @base_url = base_url.dup.freeze
         @base = URI(@base_url)
         unless %w[http https].include?(@base.scheme) && @base.host && !@base.userinfo && !@base.query && !@base.fragment
-          raise Failure.new(code: "configuration_error", message: "PLANKA_BASE_URL must be an HTTP(S) instance URL without credentials, query, or fragment")
+          raise Failure.configuration("PLANKA_BASE_URL must be an HTTP(S) instance URL without credentials, query, or fragment")
         end
 
         freeze
       rescue URI::InvalidURIError
-        raise Failure.new(code: "configuration_error", message: "Invalid PLANKA_BASE_URL")
+        raise Failure.configuration("Invalid PLANKA_BASE_URL")
       end
 
       def resolve(value, resource:, collection:, names: false)
