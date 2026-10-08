@@ -58,6 +58,28 @@ class TaskListResourcesCLITest < Minitest::Test
     assert_empty writes
   end
 
+  def test_malformed_singular_task_list_responses_are_structured_api_errors
+    [{}, { "item" => nil }].each do |payload|
+      @server.requests.clear
+      @server.inject("GET", %r{\A/api/task-lists/#{CRITERIA}\z}, payload)
+
+      doc, err, status = json("get", "task-list", CRITERIA)
+
+      assert_equal 1, status.exitstatus, payload.inspect
+      assert_equal({ "data" => nil, "meta" => {}, "error" => {
+                     "code" => "api_error",
+                     "message" => "Could not read complete resource details; verify server availability and API compatibility",
+                   } }, doc, payload.inspect)
+      refute_match(/Traceback|\.rb:\d+:in/, err, "malformed API data should not print a traceback")
+      assert_empty writes
+      assert_equal [
+        ["POST", "/api/access-tokens"],
+        ["GET", "/api/task-lists/#{CRITERIA}"],
+        ["DELETE", "/api/access-tokens/me"],
+      ], @server.requests.map { |method, path, _| [method, path] }, "stop after the failed task-list read and clean up the session"
+    end
+  end
+
   def ids(doc) = doc["data"].map { |task_list| task_list["id"] }
 
   def test_card_collection_reads_task_lists_in_card_order_with_name_filters_before_limits
