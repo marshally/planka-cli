@@ -397,4 +397,11 @@ class CommentResourcesCLITest < Minitest::Test
     assert_includes doc.dig("error", "message"), "1048576 UTF-16 units"
     assert_empty @server.requests
   end
+
+  def test_comment_reference_errors_only_offer_numeric_ids
+    doc, _, status = json("get", "comment", "not an id", "--card", CARD)
+    assert_equal 2, status
+    assert_equal "Expected a numeric comment ID", doc.dig("error", "message")
+    assert_empty @server.requests
+  end
 end

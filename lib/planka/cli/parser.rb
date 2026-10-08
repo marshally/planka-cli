@@ -96,6 +96,7 @@ module Planka
         return if @reference.match?(/\A\d+\z/) || url_reference?
 
         resource = @command.resource
+        invalid!("Expected a numeric #{resource} ID") unless @command.url? || @command.names?
         invalid!(@command.url? ? "Expected a numeric #{resource} ID or supported #{resource} URL" : "Expected a numeric #{resource} ID or exact #{resource} name")
       end
 
