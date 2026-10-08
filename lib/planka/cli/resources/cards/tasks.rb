@@ -25,7 +25,7 @@ module Planka
           def self.prepare(env, instance:, flags:, **)
             scope = Cards.prepare_scope(env, instance: instance, flags: flags)
             unless flags[:completed]
-              raise Failure.new(code: "invalid_input", status: 2, message: "Exactly one --completed or --no-completed is required")
+              raise Failure.invalid_input("Exactly one --completed or --no-completed is required")
             end
 
             scope.merge(completed: flags.fetch(:completed).first)

@@ -79,7 +79,7 @@ module Planka
         # get reads one list with a reference, otherwise the board's lists.
         def self.prepare_get(env, instance:, flags:, reference:)
           return prepare_list(env, instance: instance, flags: flags, reference: reference) if reference
-          raise Failure.new(code: "invalid_input", status: 2, message: "get lists requires --board") unless flags[:board]
+          raise Failure.invalid_input("get lists requires --board") unless flags[:board]
 
           { board_id: BoardScope.resolve(instance, flags[:board].first), name: flags[:name]&.first, limit: flags[:limit]&.first&.to_i }
         end
@@ -90,7 +90,7 @@ module Planka
 
         def self.prepare_create(_env, instance:, flags:, **)
           unless flags[:board] && flags[:name]
-            raise Failure.new(code: "invalid_input", status: 2, message: "create list requires --board and --name")
+            raise Failure.invalid_input("create list requires --board and --name")
           end
 
           { board_id: BoardScope.resolve(instance, flags[:board].first), name: flags[:name].first,
@@ -101,8 +101,7 @@ module Planka
           fields = { name: flags[:name]&.first, color: flags[:color]&.first, position: position(flags), type: flags[:type]&.first }.compact
           fields[:color] = nil if flags[:clear_color]
           if fields.empty?
-            raise Failure.new(code: "invalid_input", status: 2,
-                              message: "update list requires --name, --color, --clear-color, --position, or --type")
+            raise Failure.invalid_input("update list requires --name, --color, --clear-color, --position, or --type")
           end
 
           prepare_list(env, instance: instance, flags: flags, reference: reference).merge(fields)

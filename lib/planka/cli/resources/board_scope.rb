@@ -20,12 +20,12 @@ module Planka
         def self.default(env, instance, resource:)
           board = env["PLANKA_BOARD_ID"]
           if board.nil? || board.empty?
-            raise Failure.new(code: "invalid_input", status: 2, message: "#{resource} names require --board or PLANKA_BOARD_ID")
+            raise Failure.invalid_input("#{resource} names require --board or PLANKA_BOARD_ID")
           end
 
           resolve(instance, board)
         rescue Instance::InvalidReference
-          raise Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a board ID or same-instance URL")
+          raise Failure.configuration("PLANKA_BOARD_ID must be a board ID or same-instance URL")
         end
       end
     end

@@ -434,8 +434,9 @@ memberships remain; no exclusivity or transaction is asserted.
 
 [Workflow::Claim::Card](../lib/planka/workflow/claim/card.rb) coordinates the claim.
 [Claim::Scope](../lib/planka/workflow/claim/scope.rb) owns scoped reads and response
-validation; [Claim::Progress](../lib/planka/workflow/claim/progress.rb) owns confirmed
-and uncertain effects, result projection, and recovery state. Both write steps
+validation; [MutationProgress](../lib/planka/workflow/mutation_progress.rb) owns
+common confirmation and failure accounting, while [Claim::Progress](../lib/planka/workflow/claim/progress.rb)
+owns claim effects, result projection, and recovery state. Both write steps
 confirm only after response validation. The legacy [Claim](../lib/planka/workflow/claim.rb)
 adapter remains unchanged. Core [mutation outcomes](../lib/planka/mutation.rb)
 carry result data/effects without depending on workflow or CLI code. Shared CLI
@@ -774,8 +775,9 @@ uses the shared scalar-flag checks.
 with the same structure as `Claim::Card`. [Resume::Scope](../lib/planka/workflow/resume/scope.rb)
 reads the card once, validates its task lists and tasks, rejects two or more
 `Acceptance criteria` lists as `ambiguous_criteria_list` before writes, and
-validates each write response. [Resume::Progress](../lib/planka/workflow/resume/progress.rb)
-owns confirmed and uncertain effects, result projection, and `resume-ticket`
+validates each write response. [MutationProgress](../lib/planka/workflow/mutation_progress.rb)
+owns common confirmation and failure accounting; [Resume::Progress](../lib/planka/workflow/resume/progress.rb)
+owns resume effects, result projection, and `resume-ticket`
 recovery. Each write is confirmed only after its response validates; an
 uncertain step is recorded with null identity. Legacy `Publishing#resume_ticket`
 and the `create-ticket` adapter keep their behavior and JSON shape. Their help
@@ -947,6 +949,11 @@ sequencing. `Tasks` makes the inherited `update` public without replacing its
 algorithm; `Boards::Cards` exposes create/update/delete with card arguments, and
 `Boards::CardMove` exposes a destination-scoped update as `move`. Relationship resources keep
 CRUD methods protected and expose `add`/`remove` through the `Relationship` role.
+Collection reads (`all` on cards, lists, and members) fill an accumulator inside
+the private `collect(limit, project:)` template, which owns the limit and the
+translation of operation failures into `CollectionFailure` with the projected
+records read so far; `project` applies a resource's filtering and order to
+partial reads too. Reference failures propagate unchanged.
 No unsupported public verbs or endpoint conventions are inferred.
 
 Create and update first validate and translate input attributes. Create then

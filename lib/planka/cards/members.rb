@@ -5,8 +5,6 @@ module Planka
     class Members < Resource
       include Relationship
 
-      OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
-
       def initialize(client, card_id:, board_id: nil)
         super(client)
         @card_id, @board_id = card_id, board_id
@@ -14,14 +12,10 @@ module Planka
 
       def all(name: nil, limit: nil)
         validate_options!(name: name, limit: limit)
-        data = []
-        card, board = Scope.read(client, card_id: @card_id, board_id: @board_id)
-        hydrate_members!(data, card, identities(board), Scope.card_id(card))
-        collection(data, name: name, limit: limit)
-      rescue *OPERATION_ERRORS => error
-        raise if error.is_a?(ReferenceError)
-
-        raise CollectionFailure.new(data: collection(data, name: name, limit: limit).data)
+        collect(limit, project: ->(data) { named(data, name) }) do |data|
+          card, board = Scope.read(client, card_id: @card_id, board_id: @board_id)
+          hydrate_members!(data, card, identities(board), Scope.card_id(card))
+        end
       end
 
       def find(reference) = assigned!(read_record(reference))
@@ -109,10 +103,10 @@ module Planka
                                        "updatedAt" => membership&.[]("updatedAt"))
       end
 
-      def collection(data, name:, limit:)
+      # Exact-name matches in membership order; applies to partial reads too.
+      def named(data, name)
         data = data.select { |member| member["name"] == name } if name
-        data = data.sort_by { |member| member["membershipId"].to_i }
-        CollectionResult.new(data: limit ? data.first(limit) : data, complete: !limit || data.size <= limit)
+        data.sort_by { |member| member["membershipId"].to_i }
       end
 
       def relationship_present?(known) = !known["membershipId"].nil?

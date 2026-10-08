@@ -64,4 +64,66 @@ class Planka::CardDetailTest < Minitest::Test
     assert_equal [{ "cardId" => "blk", "taskId" => "b1", "completed" => true }], doc["blockers"]
     assert_equal(["hello"], doc["comments"].map { |c| c["text"] })
   end
+
+  def test_strict_read_rejects_malformed_card_response
+    client = FakeClient.new
+    def client.card(_id) = { "item" => {}, "included" => {} }
+
+    error = assert_raises(Planka::InvalidResponse) do
+      Planka::Cards::Detail.read(client, "c1", base_url: "https://planka.test")
+    end
+
+    assert_equal "Invalid card response", error.message
+  end
+
+  def test_legacy_detail_preserves_malformed_card_error
+    client = FakeClient.new
+    def client.card(_id) = { "included" => {} }
+
+    error = assert_raises(KeyError) do
+      Planka::Cards::Detail.new(client, base_url: "https://planka.test").for("c1")
+    end
+
+    assert_equal "key not found: \"item\"", error.message
+  end
+
+  def test_strict_read_translates_related_board_key_error
+    client = FakeClient.new
+    def client.board(_id) = {}
+
+    error = assert_raises(Planka::InvalidResponse) do
+      Planka::Cards::Detail.read(client, "c1", base_url: "https://planka.test")
+    end
+
+    assert_equal "Invalid related board records", error.message
+  end
+
+  def test_legacy_detail_preserves_related_board_key_error
+    client = FakeClient.new
+    def client.board(_id) = {}
+
+    assert_raises(KeyError) do
+      Planka::Cards::Detail.new(client, base_url: "https://planka.test").for("c1")
+    end
+  end
+
+  def test_strict_read_rejects_malformed_comments
+    client = FakeClient.new
+    def client.comments(_id) = nil
+
+    error = assert_raises(Planka::InvalidResponse) do
+      Planka::Cards::Detail.read(client, "c1", base_url: "https://planka.test")
+    end
+
+    assert_equal "Invalid comment records", error.message
+  end
+
+  def test_legacy_detail_preserves_malformed_comment_error
+    client = FakeClient.new
+    def client.comments(_id) = nil
+
+    assert_raises(NoMethodError) do
+      Planka::Cards::Detail.new(client, base_url: "https://planka.test").for("c1")
+    end
+  end
 end

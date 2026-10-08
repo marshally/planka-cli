@@ -7,6 +7,19 @@ require_relative "records"
 module Planka
   # A signed-in session against Planka's REST API as the board's bot user.
   class Client
+    # Canonical sessions reject malformed documents near the request. Legacy
+    # sessions skip the checks, so fetch and JSON failures keep their original
+    # types. A check's block runs only when checks apply.
+    module StrictResponses
+      def self.check!(message) = (yield or raise InvalidResponse, message)
+      def self.unparsable!(_error) = raise(InvalidResponse, "Invalid response JSON")
+    end
+
+    module LenientResponses
+      def self.check!(_message) = nil
+      def self.unparsable!(error) = raise(error)
+    end
+
     def self.session(base_url: nil, email: nil, password: nil, validate_responses: false, on_cleanup_error: nil)
       client = new(base_url || ENV.fetch("PLANKA_BASE_URL"), validate_responses: validate_responses)
       client.sign_in(email || ENV.fetch("PLANKA_AGENT_EMAIL"), password || ENV.fetch("PLANKA_AGENT_PASSWORD"))
@@ -22,15 +35,15 @@ module Planka
     end
 
     def initialize(base_url, validate_responses: false)
-      @validate_responses = validate_responses
+      @responses = validate_responses ? StrictResponses : LenientResponses
       @base = URI(base_url)
       @token = nil
     end
 
     def sign_in(email, password)
       response = request(:post, "/api/access-tokens", { emailOrUsername: email, password: password })
-      if @validate_responses && (!response.is_a?(Hash) || !response["item"].is_a?(String) || response["item"].empty?)
-        raise InvalidResponse, "Invalid authentication response"
+      @responses.check!("Invalid authentication response") do
+        response.is_a?(Hash) && response["item"].is_a?(String) && !response["item"].empty?
       end
 
       @token = response.fetch("item")
@@ -46,9 +59,7 @@ module Planka
 
     def board(id)
       response = request(:get, "/api/boards/#{id}")
-      if @validate_responses && !response["included"].is_a?(Hash)
-        raise InvalidResponse, "Invalid board response"
-      end
+      @responses.check!("Invalid board response") { response["included"].is_a?(Hash) }
 
       response.fetch("included")
     end
@@ -56,7 +67,7 @@ module Planka
     # The board item with its included records; #board returns only the latter.
     def board_document(id)
       document = request(:get, "/api/boards/#{id}")
-      raise InvalidResponse, "Invalid board response" if @validate_responses && !(document["item"].is_a?(Hash) && document["included"].is_a?(Hash))
+      @responses.check!("Invalid board response") { document["item"].is_a?(Hash) && document["included"].is_a?(Hash) }
 
       document
     end
@@ -64,7 +75,7 @@ module Planka
     # A finite (active or closed) list; Planka answers 404 for archive and trash.
     def list(id)
       response = request(:get, "/api/lists/#{id}")
-      raise InvalidResponse, "Invalid list response" if @validate_responses && !response["item"].is_a?(Hash)
+      @responses.check!("Invalid list response") { response["item"].is_a?(Hash) }
 
       response.fetch("item")
     end
@@ -79,9 +90,7 @@ module Planka
 
     def comments(card_id)
       response = request(:get, "/api/cards/#{card_id}/comments")
-      if @validate_responses && !response["items"].is_a?(Array)
-        raise InvalidResponse, "Invalid comments response"
-      end
+      @responses.check!("Invalid comments response") { response["items"].is_a?(Array) }
 
       response.fetch("items")
     end
@@ -122,7 +131,7 @@ module Planka
 
     def me
       response = request(:get, "/api/users/me")
-      raise InvalidResponse, "Invalid signed-in user response" if @validate_responses && !response["item"].is_a?(Hash)
+      @responses.check!("Invalid signed-in user response") { response["item"].is_a?(Hash) }
 
       response.fetch("item")
     end
@@ -130,13 +139,9 @@ module Planka
     # Every board the signed-in user can see, across projects.
     def board_ids
       document = request(:get, "/api/projects")
-      if @validate_responses
+      @responses.check!("Invalid accessible board records") do
         boards = document["included"].is_a?(Hash) && document["included"]["boards"]
-        unless boards.is_a?(Array) && boards.all? { |board|
-          board.is_a?(Hash) && Records.id?(board["id"])
-        }
-          raise InvalidResponse, "Invalid accessible board records"
-        end
+        boards.is_a?(Array) && boards.all? { |board| board.is_a?(Hash) && Records.id?(board["id"]) }
       end
       document.dig("included", "boards").map { |board| board["id"] }
     end
@@ -146,7 +151,7 @@ module Planka
 
     def move_card(card_id, list_id, position: Position::MOVE_DEFAULT)
       response = request(:patch, "/api/cards/#{card_id}", { listId: list_id, position: })
-      raise InvalidResponse, "Invalid moved card response" if @validate_responses && !response["item"].is_a?(Hash)
+      @responses.check!("Invalid moved card response") { response["item"].is_a?(Hash) }
 
       response.fetch("item")
     end
@@ -192,7 +197,7 @@ module Planka
 
     # The record a write returns; canonical sessions reject a missing record.
     def item(response, kind)
-      raise InvalidResponse, "Invalid #{kind} response" if @validate_responses && !response["item"].is_a?(Hash)
+      @responses.check!("Invalid #{kind} response") { response["item"].is_a?(Hash) }
 
       response.fetch("item")
     end
@@ -212,13 +217,10 @@ module Planka
       raise HTTPError.new("#{method.upcase} #{path}: #{res.code} #{res.body}", res.code.to_i) unless res.is_a?(Net::HTTPSuccess)
 
       document = JSON.parse(res.body)
-      raise InvalidResponse, "Invalid response document" if @validate_responses && !document.is_a?(Hash)
-
+      @responses.check!("Invalid response document") { document.is_a?(Hash) }
       document
-    rescue JSON::ParserError
-      raise InvalidResponse, "Invalid response JSON" if @validate_responses
-
-      raise
+    rescue JSON::ParserError => e
+      @responses.unparsable!(e)
     end
   end
 end

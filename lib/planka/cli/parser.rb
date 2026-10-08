@@ -124,7 +124,7 @@ module Planka
       end
 
       def invalid!(message)
-        raise Failure.new(code: "invalid_input", message: message, status: 2, program: @program, output: @output)
+        raise Failure.invalid_input(message, program: @program, output: @output)
       end
     end
   end
