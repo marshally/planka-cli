@@ -21,7 +21,8 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 adds native card `get`, `create`, `update`, `move`, and `delete`; the eleventh
 adds native list `get`, `create`, `update`, and `delete`; the twelfth adds
 `planka workflow resume ticket CARD`; the thirteenth adds card task-list `get`,
-`create`, `update`, and `delete`. All legacy entry
+`create`, `update`, and `delete`. Native label operations and comment
+`get`, `create`, `update`, and `delete` are also implemented. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -961,6 +962,90 @@ cleanup, and legacy flat/direct parity. Installed-gem verification exercises
 commands outside the checkout with the package path checked in each subprocess.
 These checks and pinned source evidence do not prove live write acceptance or
 compatibility across all editions/releases. No live writes were performed.
+
+## Implemented comment resource operations
+
+Issue [#20](https://github.com/marshally/planka-cli/issues/20) adds card-scoped
+`get comments`, `get comment`, `create comment`, `update comment`, and
+`delete comment`. The [README](../README.md#canonical-comments) owns usage,
+fields, exact text/clearing rules, human output, permissions, and recovery;
+the [style guide](../STYLEGUIDE.md#comments) marks the implemented grammar.
+
+`Cards::Comments < Resource` owns comment reads and the native create/update/delete
+hooks. `Cards::CommentRecord` owns input text rules, response validation,
+projection, and recovery identities. Existing `Cards::Scope` resolves the card
+and checks explicit board agreement. `CLI::Resources::Cards::Comments` owns
+flags, local preparation, help, and human presentation. The shared Resource/Write
+lifecycle handles no-ops, single writes, rejected/unknown outcomes, and cleanup
+presentation through the existing CLI. No workflow interpretation enters core.
+
+`Client#comments_page` uses the native `beforeId` cursor independently of
+`Client#comments`. The latter and legacy `Client#comment` keep their old shapes
+and behavior for `describe`, `show`, handoff parsing, claim inspection, and flat
+`comment`/`planka-comment`. Canonical reads validate each record's scope and
+strictly decreasing numeric ID before exposing it; a repeated cursor, wrong card,
+malformed record or page fails without looping. Collections fetch through the
+last page before limiting; individual lookups stop at the requested record.
+
+### Comment API evidence
+
+Inspected official Community tags `v2.0.0`, `2.1.1`, and `v2.2.1`. The four comment
+controllers, query-method implementation, three write helpers, and comment model
+are byte-identical across these tags. Links below pin the inspected v2.2.1 source;
+this does not establish every later release or edition's behavior.
+
+- [Routes](https://github.com/plankanban/planka/blob/v2.2.1/server/config/routes.js)
+  provide collection GET, POST, PATCH and DELETE, with no individual comment GET.
+  [Client paths](https://github.com/plankanban/planka/blob/v2.2.1/client/src/constants/Paths.js)
+  have card/board/project routes and no comment page. COMMENT therefore accepts
+  numeric IDs only, and explicit card scope is required for every command.
+- [Index controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/comments/index.js)
+  checks card access and returns `items` plus related users. The CLI does not
+  expose those users. [Query methods](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/Comment.js)
+  limit pages to 50, sort `id DESC`, and constrain `id < beforeId`. A short page
+  proves exhaustion in a stable dataset; a full page requires another request.
+  Pagination is not transactional across requests.
+- [Create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/comments/create.js)
+  accepts required text with a 1,048,576-character JavaScript limit and returns
+  `item`. It requires board membership with editor or viewer `canComment` rights.
+  The [helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/comments/create-one.js)
+  preserves text and handles notifications/events; query methods maintain the
+  card's comment count and timestamp within the native transaction.
+- [Update controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/comments/update.js)
+  accepts nonempty text up to the same limit, returns `item`, and requires the
+  author plus board editor/viewer comment rights. Native rejection can be 404
+  for a non-author or missing membership, or 403 for insufficient comment rights.
+  The [helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/comments/update-one.js)
+  sends the supplied values to the native update; the CLI sends only text.
+- [Delete controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/comments/delete.js)
+  permits a project manager, or the author with board editor/viewer comment rights,
+  and returns the deleted `item`. The [helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/comments/delete-one.js)
+  deletes that comment and emits events; query methods decrement the card's comment
+  count and update its timestamp. No linked card or sibling comment is deleted.
+- [Comment model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/Comment.js)
+  defines card identity, nullable author, and text; timestamp fields are nullable.
+  The CLI whitelists these fields, rejects blank new text without trimming it,
+  and exposes no clear-text operation.
+
+### Comment verification boundary
+
+Standing approved seams are CLI subprocesses against local HTTP fixtures, legacy
+flat/direct executable parity, and isolated installed-gem checks. Acceptance
+covers all commands, native page boundaries/order, limits, malformed/partial
+reads, no resource writes on reads, exact text and target effects, update no-ops,
+pre-request rejection, parent disagreement, unknown-write readback, known returned
+IDs, rejected writes, and cleanup preserving the primary result. The comment HTTP
+fixture is isolated from older handoff fixtures so their synthetic IDs/order do
+not silently change. The full suite protects workflow and legacy contracts.
+
+Development uses the copied existing untracked lockfile: Bundler 4.0.14,
+net-http 0.9.1, minitest 6.0.6, and RuboCop 1.91.0. No dependency upgrades were
+made. Context7 was unavailable; installed locked net-http source was inspected
+for request/retry behavior (`Net::HTTP#max_retries=`, already set to zero by
+Client), and URI 1.1.1 supplies query encoding. This is installed-source evidence,
+not current-version documentation. Source inspection, local fixtures, and package
+checks do not prove live compatibility. No live Planka writes were authorized or
+performed; report remote CI separately in the implementation PR.
 
 ## Canonical CLI architecture
 

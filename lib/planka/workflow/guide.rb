@@ -41,8 +41,8 @@ module Planka
            in Acceptance criteria. Workflow next's parent field identifies
            the stacking branch; resolve AMBIGUOUS before branching. GitHub PR
            checks require authenticated gh.
-        6. `planka comment CARD "TEXT" --output json` (legacy): record handoff
-           with `Branch: BRANCH` and `PR: URL` on separate lines in TEXT.
+        6. `planka create comment --card CARD --text "TEXT" -o json`: handoff
+           using `Branch: BRANCH` and `PR: URL` on separate lines.
 
         ## Publish and recover
         Resources: `planka get cards|lists|labels --board BOARD`,

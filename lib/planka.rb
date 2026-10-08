@@ -53,6 +53,8 @@ require_relative "planka/cards/tasks"
 require_relative "planka/cards/task_list_record"
 require_relative "planka/cards/task_list_scope"
 require_relative "planka/cards/task_lists"
+require_relative "planka/cards/comment_record"
+require_relative "planka/cards/comments"
 require_relative "planka/lists"
 require_relative "planka/task_lists"
 

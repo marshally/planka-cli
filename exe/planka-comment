@@ -10,6 +10,7 @@ require "planka/client"
 
 options = {}
 parser = Planka::CLI.output_parser(options, "usage: planka comment <card> <text> [--output human|json]")
+parser.separator "Use planka create comment --card CARD --text TEXT for data/meta/error results."
 Planka::CLI.parse!(parser, "planka comment")
 abort parser.banner unless ARGV.size == 2
 

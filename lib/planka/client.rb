@@ -95,6 +95,15 @@ module Planka
       response.fetch("items")
     end
 
+    # Canonical paging is separate from the legacy one-page comments read.
+    def comments_page(card_id, before_id: nil)
+      query = before_id ? "?#{URI.encode_www_form(beforeId: before_id)}" : ""
+      response = request(:get, "/api/cards/#{card_id}/comments#{query}")
+      @responses.check!("Invalid comments response") { response["items"].is_a?(Array) }
+
+      response.fetch("items")
+    end
+
     def card(id) = request(:get, "/api/cards/#{id}")
 
     # Cards in a list, newest-position last, as GET returns them.
@@ -161,6 +170,10 @@ module Planka
     end
 
     def comment(card_id, text) = request(:post, "/api/cards/#{card_id}/comments", { text: })
+
+    def create_comment(card_id, text:) = item(comment(card_id, text), "comment")
+    def update_comment(id, text:) = item(request(:patch, "/api/comments/#{id}", { text: text }), "comment")
+    def delete_comment(id) = item(request(:delete, "/api/comments/#{id}"), "comment")
 
     class HTTPError < Error
       attr_reader :status
