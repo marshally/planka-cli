@@ -20,7 +20,8 @@ CARD`. The second slice adds `planka describe board BOARD`; the third adds
 `planka workflow next`; the eighth adds `planka workflow claim CARD`; the tenth
 adds native card `get`, `create`, `update`, `move`, and `delete`; the eleventh
 adds native list `get`, `create`, `update`, and `delete`; the twelfth adds
-`planka workflow resume ticket CARD`. All legacy entry
+`planka workflow resume ticket CARD`; the thirteenth adds card task-list `get`,
+`create`, `update`, and `delete`. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -45,7 +46,7 @@ record. Use an isolated implementation branch and preserve unrelated work.
 | [lib/planka/canonical_cli.rb](../lib/planka/canonical_cli.rb), [lib/planka/cli/](../lib/planka/cli/) | Canonical coordinator, parsed invocations, validated configuration, output/status handling, and expected failures. |
 | [lib/planka/client.rb](../lib/planka/client.rb) | HTTP endpoints, session lifecycle, and unknown-write-outcome detection; every request is sent once. |
 | [lib/planka/cards/detail.rb](../lib/planka/cards/detail.rb), [lib/planka/boards/snapshot.rb](../lib/planka/boards/snapshot.rb) | Existing detailed card and board/list read models. |
-| [lib/planka/workflow/publishing.rb](../lib/planka/workflow/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and legacy resource operations; legacy `create-list` uses `Lists`, canonical lists use `Boards::Lists`. |
+| [lib/planka/workflow/publishing.rb](../lib/planka/workflow/publishing.rb), [lib/planka/labels.rb](../lib/planka/labels.rb), [lib/planka/lists.rb](../lib/planka/lists.rb), [lib/planka/task_lists.rb](../lib/planka/task_lists.rb) | Existing publishing and legacy resource operations; legacy `create-list` uses `Lists`, canonical lists use `Boards::Lists`; legacy `create-task-list`/`rename-task-list` use `TaskLists`, canonical task lists use `Cards::TaskLists`. |
 | [lib/planka/workflow/prime.rb](../lib/planka/workflow/prime.rb) | Built-in, credential-free agent guide. |
 | [test/lib/planka/cli_test.rb](../test/lib/planka/cli_test.rb) | Subprocess help, argument, environment, and direct-executable checks. |
 | [test/lib/planka/publishing_cli_test.rb](../test/lib/planka/publishing_cli_test.rb) | End-to-end subprocess commands against a local HTTP fake, including recovery. |
@@ -814,6 +815,97 @@ cleanup failure, the offline guide, and legacy `create-ticket` parity. This is
 pinned-source and fixture evidence, not live acceptance; no live writes were
 authorized or performed.
 
+## Implemented thirteenth slice: task lists
+
+Issue [#19](https://github.com/marshally/planka-cli/issues/19) implements
+`get task-lists --card CARD` (exact `--name`, `--limit`), `get task-list TASK_LIST`,
+`create task-list`, `update task-list` (name only), and `delete task-list`.
+Singular/plural aliases share behavior. The [README contract](../README.md#canonical-task-lists)
+owns usage, fields, ordering, scopes, native defaults and effects, and recovery.
+Legacy `create-task-list` and `rename-task-list` keep their arguments, output,
+JSON, and exits; their help now names the replacements. `describe card`,
+`workflow pending-criteria`, and `workflow resume ticket` are unchanged.
+
+Task lists are card-owned, so they live under `Cards`, parallel to board lists:
+
+- `Cards::TaskListScope` owns the card read, card-ordered task-list validation,
+  and task-list reference resolution. An ID alone finds its card through the
+  task-list show endpoint; `--card` asserts the parent, and `--board` asserts the
+  card's board through `Cards::Scope`.
+- `Cards::TaskListRecord` owns task-list field rules: name (128) and position
+  input checks, the validated public projection, write confirmation, and
+  recovery references.
+- `Cards::TaskLists < Resource` exposes `all`, `find`, `create`, `update`
+  (name only), and `delete`.
+- `CLI::Resources::Cards::TaskLists` owns command definitions, local validation,
+  and human text, reusing `Cards.prepare_scope` for card scope and `BoardScope`
+  for an ID's asserted board.
+
+Shared change: `Command#collection` is the URL path segment of same-instance
+references, and nil now means the resource has no URL. Planka has no task-list
+page, so the parser accepts only IDs and names; an empty segment previously let
+`<base>//ID` resolve. `Client#task_list` and `#delete_task_list` are added;
+`#update_task_list` validates its `item` in canonical sessions, and legacy
+`rename-task-list` is unchanged.
+
+Canonical create sends only `name` and `position`, so native defaults apply
+(`showOnFrontOfCard` true, `hideCompletedTasks` false). Legacy `create-task-list`
+still sends `showOnFrontOfCard: false` and `workflow resume ticket` still sends
+true; neither changes. The built-in workflow guide, which is also the legacy
+`prime` output, still names the legacy task-list commands alongside the other
+legacy publishing commands; reconciling it belongs to sequence step 5.
+
+### Task-list API evidence
+
+Inspected official Community source at v2.0.0 (`bda32e0`), 2.1.1 (`a8dcd7c`), and
+v2.2.1 (`266246e`). The task-list model, the create/show/update/delete
+controllers, the create/update/delete/delete-related and path helpers, and the
+task-list query methods are byte-identical across all three. The routes
+`POST /api/cards/:cardId/task-lists` and `GET`/`PATCH`/`DELETE /api/task-lists/:id`
+exist in each.
+
+- [`GET /api/cards/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/show.js)
+  includes all of the card's `taskLists` via
+  [`getByCardId`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/TaskList.js),
+  sorted by position then ID, without a limit or paging. This is the collection
+  completeness evidence; name filters are applied client-side before limits.
+- [`GET /api/task-lists/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/task-lists/show.js)
+  returns the task list under `item` (with `cardId`) and its tasks under
+  `included.tasks`. Non-members who are not project managers or permitted admins
+  receive `TASK_LIST_NOT_FOUND`, as for a missing ID.
+- [`POST /api/cards/:cardId/task-lists`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/task-lists/create.js)
+  requires a nonnegative `position` and `name` (at most 128), accepts
+  `showOnFrontOfCard` and `hideCompletedTasks`, requires board editor membership,
+  and returns `item`. The [create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/task-lists/create-one.js)
+  inserts the position among the card's task lists and may renumber them. The
+  [model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/TaskList.js)
+  requires `name`, defaults `showOnFrontOfCard` to true and `hideCompletedTasks`
+  to false. No endpoint checks for duplicate names.
+- [`PATCH /api/task-lists/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/task-lists/update.js)
+  accepts a nonempty `name` (at most 128), `position`, `showOnFrontOfCard`, and
+  `hideCompletedTasks`, and requires board editor membership. It has no card
+  input, so a task list cannot change card. The CLI sends only `name`.
+- [`DELETE /api/task-lists/:id`](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/task-lists/delete.js)
+  requires board editor membership and returns the deleted task list under
+  `item`; [cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/task-lists/delete-related.js)
+  deletes its tasks. The card and its other task lists are untouched.
+
+PR #47's comment that Community v2.2.1 has no task-list GET endpoint does not
+match these sources. Context7 was not used; the evidence is the pinned upstream
+source above. Development checks use Bundler 4.0.14 with the unchanged lockfile.
+
+Public subprocess/local HTTP tests cover every command, aliases, offline help at
+all levels, ID/name scopes, rejected URL forms, `--card`/`--board` mismatches,
+card order, name filters before limits, malformed and duplicate records, local
+validation before requests, exact single writes with native-default create
+bodies, name-only updates that keep tasks, no-ops, task cleanup on deletion as
+modelled by the fake, rejected and unknown outcomes without retries or invented
+IDs, and legacy `create-task-list`/`rename-task-list` parity. An installed-gem
+run in an isolated `GEM_HOME`, outside the checkout and without `LANG`, exercised
+each command, a rejected URL reference, leaf help, and both legacy executables.
+This is pinned-source and fixture evidence, not live acceptance; no live writes
+were authorized or performed.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -1223,7 +1315,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, and workflow resume ticket are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, and card task-list operations are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

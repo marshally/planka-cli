@@ -49,7 +49,8 @@ card CARD`, `planka describe board BOARD`, `planka workflow pending-criteria CAR
 card-scoped `get members`, `get member`, `add member`, `remove member`,
 `get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
 `get lists`, `get list`, `create list`, `update list`, `delete list`,
-and their root/group/leaf help are
+`get task-lists`, `get task-list`, `create task-list`, `update task-list`,
+`delete task-list`, and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
@@ -373,6 +374,71 @@ notice. Mutations print `Created list`, `Updated list`, or
 failures 1. Writes require native board editor permission. See the [source
 evidence and verification
 limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-eleventh-slice-lists).
+
+### Canonical task lists
+
+```sh
+planka get task-lists --card CARD [--board BOARD] [--name NAME] [--limit N] -o json
+planka get task-list TASK_LIST [--card CARD] [--board BOARD] -o json
+planka create task-list --card CARD [--board BOARD] --name NAME [--position N] -o json
+planka update task-list TASK_LIST [--card CARD] [--board BOARD] --name NAME -o json
+planka delete task-list TASK_LIST [--card CARD] [--board BOARD] -o json
+```
+
+`task-list` and `task-lists` are aliases. TASK_LIST is an ID, or an exact name
+with `--card CARD`; Planka has no task-list page URLs, so URL references are
+`invalid_input`. A task-list ID alone finds its own card; an explicit `--card`
+must contain it and an explicit `--board` must hold its card, otherwise the
+mismatch is `invalid_input`. CARD follows the card rules: an ID, same-instance
+URL, or exact name with `--board BOARD` or `PLANKA_BOARD_ID`. A name without
+`--card` is `invalid_input` before any request; ambiguous names report candidate
+IDs, and an absent or inaccessible ID is `not_found`.
+
+Task-list `data` contains `id`, `cardId`, `name`, `position`,
+`showOnFrontOfCard`, `hideCompletedTasks`, and nullable `createdAt`/`updatedAt`.
+Tasks are not embedded; `describe card CARD` shows them. Individual reads return
+an object with empty `meta`.
+
+`get task-lists` requires `--card`. It returns every task list on the card from
+the single native card read without paging, ordered by position then ID. Exact
+`--name` matches before a positive `--limit`; `--label` and `--member` are
+unsupported. `complete` describes matching task lists, and a malformed read
+exits 1 with `complete: false`. Reads make no resource writes.
+
+`create task-list` always creates a task list, even when the name exists, and
+implies no workflow name such as `Acceptance criteria`. `--card` and `--name` are
+required. It appends one position gap after the card's task lists unless
+`--position N` gives a finite nonnegative native ordering value; Planka may
+renumber positions. Only `name` and `position` are sent, so Planka's own defaults
+apply: `showOnFrontOfCard` true and `hideCompletedTasks` false. Names are
+nonempty and at most 128 characters.
+
+`update task-list` requires `--name` and changes nothing else: tasks, their
+completion, the task list's identity, position, and card are kept, and an
+identical name is a no-op. Other fields are not accepted.
+
+`delete task-list` issues one native deletion of an explicit target without
+prompts. Planka deletes the task list's tasks with it and keeps the card and its
+other task lists; the client deletes no task individually and never deletes the
+card.
+
+Mutation `data` is the resulting task list; delete adds `deleted: true`.
+`meta.changed` is true, false for a no-op, or null when unknown. A rejected write
+keeps the unchanged task list (`changed: false`) with the native failure code.
+An unknown or malformed write response returns `error.code: unknown_outcome`,
+`changed: null`, and marks changed fields null (`deleted: null` for delete).
+Unknown creates never invent a task-list ID and report `readback-task-lists`
+recovery for the card: inspect `get task-lists --card CARD` before retrying.
+Other mutations report `readback-task-list` with the `task-list` resource:
+inspect `get task-list TASK_LIST`. No request is retried automatically.
+
+Human reads print `NAME (TASK_LIST_ID) on card CARD_ID` per task list, or
+`No task lists.`; limited output adds a truncation notice. Mutations print
+`Created task list`, `Updated task list`, or
+`Deleted task list ... from card CARD_ID`. Success exits 0, local input 2, other
+failures 1. Writes require native board editor permission. See the [source
+evidence and verification
+limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-thirteenth-slice-task-lists).
 
 ### Canonical card members
 
@@ -722,8 +788,9 @@ replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
 `workflow claim` replaces `claim`, `workflow resume ticket` replaces
 `create-ticket --card`, `update card` replaces `update-card`,
 `move card` replaces `move-card`, `get cards --list LIST` replaces the list
-view of `snapshot`, and `create list` replaces `create-list`; remaining
-canonical replacements are not yet implemented.
+view of `snapshot`, `create list` replaces `create-list`, and
+`create task-list` and `update task-list` replace `create-task-list` and
+`rename-task-list`; remaining canonical replacements are not yet implemented.
 
 ### Configuration
 

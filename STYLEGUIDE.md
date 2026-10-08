@@ -7,7 +7,8 @@ CLI. It is a design contract for staged changes; the current executable supports
 `workflow resume ticket`, card-scoped `get members`, `get member`, `add member`, `remove member`, native card
 `get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
 native list `get lists`, `get list`, `create list`, `update list`, `delete list`,
-and nested help alongside all flat commands in
+card task-list `get task-lists`, `get task-list`, `create task-list`,
+`update task-list`, `delete task-list`, and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -221,6 +222,26 @@ command. Keep project-manager work in its own ticket, separate from card/board
 members, and defer it to the end of the project plan in
 [issue #37](https://github.com/marshally/planka-cli/issues/37). Its remaining specification
 and implementation are deferred; no project-manager commands are implemented.
+
+### Task lists
+
+Implemented task-list commands are card-scoped: `get task-lists --card CARD`,
+`get task-list TASK_LIST`, `create task-list --card CARD --name NAME`,
+`update task-list TASK_LIST --name NAME`, and `delete task-list TASK_LIST`.
+`TASK_LIST` is an ID or an exact name within a known `--card`; Planka has no
+task-list page URL, so URL references are rejected rather than invented. A
+task-list ID alone determines its card, and explicit `--card`/`--board` parents
+must agree with it.
+
+Collections order by native position, then ID, from the card read and accept
+exact `--name` before `--limit`. Creation always creates, appends unless
+`--position N` is given, and sends only the name and position so native display
+defaults apply; it implies no workflow task-list names. Updates accept only
+`--name`, preserving tasks, completion, identity, position, and card, and reject
+empty updates. Deletion issues the one native target deletion, which deletes the
+list's tasks and keeps the card; the client deletes no tasks individually. The
+[README task-list contract](README.md#canonical-task-lists) records fields,
+recovery, and output; see [task lists issue #19](https://github.com/marshally/planka-cli/issues/19).
 
 ### Tasks
 
