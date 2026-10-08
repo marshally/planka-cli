@@ -4,8 +4,6 @@ module Planka
     # determines its own card; names resolve within the asserted card. Each
     # operation observes current server state through the supplied client.
     class TaskLists < Resource
-      OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
-
       # A task list's public data with the position that appends a new one.
       Observation = Data.define(:task_list, :append_position)
 
@@ -18,13 +16,9 @@ module Planka
       # Every task list on the card, in card order, matching an exact name.
       def all(name: nil, limit: nil)
         validate_options!(name: name, limit: limit)
-        data = []
-        @scope.task_lists(@scope.card(nil)).each { |record| data << TaskListRecord.data(record) if name.nil? || record["name"] == name }
-        CollectionResult.limited(data, limit)
-      rescue *OPERATION_ERRORS => error
-        raise if error.is_a?(ReferenceError)
-
-        raise CollectionFailure.new(data: CollectionResult.limited(data, limit).data)
+        collect(limit) do |data|
+          @scope.task_lists(@scope.card(nil)).each { |record| data << TaskListRecord.data(record) if name.nil? || record["name"] == name }
+        end
       end
 
       def find(reference) = read_record(reference).task_list
