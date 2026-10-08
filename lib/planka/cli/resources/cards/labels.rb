@@ -11,7 +11,7 @@ module Planka
             remove label LABEL --card CARD  Detach only this label from a card
           HELP
           COMMON_HELP = <<~HELP
-            LABEL is an ID or exact label name on the card's board.
+            LABEL is an ID, same-instance /labels/ID CLI reference URL, or exact name on the card's board.
             CARD is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID.
             Explicit card IDs/URLs ignore the default board; --board asserts the actual parent.
             Ambiguous names report candidate IDs. BOARD is an ID or same-instance URL.

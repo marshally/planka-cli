@@ -50,7 +50,8 @@ card-scoped `get members`, `get member`, `add member`, `remove member`,
 `get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
 `get lists`, `get list`, `create list`, `update list`, `delete list`,
 `get task-lists`, `get task-list`, `create task-list`, `update task-list`,
-`delete task-list`, and their root/group/leaf help are
+`delete task-list`, native `get labels`, `get label`, `create label`, `update label`,
+`delete label`, card-scoped `add label`/`remove label`, and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
@@ -439,6 +440,75 @@ Human reads print `NAME (TASK_LIST_ID) on card CARD_ID` per task list, or
 failures 1. Writes require native board editor permission. See the [source
 evidence and verification
 limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-thirteenth-slice-task-lists).
+
+### Canonical labels
+
+```sh
+planka get labels --board BOARD --name enhancement --limit 10 -o json
+planka get label LABEL --board BOARD
+planka create label --board BOARD --name enhancement --color berry-red
+planka update label LABEL --board BOARD --name renamed --position 0
+planka delete label LABEL --board BOARD
+```
+
+`label` and `labels` are aliases for each verb. BOARD is a numeric ID or
+same-instance `/boards/ID` URL. Collection reads and creates require explicit `--board`. Individual
+reads, updates, and deletes use `--board` or `PLANKA_BOARD_ID`; an explicit
+board overrides the default. LABEL is an ID, same-instance `/labels/ID` resource
+reference URL, or exact name in that board. These reference URLs are CLI forms,
+not a claim that the web app has label pages. Board scope is required even for
+label IDs: Community v2.2.1 has no individual label GET endpoint. A label absent
+from the scoped snapshot fails with `not_found`; ambiguous names report candidate
+IDs. No search or fallback to another board occurs.
+
+Reads project only `id`, `boardId`, nullable `name`, `color`, `position`,
+nullable `createdAt`, and nullable `updatedAt`. Individual `data` is an object;
+collection `data` is an array, including `[]`. The board response supplies the
+whole label collection without paging. Order by native position then ID
+(numeric ID order). Exact `--name` filtering precedes positive
+`--limit`; `meta.complete` describes the matching collection. Unsupported filters
+and conflicting scalar values fail. Malformed records retain the validated,
+matching results under the same order/limit with exit 1 and `complete: false`;
+a failed board fetch returns `[]` with `complete: false`.
+
+Create requires a nonempty name (at most 128 UTF-16 units) and a native color;
+`create label --help` lists accepted colors. It always creates, even when the name
+exists. Native positions are finite, nonnegative numbers rather than row indexes;
+creation appends at the highest observed position plus 65536 when omitted.
+Planka may normalize the requested position and reposition neighboring labels;
+the CLI reports the returned position and issues no neighboring writes.
+Update accepts supplied name/color/position only, rejects an empty update, and
+skips an already-satisfied update. Names cannot be cleared through these commands;
+existing unnamed native labels remain readable. Delete issues one target DELETE;
+Planka removes its label assignments while retaining cards, boards, and other
+labels. Missing label deletion fails rather than deleting a collection.
+Card-label add/remove retain their idempotent relationship contract below.
+
+Successful create/update `data` uses the read schema; delete adds `deleted: true`.
+Mutation `meta.changed` is true for a confirmed write, false for a no-op or known
+rejection, and null for an unknown outcome. Rejected create retains only the known board with other fields null;
+rejected update/delete retains the prior label without a deletion marker.
+Unknown create has null field values except the known `boardId` and any valid
+new label ID returned by the response. Unknown update retains identity and omitted
+fields, sets changed fields to null and keeps last-observed timestamps; unknown delete retains the
+last observed label with `deleted: null`. Failed preparation reads have null
+mutation `data` and `changed: false`.
+
+Unknown writes are never blindly retried. `error.recovery.action` is
+`readback-labels` when no label ID is known, with the board;
+`readback-label` when an ID is known, with the board and label IDs. Read
+`get labels --board BOARD` or `get label LABEL --board BOARD` to reconcile before
+retrying. Create recovery may need inspection of all matching names because
+names are not unique. Human output lists tab-separated ID, name, color, and
+position; empty reads print `No labels.` and delete adds `deleted: true`.
+Success exits 0, local input 2, operational/partial/unknown outcomes 1. Cleanup
+failure preserves the primary result and emits a diagnostic.
+
+[API evidence and verification limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-label-resource-operations)
+are pinned to Community v2.2.1. Fixture and installed-gem checks do not prove live
+acceptance or support across all 2.0.0+ versions and editions. Legacy `labels`,
+`create-label`, and `apply-label`, including direct executables, retain their bare
+JSON, effects, exits, and exact-name create reuse indefinitely.
 
 ### Canonical card members
 
@@ -942,6 +1012,13 @@ Planka::Client.session(validate_responses: true) do |client|
   lists.create(name: "Review", type: "active")                 # MutationResult; needs board_id
   lists.update("200", name: "Done", type: "closed", color: nil) # color: nil clears it
   lists.delete("200")
+
+  board_labels = Planka::Boards::Labels.new(client, board_id: "100") # board required for all operations
+  board_labels.all(name: "enhancement", limit: 5)                    # CollectionResult
+  board_labels.find("enhancement")                                  # One label's public fields
+  board_labels.create(name: "enhancement", color: "berry-red")       # Always creates
+  board_labels.update("300", name: "renamed", position: 0)
+  board_labels.delete("300")
 end
 ```
 

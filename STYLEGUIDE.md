@@ -8,7 +8,9 @@ CLI. It is a design contract for staged changes; the current executable supports
 `get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
 native list `get lists`, `get list`, `create list`, `update list`, `delete list`,
 card task-list `get task-lists`, `get task-list`, `create task-list`,
-`update task-list`, `delete task-list`, and nested help alongside all flat commands in
+`update task-list`, `delete task-list`, native label `get labels`, `get label`,
+`create label`, `update label`, `delete label`, card-scoped `add label`/`remove label`,
+and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -64,6 +66,40 @@ Do not interpret an omitted target as permission for a bulk mutation.
 Reserve `apply -f FILE` for a future declarative interface with documented
 identity, reconciliation, and deletion semantics. Attaching labels uses `add`,
 not `apply`.
+
+### Labels
+
+Native label reads, creation, updates, deletion, and card-label relationships
+are implemented. `get labels --board BOARD` and `create label --board BOARD
+--name NAME --color COLOR [--position N]` require explicit board scope.
+`get label LABEL`, `update label LABEL [--name NAME] [--color COLOR]
+[--position N]`, and `delete label LABEL` require `--board` or `PLANKA_BOARD_ID`,
+even for IDs: the verified Community v2.2.1 API has no individual label GET.
+LABEL is an ID, exact name in that board, or same-instance `/labels/ID` CLI
+reference URL; this does not imply a native label web page. An explicit board
+wins over the default and lookup never falls back to another board.
+
+Collections use all labels in the board snapshot, ordered by position then
+numeric ID; exact `--name` filtering precedes positive `--limit`. Individual
+names can be ambiguous and report candidate IDs. Unknown IDs or names in scope
+fail with `not_found`. Malformed collections preserve validated matching data
+with `meta.complete: false` and exit 1.
+
+Creation always creates and defaults to appending, unlike legacy exact-name
+reuse. Names must be nonblank and at most 128 UTF-16 units. Color must be one
+of the native values in `create label --help`; position is finite and nonnegative.
+Updates change only supplied fields and identical values are a no-op. These
+commands do not clear name/color/position; existing unnamed labels are readable.
+Planka may normalize positions and renumber neighbors without client writes.
+Deletion issues one native label DELETE; Planka removes assignments and keeps
+cards. `add label LABEL --card CARD` and `remove label LABEL --card CARD` derive
+board scope from the card and preserve unrelated relationships. Already-satisfied
+relationships succeed without a write. There are no client deletion sweeps.
+
+The [README label contract](README.md#canonical-labels) defines human output,
+field schemas, failure projections, and readback recovery. Writes use
+`meta.changed: true|false|null` and never retry an uncertain result. Legacy
+`labels`, `create-label`, and `apply-label` retain their runtime contracts.
 
 ### Collection completeness and pagination
 

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+Added board label resource commands: `get labels --board BOARD` (exact name,
+limit, and completeness), `get label LABEL`, `create label --board BOARD --name
+NAME --color COLOR [--position N]`, `update label LABEL`, and `delete label LABEL`,
+with aliases and offline help. IDs and CLI reference URLs also require board
+scope for individual operations. Canonical creation always creates, updates
+send only supplied changed fields, and native deletion removes assignments while
+preserving cards. Malformed reads retain valid partial results; unknown writes
+preserve known IDs and require readback without retries. `Boards::Labels` uses
+the shared Resource/Write lifecycle. Legacy label commands retain exact-name
+reuse, arguments, JSON, exits, and runtime output; their help names replacements.
+API evidence is pinned to Community v2.2.1 source, without live write acceptance.
+
 Added card task-list resource commands with singular/plural aliases and offline
 root/group/leaf help: `get task-lists --card CARD` (card order, exact `--name`,
 `--limit`), `get task-list TASK_LIST`,

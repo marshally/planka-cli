@@ -5,28 +5,27 @@ module Planka
       INSTRUCTIONS = <<~'MARKDOWN'.freeze
         # planka-cli agent guide
 
-        Run `planka workflow guide` at session start or after context compaction.
-        Use `planka <command> --help` for full options; `planka --help` lists
-        implemented commands and `planka --version` reports the version.
+        Run `planka workflow guide` at session start.
+        Use `planka <command> --help` for options, `planka --help` for commands,
+        and `planka --version` for version.
 
         ## Connection and output
         API commands require PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, and
         PLANKA_AGENT_PASSWORD from the caller's environment. References accept IDs
         or same-instance URLs; names need board scope. Guide, help, and version
-        work offline. Keep credential values out of reports.
+        work offline. Never report credentials.
 
         Add `-o json` for canonical results: one document with data, meta, and
         error. Inspect the exit status before consuming stdout: 0 is success,
         2 is invalid input, and 1 is another failure. Diagnostics go to stderr.
-        Legacy commands below are deprecated, retained, and keep bare JSON and
-        exits.
+        Legacy commands keep bare JSON and exits.
 
         ## Find and work a ticket
         1. `planka describe board BOARD -o json`: inspect lists, cards, and tasks.
         2. `planka workflow next --board BOARD -o json`: select an unclaimed,
            unblocked, unquarantined ticket in ready-for-agent. Add `--label feature:SLUG` for
            ticket order or `--label effort:SLUG` for map/frontier; repeated labels
-           AND-match; PLANKA_BOARD_ID is the default scope. No available card is normal.
+           AND-match; PLANKA_BOARD_ID is the default scope. Empty queues are normal.
         3. `planka describe card CARD -o json`: inspect description, criteria,
            blockers, comments, and memberships before acting.
         4. `planka workflow claim-status -o json`: inspect your first open claim
@@ -46,21 +45,23 @@ module Planka
            with `Branch: BRANCH` and `PR: URL` on separate lines in TEXT.
 
         ## Publish and recover
-        Resources: `planka get cards|lists --board BOARD`,
+        Resources: `planka get cards|lists|labels --board BOARD`,
         `get|update|delete card|list REF`, `create card --list LIST --name NAME`,
         `create list --board BOARD --name NAME`, `move card CARD --list LIST`.
         Closing a list completes tasks linking its cards. Assignments use
         `get|add|remove member USER --card CARD` and `get members --card CARD`;
-        add/remove skip satisfied assignments.
+        `add|remove label LABEL --card CARD` skips satisfied assignments.
+        `create label --board BOARD --name NAME --color COLOR` always creates;
+        `get|update|delete label LABEL --board BOARD` manages existing labels.
 
-        Publishing still uses legacy commands. Specs have no
+        Legacy publishing: specs have no
         Acceptance criteria list; tickets have one. Share feature:SLUG labels.
         `planka create-spec` and `planka create-ticket` take --list ID_OR_NAME and
         --title TITLE; tickets require --criteria-file FILE (a JSON string array).
         --description-file FILE accepts multiline text; either file accepts -
-        for stdin. Omitted positions append. `planka link BLOCKED BLOCKER`
+        for stdin. Positions append. `planka link BLOCKED BLOCKER`
         records linked tasks in Blocked by; repeating a link is safe. Use IDs
-        for ambiguous names. Read help before an authorized write.
+        for ambiguous names. Read help before writes.
 
         For an unknown outcome, read the board back before retrying: the write
         may already have applied. Legacy recovery JSON can contain completed=false,

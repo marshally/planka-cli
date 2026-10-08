@@ -113,7 +113,11 @@ module Planka
 
     def delete_list(list_id) = item(request(:delete, "/api/lists/#{list_id}"), "list")
 
-    def create_label(board_id, **attrs) = request(:post, "/api/boards/#{board_id}/labels", attrs).fetch("item")
+    def create_label(board_id, **attrs) = item(request(:post, "/api/boards/#{board_id}/labels", attrs), "label")
+
+    def update_label(label_id, **attrs) = item(request(:patch, "/api/labels/#{label_id}", attrs), "label")
+
+    def delete_label(label_id) = item(request(:delete, "/api/labels/#{label_id}"), "label")
 
     def add_card_label(card_id, label_id) = request(:post, "/api/cards/#{card_id}/card-labels", { labelId: label_id })
 
