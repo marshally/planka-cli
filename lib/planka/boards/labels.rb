@@ -10,6 +10,7 @@ module Planka
       end
 
       def all(name: nil, limit: nil)
+        validate_options!(name: name, limit: limit)
         collect(limit, project: ->(data) { data.sort_by { |label| [label["position"], label["id"].to_i] } }) do |data|
           each_label do |label|
             data << label if name.nil? || label["name"] == name
@@ -24,6 +25,12 @@ module Planka
       public :update, :delete
 
       private
+
+      def validate_options!(name:, limit:)
+        raise ArgumentError, "labels are read from a board" unless @board_id
+        raise ArgumentError, "name must be a string" unless name.nil? || name.is_a?(String)
+        raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
+      end
 
       def deletion_data(known) = known.label.merge("deleted" => true)
       def delete_record(known) = client.delete_label(known.label["id"])
