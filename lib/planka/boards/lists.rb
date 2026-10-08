@@ -95,7 +95,7 @@ module Planka
         client.create_list(desired["boardId"], type: desired["type"], name: desired["name"], position: desired["position"])
       end
 
-      def validate_record!(record, desired) = ListRecord.confirm!(record, desired)
+      def validate_record!(record, desired, **) = ListRecord.confirm!(record, desired)
       def confirmed_data(record, desired) = ListRecord.data(record).merge(desired.slice("deleted"))
       def recovery(known) = ListRecord.recovery(known.list)
     end

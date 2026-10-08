@@ -10,9 +10,14 @@ module Planka
       MutationResult.new(data: yield, changed: true)
     rescue *OPERATION_ERRORS => error
       uncertain = !Client.unapplied?(error)
-      raise MutationFailure.new(data: uncertain ? unknown : unchanged,
+      raise MutationFailure.new(data: uncertain ? resolve(unknown) : unchanged,
                                 changed: uncertain ? nil : false, uncertain: uncertain,
-                                recovery: recovery)
+                                recovery: resolve(recovery))
     end
+
+    # Deferred projections may incorporate an identity returned by a malformed
+    # response. Classification and failure construction still belong here.
+    def self.resolve(projection) = projection.respond_to?(:call) ? projection.call : projection
+    private_class_method :resolve
   end
 end
