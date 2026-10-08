@@ -11,6 +11,7 @@ require "optparse"
 options = {}
 parser = OptionParser.new do |o|
   o.banner = "usage: planka apply-label <card> --label ID|NAME [--output human|json]"
+  o.separator "Deprecated: use planka add label LABEL --card CARD."
   o.on("--label LABEL", "label id or exact name") { |v| options[:label] = v }
   Planka::CLI.output_option(o, options)
 end

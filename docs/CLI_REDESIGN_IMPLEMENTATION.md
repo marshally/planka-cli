@@ -907,6 +907,61 @@ each command, a rejected URL reference, leaf help, and both legacy executables.
 This is pinned-source and fixture evidence, not live acceptance; no live writes
 were authorized or performed.
 
+## Implemented label resource operations
+
+Issue [#16](https://github.com/marshally/planka-cli/issues/16) adds native
+`get labels`, `get label`, `create label`, `update label`, and `delete label`.
+The existing card-scoped `add label`/`remove label` complete the resource slice.
+The [README contract](../README.md#canonical-labels) owns command syntax, schemas,
+human output, input rules, ordering, completeness, and recovery.
+
+`Boards::Labels` implements the supported Resource hooks and uses `collect` for
+partial collection results and the Resource/Write lifecycle for mutations.
+`Boards::LabelRecord` owns field validation, projection, confirmation, and
+readback references; `CLI::Resources::Labels` owns CLI scope/default preparation,
+flags, help, and presentation. `Cards::Labels` retains card-label relationships;
+legacy `Planka::Labels` retains exact-name reuse and its original projections.
+The general library still loads without CLI/workflow code or environment access.
+
+Collection reads and creates require explicit `--board`, matching other current
+board-resource commands. Individual operations require `--board` or
+`PLANKA_BOARD_ID` even for numeric IDs. The CLI does not issue an unsupported
+label GET or search other boards. Create always makes a new label. Known label
+IDs from malformed create responses are retained for readback, while an ID
+already present in the pre-write snapshot is never accepted as a new creation.
+Positions may be server-normalized. No resource writes occur during reads;
+there are no client assignment sweeps or retries after unknown mutations.
+
+### Label API evidence
+
+Inspected official **Community v2.2.1** source for this implementation:
+
+| Contract | Official source |
+| --- | --- |
+| POST `/api/boards/:boardId/labels`, PATCH/DELETE `/api/labels/:id`; no individual label GET route | [Routes](https://github.com/plankanban/planka/blob/v2.2.1/server/config/routes.js) |
+| Board visibility checks and full `included.labels` from `Label.qm.getByBoardId`; no label paging parameters | [Board show](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js) |
+| Numeric-string ID and board ID, nullable name/timestamps, numeric position, 42 allowed colors | [Label model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/Label.js) |
+| Create accepts nonnegative position, nullable/nonempty name up to 128 UTF-16 units, required color; returns `{item: label}`; board editor required | [Create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/labels/create.js) |
+| Update accepts only supplied name/color/position; returns `{item: label}`; board editor required | [Update controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/labels/update.js) |
+| Create/update normalize positions and may renumber neighbors on the server | [Create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/labels/create-one.js), [update helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/labels/update-one.js) |
+| Delete requires board editor membership and returns the deleted label; cleanup removes CardLabel assignments, preserving cards | [Delete controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/labels/delete.js), [cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/labels/delete-related.js) |
+| Card-label mutations require same-board identities and board editor access; return relationship records | [Add controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/card-labels/create.js), [remove controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/card-labels/delete.js) |
+
+The CLI requires a nonblank name for create/update, does not expose clearing,
+and still reads native unnamed labels. `/labels/ID` is a supported CLI reference
+form; it is not a native browser route. Legacy `labels` continues reading the
+complete board snapshot rather than a narrower labels endpoint.
+
+Context7 was unavailable. The locked bundle is Bundler 4.0.14, net-http 0.9.1,
+and minitest 6.0.6; installed source was inspected. `Net::HTTP#transport_request`
+can retry DELETE by default; Client already sets `max_retries = 0`. Dependency
+versions and Gemfile.lock are unchanged. The public CLI/local HTTP tests cover
+all label verbs, no-ops, partial malformed reads, exact writes, uncertain results,
+cleanup, and legacy flat/direct parity. Installed-gem verification exercises
+commands outside the checkout with the package path checked in each subprocess.
+These checks and pinned source evidence do not prove live write acceptance or
+compatibility across all editions/releases. No live writes were performed.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -1321,7 +1376,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, and card task-list operations are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, card task-list operations, and label resource operations are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

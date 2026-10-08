@@ -256,6 +256,14 @@ class FakePlanka
     in ["DELETE", ["api", "lists", id]] then kanban_list(id) { |list| [200, delete_list(list)] }
     in ["POST", ["api", "lists", id, "cards"]] then [200, { "item" => make_card(id, data) }]
     in ["PATCH", ["api", "cards", id]] then [200, { "item" => patch_card(id, data) }]
+    in ["DELETE", ["api", "labels", id]]
+      record = @state[:labels].find { |entry| entry["id"] == id }
+      @state[:labels].delete(record)
+      @state[:cardLabels].reject! { |entry| entry["labelId"] == id }
+      [200, { "item" => record }]
+    in ["PATCH", ["api", "labels", id]]
+      record = @state[:labels].find { |entry| entry["id"] == id }
+      [200, { "item" => record.merge!(data) }]
     in ["POST", ["api", "boards", id, "labels"]] then [200, { "item" => make_label(id, data) }]
     in ["DELETE", ["api", "cards", id, "card-labels", label_ref]]
       label_id = label_ref.delete_prefix("labelId:")
