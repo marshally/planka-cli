@@ -96,12 +96,12 @@ module Planka
         return if @reference.match?(/\A\d+\z/) || url_reference?
 
         resource = @command.resource
-        invalid!(@command.collection ? "Expected a numeric #{resource} ID or supported #{resource} URL" : "Expected a numeric #{resource} ID or exact #{resource} name")
+        invalid!(@command.url? ? "Expected a numeric #{resource} ID or supported #{resource} URL" : "Expected a numeric #{resource} ID or exact #{resource} name")
       end
 
       # Resources without a same-instance URL accept no URL form.
       def url_reference?
-        @command.collection && @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.collection}/\d+/?\z})
+        @command.url? && @reference.match?(%r{\Ahttps?://[^/]+(?:/[^/?#]+)*/#{@command.collection}/\d+/?\z})
       end
 
       def build_invocation
