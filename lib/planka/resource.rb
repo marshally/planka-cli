@@ -44,6 +44,19 @@ module Planka
     def updated_data(known, attributes) = record_data(known).merge(attributes)
     def confirmed_data(_record, desired) = desired
 
+    # Reads a collection into DATA, at most LIMIT records after PROJECT. A
+    # failed read keeps the projected records read so far; reference failures
+    # are input errors and propagate unchanged.
+    def collect(limit, project: :itself.to_proc)
+      data = []
+      yield data
+      CollectionResult.limited(project.call(data), limit)
+    rescue *OPERATION_ERRORS => error
+      raise if error.is_a?(ReferenceError)
+
+      raise CollectionFailure.new(data: CollectionResult.limited(project.call(data), limit).data)
+    end
+
     def persist(known, desired)
       unchanged = record_data(known)
       return MutationResult.new(data: desired, changed: false) if unchanged == desired

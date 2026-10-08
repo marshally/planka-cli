@@ -4,8 +4,6 @@ module Planka
     # own board; names resolve within the asserted board. Each operation observes
     # current server state through the supplied authenticated client.
     class Cards < Resource
-      OPERATION_ERRORS = [Planka::Error, *Client::NETWORK_ERRORS].freeze
-
       def initialize(client, board_id: nil)
         super(client)
         @board_id = board_id
@@ -17,15 +15,11 @@ module Planka
       # order; cards keep position order.
       def all(list: nil, name: nil, labels: [], members: [], limit: nil)
         validate_options!(name: name, labels: labels, members: members, limit: limit)
-        data = []
-        board = @scope.board(list)
-        wanted = filters(board, labels: labels, members: members)
-        readable_lists(board, list).each { |record| collect!(data, board, record, name, wanted) }
-        CollectionResult.limited(data, limit)
-      rescue *OPERATION_ERRORS => error
-        raise if error.is_a?(ReferenceError)
-
-        raise CollectionFailure.new(data: CollectionResult.limited(data, limit).data)
+        collect(limit) do |data|
+          board = @scope.board(list)
+          wanted = filters(board, labels: labels, members: members)
+          readable_lists(board, list).each { |record| collect_list!(data, board, record, name, wanted) }
+        end
       end
 
       def find(reference) = read_record(reference).card
@@ -87,7 +81,7 @@ module Planka
         users.select { |user| memberships.any? { |member| member["userId"] == user["id"] } }
       end
 
-      def collect!(data, board, list, name, wanted)
+      def collect_list!(data, board, list, name, wanted)
         relations = relation_index(board["included"])
         @scope.list_cards(board, list).sort_by { |card| [card["position"].to_f, card["id"].to_i] }.each do |card|
           related = relations.transform_values { |ids| ids.fetch(card["id"], []) }
