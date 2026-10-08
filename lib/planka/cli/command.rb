@@ -13,12 +13,13 @@ module Planka
               mutation:, collection_read:, resource:, collection:, prepare:, validate_flags:, projector:, **required)
       end
 
-      # collection is the URL path segment of same-instance references; nil
-      # when the resource has no URL, so references are IDs or names only.
       def reference? = reference
       def optional_reference? = optional_reference
       # Whether a reference may be an exact name rather than an ID or URL.
       def names? = names
+      # Whether references may be same-instance URLs; collection is their path
+      # segment, and nil means the resource has no URL.
+      def url? = !collection.nil?
       def session? = session
       def mutation? = mutation
       def collection_read? = collection_read

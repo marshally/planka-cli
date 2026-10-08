@@ -2,7 +2,6 @@ require "planka"
 require "planka/cli/command"
 require "planka/cli/failure"
 require "planka/cli/resources/board_scope"
-require "planka/cli/resources/scalar_flags"
 
 module Planka
   module CLI
@@ -104,7 +103,7 @@ module Planka
           private_class_method :position
 
           def self.validate_task_list_values(flags)
-            error = ScalarFlags.error(flags)
+            error = Cards.validate_scope_flags(flags)
             return error if error
             if flags[:name] && !Records.text?(flags[:name].first, Planka::Cards::TaskListRecord::NAME_LIMIT)
               return "--name must be at most #{Planka::Cards::TaskListRecord::NAME_LIMIT} characters"
@@ -143,7 +142,7 @@ module Planka
             ["get", "task-list"] => Command.new(aliases: [["get", "task-lists"]], names: true, optional_reference: true, collection_read: true,
                                                 resource: "task list", collection_flags: [:name, :limit],
                                                 flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit },
-                                                validate_flags: ScalarFlags.method(:error), prepare: method(:prepare_get),
+                                                validate_flags: Cards.method(:validate_scope_flags), prepare: method(:prepare_get),
                                                 help: GET_HELP, operation: method(:get), formatter: method(:format_task_lists)),
             ["create", "task-list"] => Command.new(aliases: [["create", "task-lists"]], reference: false, mutation: true, resource: "task list",
                                                    flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--position N" => :position },
@@ -154,7 +153,7 @@ module Planka
                                                    validate_flags: method(:validate_task_list_values), prepare: method(:prepare_update),
                                                    help: UPDATE_HELP, operation: method(:update), formatter: ->(task_list) { "Updated task list #{format_task_list(task_list)}" }),
             ["delete", "task-list"] => Command.new(aliases: [["delete", "task-lists"]], names: true, mutation: true, resource: "task list",
-                                                   flags: { "--card CARD" => :card, "--board BOARD" => :board }, validate_flags: ScalarFlags.method(:error),
+                                                   flags: { "--card CARD" => :card, "--board BOARD" => :board }, validate_flags: Cards.method(:validate_scope_flags),
                                                    prepare: method(:prepare_task_list), help: DELETE_HELP, operation: method(:delete),
                                                    formatter: ->(task_list) { "Deleted task list #{task_list["name"]} (#{task_list["id"]}) from card #{task_list["cardId"]}" }),
           }.freeze
