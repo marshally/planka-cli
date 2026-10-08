@@ -939,7 +939,7 @@ Inspected official **Community v2.2.1** source for this implementation:
 | Contract | Official source |
 | --- | --- |
 | POST `/api/boards/:boardId/labels`, PATCH/DELETE `/api/labels/:id`; no individual label GET route | [Routes](https://github.com/plankanban/planka/blob/v2.2.1/server/config/routes.js) |
-| Board visibility checks and full `included.labels` from `Label.qm.getByBoardId`; no label paging parameters | [Board show](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js) |
+| Board visibility checks and full `included.labels` from `Label.qm.getByBoardId`; no label paging parameters or query limit | [Board show](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js), [label query methods](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/Label.js) |
 | Numeric-string ID and board ID, nullable name/timestamps, numeric position, 42 allowed colors | [Label model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/Label.js) |
 | Create accepts nonnegative position, nullable/nonempty name up to 128 UTF-16 units, required color; returns `{item: label}`; board editor required | [Create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/labels/create.js) |
 | Update accepts only supplied name/color/position; returns `{item: label}`; board editor required | [Update controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/labels/update.js) |

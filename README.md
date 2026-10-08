@@ -565,8 +565,8 @@ planka add label LABEL --card CARD -o json
 planka remove label LABEL --card CARD -o json
 ```
 
-`label` and `labels` are aliases. LABEL is a label ID or exact label name on the
-card's board. CARD is an ID, same-instance URL, or exact name with `--board BOARD`
+`label` and `labels` are aliases. LABEL is an ID, same-instance `/labels/ID`
+CLI reference URL, or exact label name on the card's board. CARD is an ID, same-instance URL, or exact name with `--board BOARD`
 or `PLANKA_BOARD_ID`, with the same scope rules as card members. Unknown labels
 are `not_found`; ambiguous names report candidate IDs as `invalid_input`.
 
@@ -581,7 +581,8 @@ Human output prints `Label LABEL_ID on card CARD_ID` and `present: true|false`.
 Success exits 0, local input 2, other failures 1. Add/remove preserve the label,
 the card, and unrelated labels, and apply no workflow convention. Endpoint
 contract: Community v2.2.1 routes use POST card-labels and DELETE
-card-labels/labelId:ID; live acceptance is recorded in the dependency PR.
+card-labels/labelId:ID. See the [pinned source evidence and verification
+limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#label-api-evidence).
 
 ### Canonical card tasks
 

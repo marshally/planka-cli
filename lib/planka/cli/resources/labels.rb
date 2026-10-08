@@ -97,7 +97,8 @@ module Planka
           Name is nonempty, at most 128 UTF-16 units. Color is a native Planka color.
           Position is a finite nonnegative native ordering value, not a row index.
           JSON data is the resulting label object; meta.changed is true/false/null.
-          Unknown writes require readback-labels using get labels --board BOARD before retrying.
+          Unknown writes require readback-labels, or readback-label if a new ID was returned.
+          Inspect get labels --board BOARD or get label LABEL --board BOARD before retrying.
         HELP
 
         UPDATE_HELP = <<~HELP + COMMON_HELP
@@ -111,7 +112,8 @@ module Planka
         DELETE_HELP = <<~HELP + COMMON_HELP
           usage: planka delete label LABEL [--board BOARD] [-o human|json]
           Delete only this label. Native Planka removes its assignments; cards and other labels remain.
-          No confirmation prompt or client cleanup writes. JSON data is the label plus deleted true on success; null on an unknown deletion.
+          No confirmation prompt or client cleanup writes. JSON data is the label plus deleted: true
+          on success, or deleted: null on an unknown deletion.
           A rejected deletion retains the unchanged label without deleted. meta.changed is true/false/null. Unknown writes require readback-label recovery before retrying.
         HELP
 
