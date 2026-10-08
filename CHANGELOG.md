@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+Added card task-list resource commands with singular/plural aliases and offline
+root/group/leaf help: `get task-lists --card CARD` (card order, exact `--name`,
+`--limit`), `get task-list TASK_LIST`,
+`create task-list --card CARD --name NAME [--position N]`,
+`update task-list TASK_LIST --name NAME`, and `delete task-list TASK_LIST`.
+TASK_LIST is an ID or an exact name with `--card`; an ID alone finds its card,
+and URL references are rejected because Planka has no task-list pages. Creates
+append after the card's task lists and send only the name and position, so
+Planka's display defaults apply; updates rename only and keep tasks; deletes
+issue one native deletion, and Planka deletes the list's tasks. Unknown outcomes
+report `readback-task-lists` or `readback-task-list` recovery without retries
+or invented IDs. They replace legacy `create-task-list` and `rename-task-list`,
+which remain unchanged; their help names the replacements. Task-list operations
+live under `Planka::Cards::TaskLists` with `TaskListScope` and `TaskListRecord`,
+and `CLI::Resources::Cards::TaskLists`. A command without a URL collection now
+accepts only ID and name references.
+
 Added `workflow resume ticket CARD --criteria-file FILE|-` (alias `tickets`) with
 offline help at `workflow resume` and the leaf. It adds the criteria missing from
 an existing ticket's `Acceptance criteria` list and never creates a card. The
