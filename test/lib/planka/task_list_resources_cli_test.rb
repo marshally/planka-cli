@@ -120,6 +120,57 @@ class TaskListResourcesCLITest < Minitest::Test
     assert_empty writes
   end
 
+  def created(id, name, position) = task_list(id, name, position).merge("createdAt" => "2026-10-01T00:00:00.000Z")
+
+  def test_create_appends_after_the_cards_task_lists_with_native_defaults_even_for_existing_names
+    doc, err, status = json("create", "task-list", "--card", CARD, "--name", "Ünïcode notes")
+    assert status.success?, err
+    record = @server.task_lists.last
+    assert_equal({ "data" => created(record["id"], "Ünïcode notes", 196_608), "meta" => { "changed" => true }, "error" => nil }, doc)
+    assert_equal [["POST", "/api/cards/#{CARD}/task-lists", { "name" => "Ünïcode notes", "position" => 196_608 }]], writes,
+                 "only name and position; Planka's own display defaults apply"
+    @server.requests.clear
+    out, err, status = planka("create", "task-lists", "--card", "Spec: Work-next refinement", "--board", BOARD, "--name", "Notes", "--position", "1")
+    assert status.success?, err
+    assert_match(/\ACreated task list Notes \(\d+\) on card #{CARD}\n\z/, out)
+    assert_equal [["POST", "/api/cards/#{CARD}/task-lists", { "name" => "Notes", "position" => 1 }]], writes, "an existing name is still created"
+    assert_equal(2, @server.task_lists.count { |task_list| task_list["name"] == "Notes" })
+  end
+
+  def test_create_inputs_are_validated_before_any_request
+    [["create", "task-list", "--name", "x"], ["create", "task-list", "--card", CARD],
+     ["create", "task-list", "--card", CARD, "--name", ""], ["create", "task-list", "--card", CARD, "--name", "x" * 129],
+     ["create", "task-list", "--card", CARD, "--name", "x", "--position", "-1"],
+     ["create", "task-list", "--card", CARD, "--name", "x", "--position", "Infinity"],
+     ["create", "task-list", "--card", CARD, "--name", "x", "--show-on-front-of-card"],
+     ["create", "task-list", "--card", "Spec: Work-next refinement", "--name", "x"],
+     ["create", "task-list", CRITERIA, "--card", CARD, "--name", "x"]].each do |args|
+      doc, err, status = json(*args)
+      assert_equal 2, status.exitstatus, "#{args.inspect}: #{err}"
+      assert_equal "invalid_input", doc.dig("error", "code"), args.inspect
+      refute_match(/unknown command/, err, args.inspect)
+    end
+    assert_equal 0, @server.requests.size
+    doc, err, status = json("create", "task-list", "--card", CARD, "--name", "x" * 128)
+    assert status.success?, err
+    assert_equal 128, doc.dig("data", "name").size
+  end
+
+  def test_create_failures_report_no_invented_id_and_are_not_retried
+    @server.inject("POST", %r{/task-lists\z}, :apply_then_drop)
+    doc, _err, status = json("create", "task-list", "--card", CARD, "--name", "Review")
+    assert_equal [1, "unknown_outcome", nil], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+    assert_equal [nil, CARD], doc["data"].values_at("id", "cardId")
+    assert_equal({ "action" => "readback-task-lists", "resources" => [{ "type" => "card", "id" => CARD }] }, doc.dig("error", "recovery"))
+    assert_equal 1, @server.counts("POST", %r{/task-lists\z})
+    @server.inject("POST", %r{/task-lists\z}, { "item" => { "id" => "1" } })
+    doc, _err, status = json("create", "task-list", "--card", CARD, "--name", "Malformed")
+    assert_equal [1, "unknown_outcome"], [status.exitstatus, doc.dig("error", "code")]
+    @server.inject("POST", %r{/task-lists\z}, 403)
+    doc, _err, status = json("create", "task-list", "--card", CARD, "--name", "Forbidden")
+    assert_equal [1, "authorization_error", false], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+  end
+
   def test_malformed_task_lists_report_an_incomplete_failed_read
     @server.task_lists << task_list("600000000000000009", 42, 1)
     doc, err, status = json("get", "task-lists", "--card", CARD)
