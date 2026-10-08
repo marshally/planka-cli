@@ -411,7 +411,10 @@ class FakePlanka
   end
 
   def make_task_list(card_id, data)
-    record = { "id" => next_id, "cardId" => card_id, "name" => data["name"] || "Tasks", "position" => data["position"], "showOnFrontOfCard" => data["showOnFrontOfCard"] }
+    # Planka's model defaults: shown on the card's front, completed tasks visible.
+    record = { "id" => next_id, "cardId" => card_id, "name" => data["name"] || "Tasks", "position" => data["position"],
+               "showOnFrontOfCard" => data.fetch("showOnFrontOfCard", true), "hideCompletedTasks" => data.fetch("hideCompletedTasks", false),
+               "createdAt" => "2026-10-01T00:00:00.000Z", "updatedAt" => nil }
     @state[:taskLists] << record
     record
   end

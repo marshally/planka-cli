@@ -12,9 +12,11 @@ module Planka
           ROOT_HELP = <<~HELP.gsub(/^/, "  ")
             get task-lists --card CARD  List a card's task lists (read-only)
             get task-list TASK_LIST  Read one card task list (read-only)
+            create task-list --card CARD --name NAME  Create one task list on a card
           HELP
           GROUP_HELP = {
             "get" => "  task-lists --card CARD  List a card's task lists (read-only)\n  task-list TASK_LIST  Read one card task list (read-only)\n",
+            "create" => "  task-list --card CARD --name NAME  Create one task list on a card\n",
           }.freeze
 
           # get reads one task list with a reference, otherwise the card's task lists.
@@ -33,9 +35,36 @@ module Planka
             { board_id: flags[:board] && BoardScope.resolve(instance, flags[:board].first) }
           end
 
+          def self.prepare_create(env, instance:, flags:, **)
+            unless flags[:card] && flags[:name]
+              raise Failure.new(code: "invalid_input", status: 2, message: "create task-list requires --card and --name")
+            end
+
+            Cards.prepare_scope(env, instance: instance, flags: flags).merge(name: flags[:name].first, position: position(flags))
+          end
+
+          # Validated by validate_task_list_values before preparation.
+          def self.position(flags) = flags[:position] && Float(flags[:position].first)
+          private_class_method :position
+
+          def self.validate_task_list_values(flags)
+            error = ScalarFlags.error(flags)
+            return error if error
+            if flags[:name] && !Records.text?(flags[:name].first, Planka::Cards::TaskListRecord::NAME_LIMIT)
+              return "--name must be at most #{Planka::Cards::TaskListRecord::NAME_LIMIT} characters"
+            end
+
+            position = flags[:position] && Float(flags[:position].first, exception: false)
+            "--position must be finite and nonnegative" if flags[:position] && !(position && Records.position?(position))
+          end
+
           def self.get(client, reference = nil, card_id: nil, board_id: nil, **collection)
             task_lists = Planka::Cards::TaskLists.new(client, card_id: card_id, board_id: board_id)
             reference ? task_lists.find(reference) : task_lists.all(**collection)
+          end
+
+          def self.create(client, card_id:, board_id: nil, **attributes)
+            Planka::Cards::TaskLists.new(client, card_id: card_id, board_id: board_id).create(**attributes)
           end
 
           def self.format_task_list(task_list) = "#{task_list["name"]} (#{task_list["id"]}) on card #{task_list["cardId"]}"
@@ -52,6 +81,10 @@ module Planka
                                                 flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--limit N" => :limit },
                                                 validate_flags: ScalarFlags.method(:error), prepare: method(:prepare_get),
                                                 help: "", operation: method(:get), formatter: method(:format_task_lists)),
+            ["create", "task-list"] => Command.new(aliases: [["create", "task-lists"]], reference: false, mutation: true, resource: "task list",
+                                                   flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name, "--position N" => :position },
+                                                   validate_flags: method(:validate_task_list_values), prepare: method(:prepare_create),
+                                                   help: "", operation: method(:create), formatter: ->(task_list) { "Created task list #{format_task_list(task_list)}" }),
           }.freeze
 
           def self.commands = COMMANDS
