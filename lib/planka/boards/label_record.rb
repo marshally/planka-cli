@@ -2,16 +2,6 @@ module Planka
   module Boards
     # The public fields of a native board label.
     module LabelRecord
-      # A returned creation ID can aid readback even when its fields are invalid.
-      class UnconfirmedCreation < InvalidResponse
-        attr_reader :label_id
-
-        def initialize(label_id)
-          super("Invalid created label")
-          @label_id = label_id
-        end
-      end
-
       NAME_LIMIT = 128
       FIELDS = %w[id boardId name color position createdAt updatedAt].freeze
 
@@ -50,14 +40,13 @@ module Planka
         end
       end
 
-      def self.confirm_creation!(record, desired, existing_ids)
-        id = record["id"] if record.is_a?(Hash) && Records.id?(record["id"]) && !existing_ids.include?(record["id"])
-        raise InvalidResponse, "Creation returned an existing label" unless id
+      # Only a numeric ID absent from the observed board can identify a creation.
+      def self.created_id(record, existing_ids)
+        record["id"] if record.is_a?(Hash) && Records.id?(record["id"]) && !existing_ids.include?(record["id"])
+      end
 
-        confirm!(record, desired)
-        record
-      rescue InvalidResponse
-        raise UnconfirmedCreation, id
+      def self.confirm_new_identity!(record, existing_ids)
+        raise InvalidResponse, "Creation did not return a new label ID" unless created_id(record, existing_ids)
       end
 
       def self.recovery(label)

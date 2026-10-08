@@ -417,4 +417,15 @@ class LabelResourcesCLITest < Minitest::Test
     assert_equal 0, status, err
     assert_equal BOARD, doc.dig("data", "boardId")
   end
+
+  def test_creation_response_cannot_reuse_an_existing_label_identity
+    @server.inject("POST", %r{/labels$}, { "item" => @server.labels.first.dup })
+    doc, err, status = json("create", "label", "--board", BOARD, "--name", "enhancement", "--color", "berry-red")
+    assert_equal 1, status, err
+    assert_equal "unknown_outcome", doc.dig("error", "code")
+    assert_nil doc.dig("data", "id")
+    assert_nil doc.dig("meta", "changed")
+    assert_equal "readback-labels", doc.dig("error", "recovery", "action")
+    assert_equal 1, @server.counts("POST", %r{/labels$})
+  end
 end

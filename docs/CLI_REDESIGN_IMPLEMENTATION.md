@@ -1030,16 +1030,21 @@ The private hook contract separates stable algorithms from resource details:
 | `creation_data(observation, attributes)`, `deletion_data(observation)` | Project the requested state for the supported operation. Relationship supplies these from presence semantics. |
 | `update_attributes(**attributes)` | Validate public update input before reads and translate it into changed fields. Required only for resources exposing update. |
 | `create_record(observation, desired)`, `update_record(observation, desired)`, `delete_record(observation)` | Execute the corresponding request through Client and return its unvalidated record; requests derive from the desired state. Implement only the supported operations. |
-| `validate_record!(record, desired)` | Validate returned identity, scope, and requested effects before success is reported. |
+| `validate_record!(record, desired, observation:)` | Validate returned identity, scope, and requested effects before success is reported. Labels use the original observation to reject reused creation IDs; other implementations ignore that keyword. |
 | `confirmed_data(record, desired)` | Return confirmed public data; defaults to desired state. Members incorporate server-assigned membership identity and timestamps on creation. |
 | `recovery(observation)` | Describe resource-specific readback. |
+| `unconfirmed_data(observation, desired, returned)` | Project uncertain state after a failed confirmation. Defaults to marking changed fields nil; labels also retain a returned new ID. |
+| `unconfirmed_recovery(observation, desired, returned)` | Supply recovery after failure; defaults to `recovery(observation)`. Labels include a newly returned ID when known. |
 
 Public state projections are flat hashes. Desired state retains known fields
 and changes requested ones. For an uncertain write, Resource retains the
 observed projection and marks differing requested fields nil; confirmed response
 metadata is incorporated only after validation. `Write` remains the single owner
 of confirmed result/failure construction and certainty classification, preserving
-the original error as cause. Client sends each request once. Read/input failures
+the original error as cause. `Write.perform` accepts eager hashes or deferred
+callables for unknown data and recovery; Resource defers these projections until
+the response is available. Only Write classifies certainty and constructs failure
+results. Client sends each request once. Read/input failures
 occur before Write; malformed write responses require readback. Multi-step
 workflow progress remains separate.
 

@@ -50,7 +50,7 @@ module Planka
 
       def update_record(known, desired) = client.update_task(known["id"], isCompleted: desired["isCompleted"])
 
-      def validate_record!(updated, desired)
+      def validate_record!(updated, desired, **)
         unless updated.is_a?(Hash) && updated["id"] == desired["id"] && updated["taskListId"] == desired["taskListId"] && updated["isCompleted"] == desired["isCompleted"]
           raise InvalidResponse, "Invalid task update response"
         end

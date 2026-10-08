@@ -143,7 +143,7 @@ module Planka
       def deletion_data(known) = known.card.merge("deleted" => true)
       def delete_record(known) = client.delete_card(known.card["id"])
 
-      def validate_record!(record, desired) = CardRecord.confirm!(record, desired)
+      def validate_record!(record, desired, **) = CardRecord.confirm!(record, desired)
       def confirmed_data(record, desired) = CardRecord.data(record).merge(desired.slice("deleted"))
       def recovery(known) = CardRecord.recovery(known.card)
     end

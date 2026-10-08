@@ -39,7 +39,7 @@ module Planka
         client.update_card(known.card["id"], **request)
       end
 
-      def validate_record!(record, desired) = CardRecord.confirm!(record, desired)
+      def validate_record!(record, desired, **) = CardRecord.confirm!(record, desired)
       def confirmed_data(record, _desired) = CardRecord.data(record)
       def recovery(known) = CardRecord.recovery(known.card)
     end

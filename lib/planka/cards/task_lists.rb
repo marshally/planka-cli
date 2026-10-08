@@ -77,7 +77,7 @@ module Planka
       def creation_data(known, attributes) = known.task_list.merge(attributes, "position" => attributes["position"] || known.append_position)
       def create_record(_known, desired) = client.create_task_list(desired["cardId"], name: desired["name"], position: desired["position"])
 
-      def validate_record!(record, desired) = TaskListRecord.confirm!(record, desired)
+      def validate_record!(record, desired, **) = TaskListRecord.confirm!(record, desired)
       def confirmed_data(record, desired) = TaskListRecord.data(record).merge(desired.slice("deleted"))
       def recovery(known) = TaskListRecord.recovery(known.task_list)
     end

@@ -57,7 +57,7 @@ module Planka
       def create_record(known, _desired) = client.add_card_label(known["cardId"], known["labelId"])["item"]
       def delete_record(known) = client.remove_card_label(known["cardId"], known["labelId"])["item"]
 
-      def validate_record!(item, desired)
+      def validate_record!(item, desired, **)
         unless item.is_a?(Hash) && item["cardId"] == desired["cardId"] && item["labelId"] == desired["labelId"]
           raise InvalidResponse, "Invalid relationship write response"
         end

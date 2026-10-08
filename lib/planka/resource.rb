@@ -62,18 +62,26 @@ module Planka
       unchanged = record_data(known)
       return MutationResult.new(data: desired, changed: false) if unchanged == desired
 
-      Write.perform(unchanged: unchanged, unknown: uncertain_data(unchanged, desired), recovery: recovery(known)) do
-        confirm(yield, desired)
+      returned = nil
+      Write.perform(unchanged: unchanged, unknown: -> { unconfirmed_data(known, desired, returned) },
+                    recovery: -> { unconfirmed_recovery(known, desired, returned) }) do
+        returned = yield
+        confirm(returned, desired, known)
       end
     end
+
+    # Failure projections can retain returned identities without bypassing
+    # Write's certainty classification or the response-confirmation stage.
+    def unconfirmed_data(known, desired, _returned) = uncertain_data(record_data(known), desired)
+    def unconfirmed_recovery(known, _desired, _returned) = recovery(known)
 
     def uncertain_data(unchanged, desired)
       changes = desired.reject { |key, value| unchanged.key?(key) && unchanged[key] == value }
       unchanged.merge(changes.transform_values { nil })
     end
 
-    def confirm(record, desired)
-      validate_record!(record, desired)
+    def confirm(record, desired, known)
+      validate_record!(record, desired, observation: known)
       confirmed_data(record, desired)
     end
   end
