@@ -10,7 +10,8 @@ native list `get lists`, `get list`, `create list`, `update list`, `delete list`
 card task-list `get task-lists`, `get task-list`, `create task-list`,
 `update task-list`, `delete task-list`, native label `get labels`, `get label`,
 `create label`, `update label`, `delete label`, card-scoped `add label`/`remove label`,
-and nested help alongside all flat commands in
+native comment `get comments`, `get comment`, `create comment`, `update comment`,
+`delete comment`, and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -179,8 +180,31 @@ planka create task-list --card CARD --name "Acceptance criteria"
 planka update task-list TASK_LIST --name "Verification"
 planka create comment --card CARD --text "Ready for review"
 planka get comments --card CARD
-planka delete comment COMMENT
+planka delete comment COMMENT --card CARD
 ```
+
+### Comments
+
+Implemented comment operations are `get comments --card CARD`,
+`get comment COMMENT --card CARD`, `create comment --card CARD --text TEXT`,
+`update comment COMMENT --card CARD --text TEXT`, and
+`delete comment COMMENT --card CARD`. Singular/plural aliases share behavior.
+Comments use numeric IDs, with no name or URL references. Card scope is required
+even for IDs because the verified API has no individual comment GET. Optional
+`--board` asserts the card's board; card names require known board scope.
+
+Collection reads fetch native pages in descending numeric ID order, applying
+positive `--limit` only to the results and preserving verified partial comments
+on failure. No collection filters apply. Individual reads return one object.
+Text is required, nonblank UTF-8, at most 1,048,576 UTF-16 units, preserved exactly.
+Empty/blank input is rejected and clearing is unsupported. Updates send only text;
+identical text is a read-only no-op. Delete targets one comment with native effects.
+
+The [README comment contract](README.md#canonical-comments) owns public fields,
+human output, native permissions, completeness, failure projections and recovery.
+Legacy comment/handoff behavior remains unchanged. The
+[implementation evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-comment-resource-operations)
+is pinned source and fixture evidence, not live API acceptance.
 
 ### Card members
 

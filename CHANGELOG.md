@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+Added native comment resource reads, creation, text-only updates, and deletion
+with singular/plural aliases and offline help. All require explicit card scope;
+comment IDs have no URL/name lookup. Collections follow native 50-item descending
+ID pages, report limit completeness, and retain valid partial results on failure.
+Multiline Unicode text is preserved exactly; blank input and clearing are rejected.
+Updates skip identical text, writes are sent once, and uncertain outcomes retain
+known IDs with readback recovery. Legacy comment commands keep their runtime
+contracts; their help and the current agent guide name `create comment`.
+Official Community v2.0.0, 2.1.1, and v2.2.1 sources were inspected; no live writes
+or live API acceptance were performed.
+
 Added board label resource commands: `get labels --board BOARD` (exact name,
 limit, and completeness), `get label LABEL`, `create label --board BOARD --name
 NAME --color COLOR [--position N]`, `update label LABEL`, and `delete label LABEL`,

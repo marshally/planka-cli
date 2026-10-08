@@ -51,7 +51,9 @@ card-scoped `get members`, `get member`, `add member`, `remove member`,
 `get lists`, `get list`, `create list`, `update list`, `delete list`,
 `get task-lists`, `get task-list`, `create task-list`, `update task-list`,
 `delete task-list`, native `get labels`, `get label`, `create label`, `update label`,
-`delete label`, card-scoped `add label`/`remove label`, and their root/group/leaf help are
+`delete label`, card-scoped `add label`/`remove label`,
+`get comments`, `get comment`, `create comment`, `update comment`, `delete comment`,
+and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
 mapping. See [Current interface](#current-interface) for working commands and
@@ -140,7 +142,7 @@ planka update task TASK --completed true
 planka move task TASK --task-list TASK_LIST
 planka delete task TASK
 planka create comment --card CARD --text "Ready for review"
-planka delete comment COMMENT
+planka delete comment COMMENT --card CARD
 ```
 
 Updates change only supplied fields. New resources and moved cards append to
@@ -841,6 +843,75 @@ local input 2, other failures 1. Cleanup failure warns on stderr and preserves
 the primary outcome. See the
 [resume contract and API evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-twelfth-slice-resume-a-ticket).
 
+### Canonical comments
+
+```sh
+planka get comments --card CARD [--limit N]
+planka get comment COMMENT --card CARD
+planka create comment --card CARD --text "Ready for review"
+planka update comment COMMENT --card CARD --text "Updated note"
+planka delete comment COMMENT --card CARD
+```
+
+All commands accept `comment`/`comments`, `--board BOARD`, `-o human|json`, and
+work offline with `--help`. `COMMENT` is a numeric ID: comments have no names or
+supported URLs. Every command requires `--card` because the verified API has no
+individual comment GET. Cards accept IDs, same-instance `/cards/ID` URLs, or exact
+names within `--board`/`PLANKA_BOARD_ID`. Explicit card IDs and URLs ignore the
+default board; explicit `--board` must agree. Ambiguous card names list candidate
+IDs. A comment absent from the asserted card is `not_found`; it is never mutated.
+
+Collection reads fetch all native 50-item pages, ordered by descending numeric
+comment ID (newest first). There are no name/label/member filters. A positive
+`--limit` caps results after paging; `meta.complete` is false when truncated or
+retrieval fails. A failure returns verified partial comments with exit 1, even
+when a requested limit was already filled. An exact page boundary requires the
+next page to establish completeness. Concurrent changes can affect the result;
+these reads do not promise a consistent snapshot. Individual reads search those
+pages until the target is found.
+
+Creation always posts a new comment once, even for repeated text. Creation and
+update require `--text`: nonblank UTF-8, at most 1,048,576 UTF-16 code units (an
+emoji can occupy two). Text is sent exactly, including newlines and surrounding
+whitespace. Empty/blank input fails; clearing text is unsupported. The shell/OS
+may impose a lower argument-size limit. Update sends only text and an identical
+value is a no-op. Native creation requires board editor or viewer `canComment`
+permission; updates additionally require authorship. Deletion permits a project
+manager, or the author with those board permissions. The server remains the
+permission authority. Reads require access to the card. An identical-text no-op
+needs read access and makes no permission-probing write.
+
+Native deletion removes only the comment, preserving the card and other comments.
+Planka maintains its comment count, timestamps, notifications, and events; the
+CLI issues no extra cleanup mutations. No prompt or cascade flag is used.
+
+Human reads show `Comment ID on card CARD` followed by the exact text, or
+`No comments.`. Mutations prefix that rendering with `Created`, `Updated`, or
+`Deleted`. Limited collections include a truncation notice.
+
+JSON uses `{data, meta, error}`. A comment object contains `id`, `cardId`, nullable
+`userId`, `text`, and nullable `createdAt`/`updatedAt`; unrelated native fields are
+excluded. Collections return an array and `meta.complete`; individual reads
+return an object and empty `meta`. Successful mutations return the comment and
+`meta.changed: true`; identical updates return false. Delete adds `deleted: true`.
+Rejected writes return the last observed state with `changed: false` (a rejected
+create has only its card known); failures before observation return null data.
+Unknown or malformed write responses use `changed: null`, preserve known identity
+and unchanged fields, and set requested uncertain fields to null. Unknown deletion
+adds `deleted: null`. A usable created ID in a malformed response is retained.
+
+Recovery contains `action: readback-comment` and card/comment resource IDs when
+the comment ID is known, otherwise `readback-comments` and the card ID. Read with
+`get comment COMMENT --card CARD` or `get comments --card CARD` and reconcile
+before retrying; no write is automatically resent. Missing settings fail before
+requests. Sessions remain in memory; cleanup failures preserve the primary result.
+Exits are 0 success, 2 local input, 1 operational/API/unknown outcome.
+
+Legacy `comment CARD TEXT` and `planka-comment` retain positional text, bare JSON,
+stdout/stderr, and exits. Their help names `create comment`. Existing `show`,
+`describe`, handoff parsing, and claim inspection keep their one-page comment
+reader. See [pinned API evidence and verification limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-comment-resource-operations).
+
 ### Legacy compatibility commands
 
 The installed CLI also retains the flat commands below. Run
@@ -861,7 +932,7 @@ replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
 `move card` replaces `move-card`, `get cards --list LIST` replaces the list
 view of `snapshot`, `create list` replaces `create-list`, and
 `create task-list` and `update task-list` replace `create-task-list` and
-`rename-task-list`; remaining canonical replacements are not yet implemented.
+`rename-task-list`, and `create comment` replaces `comment`; remaining canonical replacements are not yet implemented.
 
 ### Configuration
 
