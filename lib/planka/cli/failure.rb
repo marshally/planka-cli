@@ -12,6 +12,11 @@ module Planka
         @program, @output = program, output
         @recovery = recovery
       end
+
+      # Local input failures exit 2; CONTEXT carries program/output when known.
+      def self.invalid_input(message, **context) = new(code: "invalid_input", status: 2, message: message, **context)
+
+      def self.configuration(message) = new(code: "configuration_error", message: message)
     end
   end
 end

@@ -76,7 +76,7 @@ module Planka
           Failure.new(code: code, message: "#{message}; read back the affected resources before retrying",
                       data: error.data, meta: { "changed" => error.changed }, recovery: error.recovery)
         when Planka::DependencyUnavailable
-          Failure.new(code: "configuration_error", message: error.message)
+          Failure.configuration(error.message)
         when Planka::Client::HTTPError
           code = { 401 => "authentication_error", 403 => "authorization_error", 404 => "not_found" }.fetch(error.status, "api_error")
           Failure.new(code: code, message: "API request failed (HTTP #{error.status}); verify the resource and access permissions")

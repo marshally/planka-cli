@@ -12,7 +12,7 @@ module Planka
         values = REQUIRED.map { |key| env[key] }
         missing = REQUIRED.zip(values).filter_map { |key, value| key if value.to_s.strip.empty? }
         unless missing.empty?
-          raise Failure.new(code: "configuration_error", message: "Missing required environment: #{missing.join(", ")}")
+          raise Failure.configuration("Missing required environment: #{missing.join(", ")}")
         end
 
         new(*values)

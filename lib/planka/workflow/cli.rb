@@ -122,27 +122,27 @@ module Planka
       def self.branch_preparation(env, instance:, **)
         { base_url: instance.base_url, prefix: Configuration.from_env(env).branch_prefix }
       rescue ConfigurationError => error
-        raise Planka::CLI::Failure.new(code: "configuration_error", message: error.message)
+        raise Planka::CLI::Failure.configuration(error.message)
       end
 
       def self.next_preparation(env, instance:, flags:, **)
         board = flags.fetch(:board, []).first || env["PLANKA_BOARD_ID"]
         if board.to_s.strip.empty?
-          raise Planka::CLI::Failure.new(code: "configuration_error", message: "Missing required environment: PLANKA_BOARD_ID (or supply --board BOARD)")
+          raise Planka::CLI::Failure.configuration("Missing required environment: PLANKA_BOARD_ID (or supply --board BOARD)")
         end
 
         { base_url: instance.base_url, board_id: instance.resolve(board, resource: "board", collection: "boards"), labels: flags.fetch(:labels, []).uniq }
       rescue Planka::CLI::Instance::InvalidReference => error
         if flags.fetch(:board, []).empty?
-          raise Planka::CLI::Failure.new(code: "configuration_error", message: "PLANKA_BOARD_ID must be a numeric board ID or same-instance board URL")
+          raise Planka::CLI::Failure.configuration("PLANKA_BOARD_ID must be a numeric board ID or same-instance board URL")
         end
 
-        raise Planka::CLI::Failure.new(code: "invalid_input", status: 2, message: error.message)
+        raise Planka::CLI::Failure.invalid_input(error.message)
       end
 
       def self.resume_preparation(_env, instance:, flags:, **)
         unless flags[:criteria_file]
-          raise Planka::CLI::Failure.new(code: "invalid_input", status: 2, message: "resume ticket requires --criteria-file")
+          raise Planka::CLI::Failure.invalid_input("resume ticket requires --criteria-file")
         end
 
         { base_url: instance.base_url, criteria: criteria(flags.fetch(:criteria_file).first) }
@@ -162,7 +162,7 @@ module Planka
         invalid_criteria!("Could not read --criteria-file")
       end
 
-      def self.invalid_criteria!(message) = raise(Planka::CLI::Failure.new(code: "invalid_input", status: 2, message: message))
+      def self.invalid_criteria!(message) = raise(Planka::CLI::Failure.invalid_input(message))
       private_class_method :criteria, :invalid_criteria!
 
       def self.validate_next_flags(flags)
