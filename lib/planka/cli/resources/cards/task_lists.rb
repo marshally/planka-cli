@@ -14,11 +14,13 @@ module Planka
             get task-list TASK_LIST  Read one card task list (read-only)
             create task-list --card CARD --name NAME  Create one task list on a card
             update task-list TASK_LIST --name NAME  Rename one task list
+            delete task-list TASK_LIST  Delete one task list; Planka deletes its tasks
           HELP
           GROUP_HELP = {
             "get" => "  task-lists --card CARD  List a card's task lists (read-only)\n  task-list TASK_LIST  Read one card task list (read-only)\n",
             "create" => "  task-list --card CARD --name NAME  Create one task list on a card\n",
             "update" => "  task-list TASK_LIST --name NAME  Rename one task list\n",
+            "delete" => "  task-list TASK_LIST  Delete one task list; Planka deletes its tasks\n",
           }.freeze
 
           # get reads one task list with a reference, otherwise the card's task lists.
@@ -79,6 +81,10 @@ module Planka
             Planka::Cards::TaskLists.new(client, card_id: card_id, board_id: board_id).update(reference, **attributes)
           end
 
+          def self.delete(client, reference, card_id: nil, board_id: nil)
+            Planka::Cards::TaskLists.new(client, card_id: card_id, board_id: board_id).delete(reference)
+          end
+
           def self.format_task_list(task_list) = "#{task_list["name"]} (#{task_list["id"]}) on card #{task_list["cardId"]}"
 
           def self.format_task_lists(data)
@@ -101,6 +107,10 @@ module Planka
                                                    flags: { "--card CARD" => :card, "--board BOARD" => :board, "--name NAME" => :name },
                                                    validate_flags: method(:validate_task_list_values), prepare: method(:prepare_update),
                                                    help: "", operation: method(:update), formatter: ->(task_list) { "Updated task list #{format_task_list(task_list)}" }),
+            ["delete", "task-list"] => Command.new(aliases: [["delete", "task-lists"]], names: true, mutation: true, resource: "task list",
+                                                   flags: { "--card CARD" => :card, "--board BOARD" => :board }, validate_flags: ScalarFlags.method(:error),
+                                                   prepare: method(:prepare_task_list), help: "", operation: method(:delete),
+                                                   formatter: ->(task_list) { "Deleted task list #{task_list["name"]} (#{task_list["id"]}) from card #{task_list["cardId"]}" }),
           }.freeze
 
           def self.commands = COMMANDS
