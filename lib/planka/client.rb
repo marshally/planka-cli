@@ -123,6 +123,8 @@ module Planka
 
     def update_task_list(task_list_id, **attrs) = item(request(:patch, "/api/task-lists/#{task_list_id}", attrs), "task list")
 
+    def delete_task_list(task_list_id) = item(request(:delete, "/api/task-lists/#{task_list_id}"), "task list")
+
     def update_task(id, **attrs) = request(:patch, "/api/tasks/#{id}", attrs)["item"]
 
     def create_task(task_list_id, **attrs) = item(request(:post, "/api/task-lists/#{task_list_id}/tasks", attrs), "task")

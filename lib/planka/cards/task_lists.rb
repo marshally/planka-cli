@@ -40,6 +40,10 @@ module Planka
       # Renames the task list; its tasks, completion, identity, and card are kept.
       def update(reference, **attributes) = super
 
+      # Issues one native task-list deletion; Planka deletes its tasks and
+      # keeps the card.
+      public :delete
+
       private
 
       def validate_options!(name:, limit:)
@@ -69,6 +73,9 @@ module Planka
 
       def update_record(known, desired) = client.update_task_list(known.task_list["id"], name: desired["name"])
 
+      def deletion_data(known) = known.task_list.merge("deleted" => true)
+      def delete_record(known) = client.delete_task_list(known.task_list["id"])
+
       def creation_attributes(name:, position:)
         { "name" => TaskListRecord.name!(name), "position" => position && TaskListRecord.position!(position) }
       end
@@ -77,7 +84,7 @@ module Planka
       def create_record(_known, desired) = client.create_task_list(desired["cardId"], name: desired["name"], position: desired["position"])
 
       def validate_record!(record, desired) = TaskListRecord.confirm!(record, desired)
-      def confirmed_data(record, _desired) = TaskListRecord.data(record)
+      def confirmed_data(record, desired) = TaskListRecord.data(record).merge(desired.slice("deleted"))
       def recovery(known) = TaskListRecord.recovery(known.task_list)
     end
   end

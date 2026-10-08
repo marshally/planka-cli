@@ -215,6 +215,36 @@ class TaskListResourcesCLITest < Minitest::Test
     assert_equal 3, @server.counts("PATCH", %r{/api/task-lists/}), "unknown updates are not retried"
   end
 
+  def test_delete_issues_one_target_deletion_and_planka_deletes_its_tasks
+    doc, err, status = json("delete", "task-list", CRITERIA)
+    assert status.success?, err
+    assert_equal({ "data" => expected("deleted" => true), "meta" => { "changed" => true }, "error" => nil }, doc)
+    assert_equal [["DELETE", "/api/task-lists/#{CRITERIA}", nil]], writes, "no task is deleted individually by the client"
+    assert_empty @server.tasks, "Planka deletes the task list's tasks"
+    assert_equal([NOTES], @server.task_lists.map { |task_list| task_list["id"] })
+    assert @server.find_card(CARD), "the card is kept"
+    out, err, status = planka("delete", "task-lists", "Notes", "--card", CARD)
+    assert status.success?, err
+    assert_equal "Deleted task list Notes (#{NOTES}) from card #{CARD}", out.chomp
+  end
+
+  def test_delete_requires_a_target_and_reports_rejected_or_unknown_outcomes
+    [["delete", "task-list"], ["delete", "task-lists", "--card", CARD], ["delete", "task-list", "Notes"]].each do |args|
+      doc, _err, status = json(*args)
+      assert_equal [2, "invalid_input"], [status.exitstatus, doc.dig("error", "code")], args.inspect
+    end
+    assert_equal 0, @server.requests.size
+    @server.inject("DELETE", %r{/api/task-lists/}, 403)
+    doc, _err, status = json("delete", "task-list", CRITERIA)
+    assert_equal [1, "authorization_error", false, expected], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed"), doc["data"]]
+    @server.inject("DELETE", %r{/api/task-lists/}, :apply_then_drop)
+    doc, _err, status = json("delete", "task-list", CRITERIA)
+    assert_equal [1, "unknown_outcome", nil], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+    assert_equal expected("deleted" => nil), doc["data"]
+    assert_equal({ "action" => "readback-task-list", "resources" => [{ "type" => "task-list", "id" => CRITERIA }] }, doc.dig("error", "recovery"))
+    assert_equal 2, @server.counts("DELETE", %r{/api/task-lists/}), "the unknown delete is not retried"
+  end
+
   def test_malformed_task_lists_report_an_incomplete_failed_read
     @server.task_lists << task_list("600000000000000009", 42, 1)
     doc, err, status = json("get", "task-lists", "--card", CARD)

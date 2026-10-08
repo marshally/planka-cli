@@ -271,6 +271,7 @@ class FakePlanka
     in ["POST", ["api", "cards", id, "task-lists"]] then [200, { "item" => make_task_list(id, data) }]
     in ["GET", ["api", "task-lists", id]] then task_list_payload(id)
     in ["PATCH", ["api", "task-lists", id]] then [200, { "item" => patch_task_list(id, data) }]
+    in ["DELETE", ["api", "task-lists", id]] then [200, { "item" => delete_task_list(id) }]
     in ["POST", ["api", "task-lists", id, "tasks"]] then [200, { "item" => make_task(id, data) }]
     else [404, { "message" => "no route for #{method} #{path}" }]
     end
@@ -423,6 +424,13 @@ class FakePlanka
     task_list = fetch(@state[:taskLists], id)
     task_list["name"] = data["name"] if data.key?("name")
     task_list
+  end
+
+  # Planka deletes a deleted task list's tasks with it.
+  def delete_task_list(id)
+    task_list = fetch(@state[:taskLists], id)
+    @state[:tasks].reject! { |task| task["taskListId"] == id }
+    @state[:taskLists].delete(task_list)
   end
 
   def make_task(task_list_id, data)
