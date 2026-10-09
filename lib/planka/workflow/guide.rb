@@ -10,12 +10,12 @@ module Planka
         ## Connection and output
         API commands require PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, and
         PLANKA_AGENT_PASSWORD from the caller's environment. References accept IDs
-        or same-instance URLs; names need parent scope. Help/guide/version work
+        or same-instance URLs; names need resource scope. Help/guide/version work
         offline. Never report credentials.
 
         Add `-o json` for canonical results: one document with data, meta, and
-        error. Inspect the exit status before consuming stdout: 0 is success,
-        2 is invalid input, and 1 is another failure. Diagnostics go to stderr.
+        error. Check status: 0 success, 2 invalid input, 1 other failure. Diagnostics
+        go to stderr.
         Legacy JSON/exits remain unchanged.
 
         ## Find and work a ticket
@@ -27,8 +27,7 @@ module Planka
         3. `planka describe card CARD -o json`: inspect description, criteria,
            blockers, comments, and memberships before acting.
         4. `planka workflow claim-status -o json`: inspect your first open claim
-           without a latest PR handoff across all accessible boards. This neither
-           acquires a lock nor checks GitHub. When authorized to start,
+           without a latest PR handoff across all accessible boards. No lock or GitHub check. When authorized,
            `planka workflow claim CARD -o json` adds membership and moves
            the card to in-progress. Reclaiming an already-satisfied card is a no-op.
            On partial/unknown outcomes, inspect the card before retrying;
@@ -45,6 +44,8 @@ module Planka
         ## Publish and recover
         Boards: `get boards --project PROJECT`, `get|update|delete board BOARD`,
         `create board --project PROJECT --name NAME`. Deletion removes board contents.
+        Projects: `planka get projects`, `get|update|delete project PROJECT`,
+        `create project --name NAME`. Deletion requires an empty project.
         Resources: `planka get cards|lists|labels --board BOARD`,
         `get|update|delete card|list REF`, `create card --list LIST --name NAME`,
         `create list --board BOARD --name NAME`, `move card CARD --list LIST`.
@@ -60,8 +61,7 @@ module Planka
         --title TITLE; tickets require --criteria-file FILE (a JSON string array).
         --description-file FILE accepts multiline text; either file accepts -
         for stdin. Positions append. `planka link BLOCKED BLOCKER`
-        records linked tasks in Blocked by; repeating a link is safe. Use IDs
-        for ambiguous names. Read help before writes.
+        records linked tasks in Blocked by; repeating a link is safe. Disambiguate with IDs. Read help before writes.
 
         For an unknown outcome, read the board back before retrying: the write
         may already have applied. Legacy recovery JSON can contain completed=false,

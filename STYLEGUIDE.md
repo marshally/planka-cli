@@ -12,7 +12,8 @@ card task-list `get task-lists`, `get task-list`, `create task-list`,
 `create label`, `update label`, `delete label`, card-scoped `add label`/`remove label`,
 native comment `get comments`, `get comment`, `create comment`, `update comment`,
 `delete comment`, native board `get boards`, `get board`, `create board`,
-`update board`, `delete board`, and nested help alongside all flat commands in
+`update board`, `delete board`, native project `get projects`, `get project`,
+`create project`, `update project`, `delete project`, and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -429,7 +430,7 @@ See the [board schemas and recovery contract](README.md#canonical-boards).
 
 ### Basic project creation and updates
 
-Planned `create project --name NAME` accepts optional `--type private|shared`,
+Implemented `create project --name NAME` accepts optional `--type private|shared`,
 default private when omitted. Type selection is creation-only; no implicit
 ownership-transfer update. Names are nonempty and obey the verified native length
 limit. Creation may omit description; preserve the native no-description state.
@@ -441,14 +442,24 @@ on creation. Nonempty descriptions obey the verified native length limit; reject
 empty input rather than interpreting it as clearing. Read/validate description
 inputs before network requests and do not silently truncate them.
 
-Planned `update project PROJECT` accepts `--name` and the description inputs
+Implemented `update project PROJECT` accepts `--name` and the description inputs
 above, changing only supplied fields, preserving omitted description, and rejecting
 empty updates. Defer ownership transfers, backgrounds, visibility, and favorites.
 Preserve native project creation's own manager/owner effects without extra
 client-side manager writes; this does not bring deferred project-manager commands
 into scope. Track the resource slice in
-[projects issue #23](https://github.com/marshally/planka-cli/issues/23); basic
-create/update commands are not implemented.
+[projects issue #23](https://github.com/marshally/planka-cli/issues/23).
+
+Implemented `get projects` reads the accessible instance collection with exact
+`--name` filtering before `--limit`, preserving native response order and reporting
+completeness. `get project PROJECT` reads one concise object. Project names resolve
+on the selected instance among accessible projects; ambiguity exits 1 with candidate
+IDs. IDs and same-instance `/projects/ID` URLs select their own project without a
+board default or parent flag. `delete project PROJECT` preserves native nonempty
+rejection and sends no child deletes. Names are limited to 128 and descriptions
+to 1024 UTF-16 code units, validated before requests. See the
+[project schema and recovery contract](README.md#canonical-projects) and
+[pinned API evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#project-api-evidence).
 
 ### List updates
 

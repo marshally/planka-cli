@@ -1,5 +1,5 @@
 module Planka
-  module Projects
+  class Projects < Resource
     # Native boards visible within one explicit project.
     class Boards < Resource
       Observation = Data.define(:board, :append_position, :existing_ids)
