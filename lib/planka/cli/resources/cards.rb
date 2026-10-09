@@ -1,7 +1,7 @@
 require "planka"
 require "planka/cli/command"
 require "planka/cli/failure"
-require "planka/cli/input_file"
+require "planka/cli/card_input"
 require "planka/cli/resources/board_scope"
 require "planka/cli/resources/scalar_flags"
 
@@ -119,8 +119,8 @@ module Planka
         def self.prepare_collection(env, instance, flags)
           raise Failure.invalid_input("get cards requires --board or --list") unless flags[:board] || flags[:list]
 
-          list_scope(env, instance, flags).merge(name: flags[:name]&.first, labels: flags.fetch(:labels, []),
-                                                 members: flags.fetch(:members, []), limit: flags[:limit]&.first&.to_i)
+          CardInput.list_scope(env, instance: instance, flags: flags).merge(name: flags[:name]&.first, labels: flags.fetch(:labels, []),
+                                                                            members: flags.fetch(:members, []), limit: flags[:limit]&.first&.to_i)
         end
 
         def self.prepare_create(env, instance:, flags:, **)
@@ -128,31 +128,7 @@ module Planka
             raise Failure.invalid_input("create card requires --list and --name")
           end
 
-          list_scope(env, instance, flags).merge(name: flags[:name].first, description: description(flags), position: position(flags))
-        end
-
-        # An explicit --board asserts the list's parent; list names fall back to
-        # PLANKA_BOARD_ID; list IDs and URLs find their own board.
-        def self.list_scope(env, instance, flags)
-          board = flags[:board]&.first
-          list = flags[:list] && instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true)
-          board_id = if board then BoardScope.resolve(instance, board)
-                     elsif list && !Records.id?(list) then BoardScope.default(env, instance, resource: "Card")
-                     end
-          { board_id: board_id, list: list }
-        end
-
-        # Validated by validate_card_values before preparation.
-        def self.position(flags) = flags[:position] && Float(flags[:position].first)
-
-        def self.description(flags)
-          path = flags[:description_file]&.first or return
-          text = InputFile.read(path)
-          return text if Planka::Boards::CardRecord.text?(text, Planka::Boards::CardRecord::DESCRIPTION_LIMIT)
-
-          raise Failure.invalid_input("--description-file must be nonempty UTF-8 text of at most #{Planka::Boards::CardRecord::DESCRIPTION_LIMIT} characters")
-        rescue SystemCallError, IOError
-          raise Failure.invalid_input("Could not read --description-file")
+          CardInput.creation(env, instance: instance, flags: flags)
         end
 
         def self.prepare_update(env, instance:, flags:, reference:)
@@ -161,30 +137,19 @@ module Planka
           end
 
           prepare_card(env, instance: instance, flags: flags, reference: reference)
-            .merge(name: flags[:name]&.first, description: description(flags))
+            .merge(CardInput.fields(flags))
         end
 
         def self.prepare_move(env, instance:, flags:, reference:)
           raise Failure.invalid_input("move card requires --list") unless flags[:list]
 
           prepare_card(env, instance: instance, flags: flags, reference: reference)
-            .merge(list: instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true), position: position(flags))
+            .merge(list: instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true), position: CardInput.position(flags))
         end
-        private_class_method :prepare_collection, :list_scope, :position, :description
+        private_class_method :prepare_collection
 
         def self.scope_board(env, instance, card, explicit) = BoardScope.for_reference(env, instance, card, explicit, resource: "Card")
         private_class_method :scope_board
-
-        def self.validate_card_values(flags)
-          error = validate_scope_flags(flags)
-          return error if error
-          if flags[:name] && !Planka::Boards::CardRecord.text?(flags[:name].first, Planka::Boards::CardRecord::NAME_LIMIT)
-            return "--name must be at most #{Planka::Boards::CardRecord::NAME_LIMIT} characters"
-          end
-
-          position = flags[:position] && Float(flags[:position].first, exception: false)
-          "--position must be finite and nonnegative" if flags[:position] && !(position&.finite? && position >= 0)
-        end
 
         def self.validate_collection_flags(flags)
           repeated = flags.slice(:labels, :members)
@@ -264,15 +229,15 @@ module Planka
           ["create", "card"] => Command.new(aliases: [["create", "cards"]], reference: false, mutation: true, resource: "card", collection: "cards",
                                             flags: { "--list LIST" => :list, "--board BOARD" => :board, "--name NAME" => :name,
                                                      "--description-file FILE" => :description_file, "--position N" => :position },
-                                            validate_flags: method(:validate_card_values), prepare: method(:prepare_create),
+                                            validate_flags: CardInput.method(:error), prepare: method(:prepare_create),
                                             help: CREATE_HELP, operation: method(:create), formatter: ->(card) { "Created card #{format_card(card)}" }),
           ["update", "card"] => Command.new(aliases: [["update", "cards"]], names: true, mutation: true, resource: "card", collection: "cards",
                                             flags: { "--board BOARD" => :board, "--name NAME" => :name, "--description-file FILE" => :description_file },
-                                            validate_flags: method(:validate_card_values), prepare: method(:prepare_update),
+                                            validate_flags: CardInput.method(:error), prepare: method(:prepare_update),
                                             help: UPDATE_HELP, operation: method(:update), formatter: ->(card) { "Updated card #{format_card(card)}" }),
           ["move", "card"] => Command.new(aliases: [["move", "cards"]], names: true, mutation: true, resource: "card", collection: "cards",
                                           flags: { "--list LIST" => :list, "--board BOARD" => :board, "--position N" => :position },
-                                          validate_flags: method(:validate_card_values), prepare: method(:prepare_move),
+                                          validate_flags: CardInput.method(:error), prepare: method(:prepare_move),
                                           help: MOVE_HELP, operation: method(:move), formatter: ->(card) { "Moved card #{format_card(card)}" }),
           ["delete", "card"] => Command.new(aliases: [["delete", "cards"]], names: true, mutation: true, resource: "card", collection: "cards",
                                             flags: { "--board BOARD" => :board }, validate_flags: method(:validate_scope_flags),
