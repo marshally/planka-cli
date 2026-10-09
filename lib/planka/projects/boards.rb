@@ -19,9 +19,7 @@ module Planka
       def find(reference) = read_record(reference).board
 
       def all(name: nil, limit: nil)
-        raise ArgumentError, "boards are read from a project" unless @project_id
-        raise ArgumentError, "name must be a string" unless name.nil? || name.is_a?(String)
-        raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
+        validate_options!(name: name, limit: limit)
 
         collect(limit, project: ->(data) { data.sort_by { |board| [board["position"], board["id"].to_i] } }) do |data|
           each_board { |board| data << board if name.nil? || board["name"] == name }
@@ -29,6 +27,12 @@ module Planka
       end
 
       private
+
+      def validate_options!(name:, limit:)
+        raise ArgumentError, "boards are read from a project" unless @project_id
+        raise ArgumentError, "name must be a string" unless name.nil? || name.is_a?(String)
+        raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
+      end
 
       def creation_attributes(name:, position:)
         { "name" => BoardRecord.name!(name), "position" => position && BoardRecord.position!(position) }
