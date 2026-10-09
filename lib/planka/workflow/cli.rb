@@ -149,7 +149,8 @@ module Planka
         --name is at most 1024 UTF-16 units. --position is finite and nonnegative; omitted descriptions stay null.
         JSON data: card {id, name, description, type, boardId, listId, position, createdAt, updatedAt, url},
         taskList {id, name, created}, tasks [{id, name, isCompleted, created}]. meta.changed reports known effects.
-        Failures retain confirmed card/list/task identities. Recovery is resume-ticket for the known card;
+        Failures retain confirmed identities and trustworthy fresh numeric IDs when other returned fields are invalid;
+        their created/completion fields stay null. Recovery is resume-ticket for the known card and task list;
         an unknown card create uses readback-card by returned ID or readback-cards by list. Never retry blindly.
         Exit 0: success; 2: local input; 1: configuration, lookup, API, partial or unknown outcome.
         Example: planka workflow create ticket --list LIST --name Search --criteria-file criteria.json -o json

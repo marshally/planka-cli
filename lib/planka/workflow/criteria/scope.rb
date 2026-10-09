@@ -5,6 +5,15 @@ module Planka
       class Scope
         attr_reader :card, :task_list, :tasks
 
+        class UnconfirmedIdentity < InvalidResponse
+          attr_reader :trusted_id
+
+          def initialize(trusted_id, message)
+            @trusted_id = trusted_id
+            super(message)
+          end
+        end
+
         def self.read(client, id) = new(client, id)
 
         def initialize(client, id)
@@ -15,20 +24,21 @@ module Planka
         def task_list_position = Position.after(@task_lists)
 
         def created_task_list(record)
-          unless record.is_a?(Hash) && Records.id?(record["id"]) && record["cardId"] == @id &&
-                 record["name"] == Workflow::Card::CRITERIA_LIST
-            raise InvalidResponse, "Invalid created criteria list"
-          end
+          identity = created_identity(record, "cardId", @id, @task_list_ids)
+          invalid_created_record!("Invalid created criteria list", identity) unless
+            identity && record["name"] == Workflow::Card::CRITERIA_LIST && Records.position?(record["position"])
 
+          @task_list_ids << identity
           record
         end
 
         def created_task(record, task_list_id, name)
-          unless record.is_a?(Hash) && Records.id?(record["id"]) && record["taskListId"] == task_list_id &&
-                 record["name"] == name && [true, false].include?(record["isCompleted"]) && Records.position?(record["position"])
-            raise InvalidResponse, "Invalid created criterion"
-          end
+          identity = created_identity(record, "taskListId", task_list_id, @task_ids)
+          valid = identity && record["name"] == name && [true, false].include?(record["isCompleted"]) &&
+                  record["linkedCardId"].nil? && Records.position?(record["position"])
+          invalid_created_record!("Invalid created criterion", identity) unless valid
 
+          @task_ids << identity
           record
         end
 
@@ -41,6 +51,8 @@ module Planka
 
           @task_lists = validate_task_lists!(included["taskLists"])
           tasks = validate_tasks!(included["tasks"])
+          @task_list_ids = @task_lists.map { |list| list["id"] }
+          @task_ids = tasks.map { |task| task["id"] }
           named = @task_lists.select { |list| list["name"] == Workflow::Card::CRITERIA_LIST }
           if named.size > 1
             raise ReferenceError.new("Card has #{named.size} #{Workflow::Card::CRITERIA_LIST} lists; candidate IDs: " \
@@ -79,6 +91,21 @@ module Planka
           end
 
           tasks
+        end
+
+        def created_identity(record, parent_key, parent_id, existing_ids)
+          return unless record.is_a?(Hash) && Records.id?(record["id"]) && record[parent_key] == parent_id
+          return if existing_ids.include?(record["id"])
+
+          record["id"]
+        end
+
+        def invalid_created_record!(message, identity)
+          if identity
+            raise UnconfirmedIdentity.new(identity, message)
+          end
+
+          raise InvalidResponse, message
         end
       end
     end

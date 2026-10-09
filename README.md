@@ -1061,6 +1061,10 @@ the card is confirmed, any criteria read/write failure retains the card and
 sets `changed: true`; confirmed task-list/task IDs are retained, and recovery
 uses `resume-ticket` with the known card and task list. Do not retry an unknown
 card create. Inspect it, then use the resume command to fill missing criteria.
+For malformed task-list/task responses, a fresh numeric ID is retained only
+when its returned parent matches the requested card/list and the ID was absent
+from the observed scope. Its `created` field remains null; an uncertain task's
+`isCompleted` is null. Invalid, reused, or other-parent IDs remain null.
 Stable errors include `invalid_input`, `configuration_error`, `not_found`,
 `authentication_error`, `authorization_error`, `api_error`, `network_error`,
 `ambiguous_criteria_list`, `partial_failure`, and `unknown_outcome`. Success exits 0, local input exits 2,
