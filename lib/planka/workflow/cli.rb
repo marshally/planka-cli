@@ -5,7 +5,7 @@ require "planka/cli/command"
 require "planka/cli/input_file"
 require "planka/cli/card_input"
 require "planka/cli/resources/scalar_flags"
-require "json"
+require "planka/workflow/cli/ticket_input"
 
 module Planka
   module Workflow
@@ -170,14 +170,6 @@ module Planka
         raise Planka::CLI::Failure.invalid_input(error.message)
       end
 
-      def self.resume_preparation(_env, instance:, flags:, **)
-        unless flags[:criteria_file]
-          raise Planka::CLI::Failure.invalid_input("resume ticket requires --criteria-file")
-        end
-
-        { base_url: instance.base_url, criteria: criteria(flags.fetch(:criteria_file).first) }
-      end
-
       def self.spec_preparation(env, instance:, flags:, **)
         unless flags[:list] && flags[:name]
           raise Planka::CLI::Failure.invalid_input("create spec requires --list and --name")
@@ -185,23 +177,6 @@ module Planka
 
         Planka::CLI::CardInput.creation(env, instance: instance, flags: flags)
       end
-
-      # A nonempty JSON array of distinct criteria, each a valid task name.
-      def self.criteria(path)
-        criteria = JSON.parse(Planka::CLI::InputFile.read(path))
-        return criteria if criteria.is_a?(Array) && !criteria.empty? && criteria.uniq.size == criteria.size &&
-                           criteria.all? { |criterion| Records.text?(criterion, Resume::Ticket::CRITERION_LIMIT) && !criterion.strip.empty? }
-
-        invalid_criteria!("--criteria-file must be a nonempty JSON array of distinct nonblank strings " \
-                          "of at most #{Resume::Ticket::CRITERION_LIMIT} characters")
-      rescue JSON::ParserError
-        invalid_criteria!("--criteria-file must contain a JSON array")
-      rescue SystemCallError, IOError
-        invalid_criteria!("Could not read --criteria-file")
-      end
-
-      def self.invalid_criteria!(message) = raise(Planka::CLI::Failure.invalid_input(message))
-      private_class_method :criteria, :invalid_criteria!
 
       def self.validate_next_flags(flags)
         boards = flags.fetch(:board, [])
@@ -222,7 +197,7 @@ module Planka
         ["workflow", "resume", "ticket"] => Planka::CLI::Command.new(aliases: [["workflow", "resume", "tickets"]], resource: "card", collection: "cards", mutation: true,
                                                                      flags: { "--criteria-file FILE" => :criteria_file },
                                                                      validate_flags: Planka::CLI::Resources::ScalarFlags.method(:error),
-                                                                     prepare: method(:resume_preparation), help: RESUME_TICKET_HELP,
+                                                                     prepare: TicketInput.method(:resume), help: RESUME_TICKET_HELP,
                                                                      operation: Resume::Ticket.method(:read), formatter: Format.method(:resumed_ticket)),
         ["workflow", "next"] => Planka::CLI::Command.new(reference: false, resource: "board", collection: "boards", flags: { "--board BOARD" => :board, "--label LABEL" => :labels }, validate_flags: method(:validate_next_flags), prepare: method(:next_preparation), help: NEXT_HELP, operation: NextSelection.method(:read), projector: :as_json.to_proc, formatter: Format.method(:next_selection)),
         ["workflow", "guide"] => Planka::CLI::Command.new(reference: false, session: false, help: GUIDE_HELP, operation: Guide.method(:read), formatter: Format.method(:guide)),
