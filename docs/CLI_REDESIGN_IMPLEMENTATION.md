@@ -603,9 +603,10 @@ Card-scoped relationships stay under `Cards::*`; native cards live under `Boards
   so `updated_data` stays a pure projection, as the hook contract requires.
 
 `CLI::Resources::Cards` owns command definitions, required-input checks, and human
-text. Shared `CLI::CardInput` owns canonical card value checks and pre-session
-conversion of list scope, fields, description files/stdin, and positions into
-explicit operation inputs. Resource and workflow catalogs can use it without
+text. Shared `CLI::CardInput` owns canonical card value checks and returns complete
+pre-session inputs for collections, individual cards, card parents, creation,
+updates, and moves. Scope resolution, filter defaults/conversion, fields,
+description files/stdin, and positions stay behind that interface. Resource and workflow catalogs can use it without
 depending on the card command catalog; legacy input adapters remain separate.
 
 The shared catalog changed in three ways. Preparation callbacks receive the
@@ -1279,7 +1280,7 @@ Legacy executables retain their existing argument/output adapters.
 | [Client](../lib/planka/client.rb) | Own HTTP/session lifecycle. Accept explicit connection settings; canonical sessions opt into response-document and token validation. |
 | [Boards::Lists](../lib/planka/boards/lists.rb), [Boards::ListScope](../lib/planka/boards/list_scope.rb), [Boards::ListRecord](../lib/planka/boards/list_record.rb), [CLI::Resources::Lists](../lib/planka/cli/resources/lists.rb) | Own native list reads, creation, updates, and deletion; board/list resolution shared with cards; list record rules; and their command definitions. |
 | [CLI::Resources::BoardScope](../lib/planka/cli/resources/board_scope.rb) | Resolve the board scope of a card or list reference before authentication, classifying a bad default board as configuration failure. |
-| [CLI::CardInput](../lib/planka/cli/card_input.rb) | Validate canonical card values and prepare list scope, fields, description files/stdin, and positions before authentication; catalogs retain command-specific required-input checks. |
+| [CLI::CardInput](../lib/planka/cli/card_input.rb) | Validate canonical card values and return complete operation inputs through collection/card/parent/creation/update/move methods; scope, flag conversion, fields, files/stdin, and positioning remain private. Catalogs retain command-specific required-input checks. |
 | [Boards::Cards](../lib/planka/boards/cards.rb), [Boards::CardMove](../lib/planka/boards/card_move.rb), [Boards::CardScope](../lib/planka/boards/card_scope.rb), [Boards::CardRecord](../lib/planka/boards/card_record.rb), [CLI::Resources::Cards](../lib/planka/cli/resources/cards.rb) | Own native card reads, creation, updates, moves, and deletion; card scope and record rules; and their command definitions. |
 | [Resource](../lib/planka/resource.rb) | Own protected create/update/delete algorithms: input preparation, current-state lookup, change detection, request execution, response validation, and result construction. Concrete resources supply operation hooks and expose supported verbs. |
 | [Relationship](../lib/planka/relationship.rb) | Expose association `add`/`remove` through Resource create/delete, query inclusion, and project observed/created/deleted relationship state without inspecting resource fields. |

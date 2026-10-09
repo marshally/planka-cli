@@ -2,7 +2,6 @@ require "planka"
 require "planka/cli/command"
 require "planka/cli/failure"
 require "planka/cli/card_input"
-require "planka/cli/resources/board_scope"
 require "planka/cli/resources/scalar_flags"
 
 module Planka
@@ -104,8 +103,7 @@ module Planka
         def self.prepare_scope(env, instance:, flags:, **)
           raise Failure.invalid_input("Exactly one --card is required") unless flags[:card]
 
-          card = instance.resolve(flags.fetch(:card).first, resource: "card", collection: "cards", names: true)
-          { card_id: card, board_id: scope_board(env, instance, card, flags[:board]&.first) }
+          CardInput.parent(env, instance: instance, flags: flags)
         end
 
         # get reads one card with a reference, otherwise a scoped collection.
@@ -114,14 +112,13 @@ module Planka
         end
 
         def self.prepare_card(env, instance:, flags:, reference:)
-          { board_id: scope_board(env, instance, reference, flags[:board]&.first) }
+          CardInput.card(env, instance: instance, flags: flags, reference: reference)
         end
 
         def self.prepare_collection(env, instance, flags)
           raise Failure.invalid_input("get cards requires --board or --list") unless flags[:board] || flags[:list]
 
-          CardInput.list_scope(env, instance: instance, flags: flags).merge(name: flags[:name]&.first, labels: flags.fetch(:labels, []),
-                                                                            members: flags.fetch(:members, []), limit: flags[:limit]&.first&.to_i)
+          CardInput.collection(env, instance: instance, flags: flags)
         end
 
         def self.prepare_create(env, instance:, flags:, **)
@@ -137,20 +134,15 @@ module Planka
             raise Failure.invalid_input("update card requires --name or --description-file")
           end
 
-          prepare_card(env, instance: instance, flags: flags, reference: reference)
-            .merge(CardInput.fields(flags))
+          CardInput.update(env, instance: instance, flags: flags, reference: reference)
         end
 
         def self.prepare_move(env, instance:, flags:, reference:)
           raise Failure.invalid_input("move card requires --list") unless flags[:list]
 
-          prepare_card(env, instance: instance, flags: flags, reference: reference)
-            .merge(list: instance.resolve(flags[:list].first, resource: "list", collection: "lists", names: true), position: CardInput.position(flags))
+          CardInput.move(env, instance: instance, flags: flags, reference: reference)
         end
         private_class_method :prepare_collection
-
-        def self.scope_board(env, instance, card, explicit) = BoardScope.for_reference(env, instance, card, explicit, resource: "Card")
-        private_class_method :scope_board
 
         def self.validate_collection_flags(flags)
           repeated = flags.slice(:labels, :members)
