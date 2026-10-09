@@ -7,6 +7,16 @@ module Planka
       NAME_LIMIT = 1024
       DESCRIPTION_LIMIT = 1_048_576
 
+      def self.type!(type)
+        return type if %w[project story].include?(type)
+
+        raise ArgumentError, "type must be project or story"
+      end
+
+      def self.created_id(record, existing_ids)
+        record["id"] if record.is_a?(Hash) && Records.id?(record["id"]) && !existing_ids.include?(record["id"])
+      end
+
       def self.text?(value, limit) = Records.text?(value, limit)
 
       def self.text!(field, value, limit)
@@ -36,7 +46,7 @@ module Planka
         record.is_a?(Hash) && Records.id?(record["id"]) && record["name"].is_a?(String) &&
           (record["description"].nil? || record["description"].is_a?(String)) && record["type"].is_a?(String) &&
           Records.id?(record["boardId"]) && Records.id?(record["listId"]) &&
-          (record["position"].nil? || (record["position"].is_a?(Numeric) && record["position"].finite?)) &&
+          (record["position"].nil? || Records.position?(record["position"])) &&
           %w[createdAt updatedAt].all? { |field| record[field].nil? || Records.timestamp?(record[field]) }
       end
 

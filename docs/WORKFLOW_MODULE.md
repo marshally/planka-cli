@@ -81,6 +81,13 @@ result shape. Core outcome values are independent
 of workflow policy; shared CLI Output owns their canonical presentation. Legacy
 Claim retains its original behavior and result shape.
 
+`Workflow::Create::Spec.create` composes `Boards::Cards#create` with an explicit
+`project` type. Core scope/record and Resource/Write handling own observation,
+positioning, confirmation, certainty, and created-identity recovery. The workflow
+adds no acceptance criteria, members, labels, or comments. Its CLI preparation
+uses shared `CLI::CardInput`, and `Workflow::Format` owns the human success text.
+Legacy `Publishing#create_spec` keeps its original argument/result adapter.
+
 ## CLI attachment and compatibility
 
 `require "planka/workflow/cli"` loads the workflow CLI adapter. The bundled

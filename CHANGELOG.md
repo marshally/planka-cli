@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+Added `planka workflow create spec` (also `specs`) with required `--list` and
+`--name`, optional description file/stdin and native positioning, and offline
+help. It publishes one project card without acceptance criteria, using shared
+card input and mutation handling. Canonical creates preserve a valid new
+returned ID from an otherwise malformed response, require readback after unknown
+outcomes, and never retry. Ambiguous list-name lookup now uses operational exit 1
+with its existing `invalid_input` code and candidate IDs. Legacy `create-spec`
+flags, bare JSON, output, and exits are retained; help names its implemented
+replacement. Documentation and API evidence are pinned to Community v2.2.1;
+no live mutation acceptance was performed.
+
 Added native board `get boards --project PROJECT`, `get board BOARD`,
 `create board --project PROJECT --name NAME [--position N]`,
 `update board BOARD [--name NAME] [--position N]`, and `delete board BOARD`,

@@ -6,7 +6,9 @@ module Planka
       CARD_TYPES = %w[project story].freeze
 
       # A card's public data with the destination it is being created or moved in.
-      Observation = Data.define(:card, :destination)
+      Observation = Data.define(:card, :destination, :existing_ids) do
+        def initialize(card:, destination:, existing_ids: []) = super
+      end
 
       # A verified list a card is created or moved into.
       Destination = Data.define(:board_id, :list_id, :finite, :append_position, :default_card_type) do
@@ -37,14 +39,23 @@ module Planka
       end
 
       # The verified destination list and the position that appends to it.
-      def destination(list, excluding: nil)
+      def destination(list, excluding: nil) = destination_in(board(list), list, excluding: excluding)
+
+      # Observes placement and already-visible identities from the same read.
+      def creation(list)
         board = board(list)
+        destination = destination_in(board, list)
+        existing_ids = Array(board["included"]["cards"]).filter_map { |card| card["id"] if card.is_a?(Hash) && Records.id?(card["id"]) }
+        Observation.new(card: CardRecord.placeholder(destination), destination: destination, existing_ids: existing_ids)
+      end
+
+      private
+
+      def destination_in(board, list, excluding: nil)
         record = lists(board, list).first
         Destination.new(board_id: board["item"]["id"], list_id: record["id"], finite: finite?(record), default_card_type: default_card_type(board),
                         append_position: (Position.after(list_cards(board, record, excluding: excluding)) if finite?(record)))
       end
-
-      private
 
       def scoped_card!(card, list)
         CardRecord.data(card)

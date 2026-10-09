@@ -18,6 +18,7 @@ module Planka
       end
 
       def pending_criteria(data) = data.fetch("criteria").join("\n")
+      def created_spec(card) = "Created spec #{card.fetch("name")} (#{card.fetch("id")}) in list #{card.fetch("listId")}"
       def guide(data) = data.fetch("instructions")
       def next_selection(data) = data.to_s
       def branch_name(data) = data.fetch("branch")
