@@ -33,7 +33,7 @@ interfaces; this document owns the workflow-specific architecture.
 | `Workflow::Configuration` | Explicitly captures workflow settings from a supplied environment. Branch-prefix validation belongs here, independently of connection settings. |
 | `Workflow::Format` | Workflow human text, without IO or session ownership. Next-card reports answer their own `as_json` projection. |
 | `Workflow::CLI` | Workflow command definitions, help, formatters, and conversion of workflow configuration failures into canonical CLI failures. |
-| `Workflow::CLI::TicketInput` | Resume-ticket flag requirements, criteria file/stdin reading and validation, and complete operation inputs. |
+| `Workflow::CLI::TicketInput` | Create/resume ticket flag requirements, criteria file/stdin reading and validation, and complete operation inputs. |
 | Shared CLI modules | Catalog composition, parsing to immutable invocations, captured connection settings, instance reference resolution, pre-session command preparation, session coordination, canonical presentation and exit handling. |
 
 API-backed workflow readers accept an authenticated client and explicit inputs:
@@ -93,6 +93,15 @@ recording confirmation; an exception from a create block remains pending so
 `failure` can report uncertainty. `Fill` owns exception-to-failure wrapping and
 preserves the original exception as cause. Concrete progress implementations own
 projection and recovery policy; the fill operation does not choose a progress type.
+
+`Workflow::Create::Ticket` creates one project card through `Boards::Cards`, then
+passes criteria to `Criteria::Fill`. Its progress adapter composes
+`Resume::Progress` for criteria confirmations and IDs while owning the newly
+created card projection and the already-confirmed `changed: true` effect. This
+keeps resume and creation recovery policies separate while sharing the fill
+sequence. New ticket tasks must be confirmed incomplete before the write counts
+as confirmed. The canonical workflow does not call legacy
+`Publishing#create_ticket`, whose adapter and runtime contract remain intact.
 
 `Workflow::Create::Spec.create` composes `Boards::Cards#create` with an explicit
 `project` type. Core scope/record and Resource/Write handling own observation,

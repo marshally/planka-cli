@@ -56,10 +56,10 @@ module Planka
         `get|update|delete label LABEL --board BOARD` manages existing labels.
 
         `planka workflow create spec --list LIST --name NAME` publishes a project
-        card without Acceptance criteria. Tickets have a criteria list; legacy
-        `planka create-ticket` takes --list ID_OR_NAME, --title TITLE, and
-        --criteria-file FILE (a JSON string array). Share feature:SLUG labels.
-        --description-file FILE preserves text; files accept - for stdin.
+        card without Acceptance criteria. `workflow create ticket` also requires
+        `--criteria-file FILE` (a JSON string array) and creates incomplete tasks
+        in input order. Share feature:SLUG labels. `--description-file FILE`
+        preserves text; one file may use - for stdin.
         Positions append. `planka link BLOCKED BLOCKER` records linked
         tasks in Blocked by; repeating a link is safe. Read help before writes.
 

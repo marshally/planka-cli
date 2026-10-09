@@ -55,7 +55,7 @@ card-scoped `get members`, `get member`, `add member`, `remove member`,
 `get comments`, `get comment`, `create comment`, `update comment`, `delete comment`,
 `get boards`, `get board`, `create board`, `update board`, `delete board`,
 `get projects`, `get project`, `create project`, `update project`, `delete project`,
-`planka workflow create spec`, `planka workflow resume ticket`,
+`planka workflow create spec`, `planka workflow create ticket`, `planka workflow resume ticket`,
 and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -1022,6 +1022,55 @@ Legacy `create-spec --title TITLE` and `planka-create-spec` retain their argumen
 bare `{card: {id, name, url}}` JSON, human output, and exit contracts. Their help
 names the implemented canonical command; runtime warnings are not added.
 
+### Canonical create ticket
+
+```sh
+planka workflow create ticket --list ready-for-agent --board BOARD --name "Index documents" --criteria-file criteria.json
+planka workflow create ticket --list LIST_ID --name "Index documents" --criteria-file - -o json < criteria.json
+planka workflow create tickets --list LIST_ID --name "Index documents" --criteria-file criteria.json
+```
+
+Creates one `project` card even when the board defaults to `story`, then creates
+one task list named exactly `Acceptance criteria` and incomplete tasks in input
+order. Existing cards or criteria are never reused by this create command.
+`ticket`/`tickets` are aliases. `--list` and `--name` are required; LIST accepts
+an ID, same-instance URL, or exact name with `--board BOARD` or
+`PLANKA_BOARD_ID`. An explicit board asserts the list parent. List IDs/URLs
+determine their board and ignore the environment default.
+
+`--criteria-file FILE|-` is required and contains a nonempty JSON array of
+distinct, nonblank UTF-8 strings, each at most 1024 UTF-16 units. Optional
+`--description-file FILE|-` preserves multiline UTF-8 text up to 1048576 UTF-16
+units. Only one input may use stdin. Inputs are read and validated before any
+request, after connection settings are checked. `--position` is finite and
+nonnegative on supported lists; omitted positions append. Descriptions omitted
+from the invocation remain null.
+
+Human success prints `Created ticket: NAME (URL, ID: CARD_ID)` followed by
+`Acceptance criteria: COUNT`. JSON success uses the shared envelope. `data.card`
+has `id`, `name`, `description`, `type`,
+`boardId`, `listId`, `position`, `createdAt`, `updatedAt`, and `url`;
+`data.taskList` has `id`, `name`, and `created`; `data.tasks` contains
+`{id, name, isCompleted, created}` in input order. Success sets
+`meta.changed: true`.
+
+If card creation is rejected, the failure reports `changed: false`. If its
+outcome is unknown, the result reports `changed: null`, retains a valid returned
+ID when available, and uses `readback-card` or `readback-cards` recovery. Once
+the card is confirmed, any criteria read/write failure retains the card and
+sets `changed: true`; confirmed task-list/task IDs are retained, and recovery
+uses `resume-ticket` with the known card and task list. Do not retry an unknown
+card create. Inspect it, then use the resume command to fill missing criteria.
+Stable errors include `invalid_input`, `configuration_error`, `not_found`,
+`authentication_error`, `authorization_error`, `api_error`, `network_error`,
+`ambiguous_criteria_list`, `partial_failure`, and `unknown_outcome`. Success exits 0, local input exits 2,
+and operational/API/partial/unknown failures exit 1. Session cleanup failures
+warn on stderr and preserve the operation result.
+
+Legacy `create-ticket` and `planka-create-ticket` retain their arguments, flat
+JSON, human output, and exits. Their help names both implemented canonical
+commands; runtime warnings are not added.
+
 ### Canonical resume ticket
 
 ```sh
@@ -1155,7 +1204,8 @@ release notes, with no automatic runtime warnings. `describe card` replaces
 `workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
 replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
 `workflow guide` replaces `prime`, `workflow next` replaces `next-card`, and
-`workflow claim` replaces `claim`, `workflow create spec` replaces `create-spec`, and `workflow resume ticket` replaces
+`workflow claim` replaces `claim`, `workflow create spec` replaces `create-spec`,
+`workflow create ticket` replaces `create-ticket` creation, and `workflow resume ticket` replaces
 `create-ticket --card`, `update card` replaces `update-card`,
 `move card` replaces `move-card`, `get cards --list LIST` replaces the list
 view of `snapshot`, `create list` replaces `create-list`, and

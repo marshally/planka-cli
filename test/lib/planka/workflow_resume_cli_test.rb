@@ -256,12 +256,13 @@ class Planka::WorkflowResumeCLITest < Minitest::Test
     assert_includes err, "session cleanup failed; the operation result is unchanged"
   end
 
-  def test_legacy_create_ticket_names_only_the_resume_replacement_and_keeps_its_contract
+  def test_legacy_create_ticket_names_both_replacements_and_keeps_its_contract
     [["create-ticket", "--help"], ["--help"]].each do |args|
       out, err, status = planka(*args, executable: args.size == 2 ? "planka" : "planka-create-ticket")
       assert status.success?, err
+      assert_includes out, "Canonical replacement for creation: planka workflow create ticket"
       assert_includes out, "Canonical replacement for --card: planka workflow resume ticket CARD --criteria-file FILE"
-      refute_includes out, "workflow create ticket"
+      assert_includes out, "workflow create ticket"
     end
     seed_criteria_list(["One", true, 65_536])
     out, err, status = planka("create-ticket", "--card", CARD, "--criteria-file", criteria_file(["One", "Two"]), "--output", "json")

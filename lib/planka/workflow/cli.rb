@@ -14,6 +14,7 @@ module Planka
       ROOT_HELP = <<~HELP
         Workflows:
           workflow create spec --list LIST --name NAME  Publish a project spec without acceptance criteria
+          workflow create ticket --list LIST --name NAME --criteria-file FILE  Publish a ticket with acceptance criteria
           workflow claim CARD  Add your membership and move the card to in-progress
           workflow resume ticket CARD --criteria-file FILE  Add missing acceptance criteria to a ticket
           workflow guide  Read built-in agent guidance (offline)
@@ -25,6 +26,7 @@ module Planka
       GROUP_HELP = <<~HELP
         usage: planka workflow <operation> [arguments] [flags]
           create spec --list LIST --name NAME  Publish a project spec without acceptance criteria
+          create ticket --list LIST --name NAME --criteria-file FILE  Publish a ticket with acceptance criteria
           claim CARD  Add your membership and move the card to in-progress
           resume ticket CARD --criteria-file FILE  Add missing acceptance criteria to a ticket
           guide  Read built-in agent guidance (offline)
@@ -131,6 +133,26 @@ module Planka
       CREATE_GROUP_HELP = <<~HELP
         usage: planka workflow create <resource> [flags]
           spec --list LIST --name NAME  Publish a project spec without acceptance criteria
+          ticket --list LIST --name NAME --criteria-file FILE  Publish a ticket with acceptance criteria
+      HELP
+      CREATE_TICKET_HELP = <<~HELP
+        usage: planka workflow create ticket --list LIST [--board BOARD] --name NAME --criteria-file FILE|-
+                                             [--description-file FILE|-] [--position N] [--output human|json]
+        Creates one project card, then creates its Acceptance criteria task list and incomplete tasks in file order.
+        LIST is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID.
+        BOARD asserts the list parent. A list ID/URL ignores PLANKA_BOARD_ID. Placement follows native list rules.
+        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+        ticket/tickets are aliases. No positional target is accepted.
+        --criteria-file is a nonempty JSON array of distinct, nonblank UTF-8 strings, at most 1024 UTF-16 units each.
+        --description-file accepts nonempty UTF-8 text up to 1048576 UTF-16 units. Either file accepts - for stdin;
+        both cannot use stdin in the same command. Inputs are read before requests and their text is preserved.
+        --name is at most 1024 UTF-16 units. --position is finite and nonnegative; omitted descriptions stay null.
+        JSON data: card {id, name, description, type, boardId, listId, position, createdAt, updatedAt, url},
+        taskList {id, name, created}, tasks [{id, name, isCompleted, created}]. meta.changed reports known effects.
+        Failures retain confirmed card/list/task identities. Recovery is resume-ticket for the known card;
+        an unknown card create uses readback-card by returned ID or readback-cards by list. Never retry blindly.
+        Exit 0: success; 2: local input; 1: configuration, lookup, API, partial or unknown outcome.
+        Example: planka workflow create ticket --list LIST --name Search --criteria-file criteria.json -o json
       HELP
       RESUME_TICKET_HELP = <<~HELP
         usage: planka workflow resume ticket CARD --criteria-file FILE|- [--output human|json]
@@ -178,6 +200,10 @@ module Planka
         Planka::CLI::CardInput.creation(env, instance: instance, flags: flags)
       end
 
+      def self.ticket_preparation(env, instance:, flags:, **)
+        TicketInput.creation(env, instance: instance, flags: flags)
+      end
+
       def self.validate_next_flags(flags)
         boards = flags.fetch(:board, [])
         labels = flags.fetch(:labels, []).uniq
@@ -193,6 +219,13 @@ module Planka
                                                                             "--description-file FILE" => :description_file, "--position N" => :position },
                                                                    validate_flags: Planka::CLI::CardInput.method(:error), prepare: method(:spec_preparation),
                                                                    help: CREATE_SPEC_HELP, operation: Create::Spec.method(:create), formatter: Format.method(:created_spec)),
+        ["workflow", "create", "ticket"] => Planka::CLI::Command.new(aliases: [["workflow", "create", "tickets"]], reference: false, mutation: true,
+                                                                     resource: "card", collection: "cards",
+                                                                     flags: { "--list LIST" => :list, "--board BOARD" => :board, "--name NAME" => :name,
+                                                                              "--criteria-file FILE" => :criteria_file, "--description-file FILE" => :description_file,
+                                                                              "--position N" => :position },
+                                                                     validate_flags: Planka::CLI::CardInput.method(:error), prepare: method(:ticket_preparation),
+                                                                     help: CREATE_TICKET_HELP, operation: Create::Ticket.method(:create), formatter: Format.method(:ticket_result)),
         ["workflow", "claim"] => Planka::CLI::Command.new(resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, operation: Claim::Card.method(:read), formatter: Format.method(:claim)),
         ["workflow", "resume", "ticket"] => Planka::CLI::Command.new(aliases: [["workflow", "resume", "tickets"]], resource: "card", collection: "cards", mutation: true,
                                                                      flags: { "--criteria-file FILE" => :criteria_file },

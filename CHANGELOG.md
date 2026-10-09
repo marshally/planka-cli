@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+Added `planka workflow create ticket` (alias `tickets`) with required list, name,
+and criteria file flags, optional description and position, project card creation,
+and ordered incomplete Acceptance criteria. Confirmed card and criteria effects
+survive partial failures with working `resume-ticket` recovery; unknown card
+creates retain readback guidance without retries. Canonical CLI schemas, help,
+guide, release notes, and migration guidance describe the workflow. Legacy
+`create-ticket` and direct executable behavior remain intact.
+
 Added `planka workflow create spec` (also `specs`) with required `--list` and
 `--name`, optional description file/stdin and native positioning, and offline
 help. It publishes one project card without acceptance criteria, using shared
