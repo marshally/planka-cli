@@ -54,6 +54,8 @@ card-scoped `get members`, `get member`, `add member`, `remove member`,
 `delete label`, card-scoped `add label`/`remove label`,
 `get comments`, `get comment`, `create comment`, `update comment`, `delete comment`,
 `get boards`, `get board`, `create board`, `update board`, `delete board`,
+
+`get projects`, `get project`, `create project`, `update project`, `delete project`,
 and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -306,6 +308,87 @@ operational/API failures 1. `describe board` and legacy `snapshot` retain their
 existing detailed outputs. [Community v2.2.1 source evidence and verification
 limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#board-api-evidence) are recorded separately
 from local HTTP and installed-package checks; no live write acceptance is claimed.
+
+### Canonical projects
+
+```sh
+planka get projects --name Product --limit 10 -o json
+planka get project PROJECT
+planka create project --name Product --type private --description-file project.md
+planka update project PROJECT --name Roadmap --clear-description
+planka delete project PROJECT
+```
+
+Project commands use the selected instance and signed-in user's access, without
+board defaults or parent flags. `PROJECT` accepts a numeric ID, same-instance
+`/projects/ID` URL, or exact name among accessible projects on that instance.
+Missing names/IDs fail; ambiguous names report candidate IDs and exit 1. Numeric
+references remain IDs. Singular/plural spellings are aliases for every verb.
+
+`get projects` returns all accessible projects from one Community v2.2.1 response,
+without pagination. It preserves native response order, which groups manager/
+board-member projects and additional shared projects visible to administrators;
+it is not a globally sorted or transactionally consistent snapshot. Exact `--name`
+filtering precedes a positive `--limit`. Labels, members, and parent filters are
+unsupported, and collection flags are rejected for individual reads. Malformed
+records or retrieval failures preserve matching valid records read so far, set
+`meta.complete: false`, and exit 1. Limited successful results exit 0.
+
+Creation always creates, even when a name exists. `--type private|shared` defaults
+to private and is creation-only. Native creation requires an administrator or
+`projectOwner` account; it creates the caller's project-manager relationship,
+and makes that relationship the owner for private projects. The CLI sends one
+POST and no manager writes. Basic updates and deletion require native project
+manager permission. Reads allow managers, project board members, and, for shared
+projects, administrators. Native access denial may return 404 (`not_found`).
+
+Names must be nonblank and at most 128 UTF-16 code units. Descriptions accept
+mutually exclusive `--description TEXT` or `--description-file FILE`, where `-`
+reads stdin; input is nonblank UTF-8 text at most 1024 UTF-16 code units. Unicode,
+quotes, and newlines are preserved without truncation. An omitted creation
+description leaves native null. Updates additionally accept mutually exclusive
+`--clear-description` to send null, preserve omitted fields, and reject empty
+updates. Identical values skip PATCH. File reading and local validation happen
+before authentication. Type/ownership transfers, backgrounds, visibility,
+favorites, and project-manager commands remain outside this interface.
+
+Deletion sends one native target DELETE. Planka rejects projects that still have
+boards; the client makes no child deletions or cleanup writes. On successful
+empty-project deletion, Planka removes its manager/favorite relationships,
+backgrounds, and custom-field settings. There are no prompts or cascade flags.
+
+All commands use `{data, meta, error}`. Reads return the following object, or an
+array of these objects for collections; unrelated native fields are omitted:
+
+```json
+{"id":"123","name":"Product","description":null,"type":"private",
+ "ownerProjectManagerId":"456","createdAt":null,"updatedAt":null,
+ "url":"https://planka.example/projects/123"}
+```
+
+`type` derives from native `ownerProjectManagerId` (private when non-null, shared
+otherwise); the owner ID is a relationship ID, not a user ID. Timestamps and
+description are nullable. Successful individual reads use `meta: {}`; collections
+use `meta.complete`. Human reads print name, ID, and URL, with `No projects.` for
+an empty collection and a truncation notice when limited. Human mutations prefix
+the same fields with Created/Updated/Deleted project.
+
+Mutations return the resulting project, with `deleted: true` for deletion, and
+`meta.changed: true`; identical updates return false. A rejected write returns
+observed state and false (creation has null fields). Unknown/malformed writes
+return null changed status, observed values for unchanged fields, and null for
+uncertain changed fields (`deleted: null` for uncertain deletion). Uncertain
+creation retains a valid returned ID when available, but leaves unconfirmed
+fields/URL null. No write is retried. Recovery is `readback-project` with
+`resources: [{"type":"project","id":"123"}]` for a known identity, otherwise
+`readback-projects` with an empty resource array. Use `get project PROJECT` or
+`get projects` to reconcile before retrying. API/unknown failures exit 1, local
+input exits 2, success exits 0; cleanup failures preserve the primary result.
+
+Evidence is pinned to official Community v2.2.1 source and local HTTP/package
+checks. No live project writes or cross-version compatibility are claimed; see
+[project API evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#project-api-evidence).
+No legacy project commands exist; all flat/direct commands remain unchanged.
 
 ### Canonical cards
 
@@ -1128,6 +1211,13 @@ the object within the session; each operation reads current server state:
 
 ```ruby
 Planka::Client.session(validate_responses: true) do |client|
+  projects = Planka::Projects.new(client, base_url: ENV.fetch("PLANKA_BASE_URL"))
+  projects.all(name: "Product", limit: 10)                     # CollectionResult
+  projects.find("123")                                        # ID or exact instance-scoped name
+  projects.create(name: "Product", type: "private", description: "Roadmap")
+  projects.update("123", description: nil)                     # Explicit clearing
+  projects.delete("123")                                      # Native empty-project restriction
+
   members = Planka::Cards::Members.new(client, card_id: "123")
   members.all                     # CollectionResult: data and complete
   members.find("456")              # One assigned user's public fields

@@ -161,6 +161,21 @@ module Planka
       response.fetch("item")
     end
 
+    def delete_project(id) = item(request(:delete, "/api/projects/#{id}"), "project")
+
+    def update_project(id, **attributes) = item(request(:patch, "/api/projects/#{id}", attributes), "project")
+
+    def create_project(**attributes) = item(request(:post, "/api/projects", attributes), "project")
+
+    def project(id) = item(request(:get, "/api/projects/#{id}"), "project")
+
+    def projects
+      response = request(:get, "/api/projects")
+      @responses.check!("Invalid projects response") { response["items"].is_a?(Array) }
+
+      response.fetch("items")
+    end
+
     # Every board the signed-in user can see, across projects.
     def board_ids
       document = request(:get, "/api/projects")

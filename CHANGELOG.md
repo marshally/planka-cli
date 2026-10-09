@@ -14,6 +14,16 @@ under `Projects::Boards` using Resource/Write. Detailed board and legacy snapsho
 contracts remain unchanged. Evidence is Community v2.2.1 source plus local
 fixture/package verification, without live write acceptance.
 
+Added native project collection/individual reads, private/shared creation,
+supplied-field name/description updates, and empty-project deletion, with aliases
+and offline help. Exact name filters precede limits and partial reads retain
+validated results. Descriptions accept inline/file/stdin input and explicit
+update-only null clearing. Native creation manages the caller's ownership and
+manager effects; deletion preserves nonempty rejection without client child
+writes. Unknown outcomes retain known IDs and require readback without retries.
+Schemas, permissions, UTF-16 limits, and API evidence are documented against
+Community v2.2.1. All legacy commands remain unchanged; no live writes were made.
+
 Added native comment resource reads, creation, text-only updates, and deletion
 with singular/plural aliases and offline help. All require explicit card scope;
 comment IDs have no URL/name lookup. Collections follow native 50-item descending

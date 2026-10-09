@@ -1,5 +1,5 @@
 module Planka
-  module Projects
+  class Projects < Resource
     # The concise board projection, independent of snapshot-related records.
     module BoardRecord
       FIELDS = %w[id projectId name position createdAt updatedAt].freeze

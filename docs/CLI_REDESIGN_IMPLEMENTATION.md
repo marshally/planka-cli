@@ -22,8 +22,9 @@ adds native card `get`, `create`, `update`, `move`, and `delete`; the eleventh
 adds native list `get`, `create`, `update`, and `delete`; the twelfth adds
 `planka workflow resume ticket CARD`; the thirteenth adds card task-list `get`,
 `create`, `update`, and `delete`. Native label operations and comment
-`get`, `create`, `update`, and `delete` are also implemented, as are native board
-collection/individual reads, creation, updates, and deletion (#22). All legacy entry
+`get`, `create`, `update`, and `delete` are also implemented. Native boards (#22)
+and projects (#23) support collection/individual reads, creation, updates, and
+deletion. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -60,8 +61,8 @@ record. Use an isolated implementation branch and preserve unrelated work.
 The existing client already has board/card/comment reads, list-card reads,
 creates for cards/lists/labels/task lists/tasks/comments, card/task-list updates,
 card moves, and membership/label attachment. Inspect actual methods before
-reusing them. Reading board IDs through the projects response does not establish
-a complete project or board resource interface.
+reusing them. Native project operations now have their own interface below;
+legacy board discovery through the projects response remains unchanged.
 
 ## Implemented first slice: nested dispatch and card detail
 
@@ -1093,6 +1094,101 @@ cleanup, and legacy/direct parity. Context7 was unavailable; dependency behavior
 was checked against installed locked Minitest 6.0.6 and net-http 0.9.1 source,
 using Bundler 4.0.14. No dependency upgrade is part of this slice.
 
+## Implemented project resource operations
+
+Issue [#23](https://github.com/marshally/planka-cli/issues/23) implements
+`get projects`, `get project PROJECT`, `create project --name NAME`,
+`update project PROJECT`, and `delete project PROJECT`, with aliases and offline
+root/group/leaf help. [The README contract](../README.md#canonical-projects)
+records inputs, output schemas, permissions, order/completeness, and recovery.
+
+`Planka::Projects` owns instance-scoped reads/resolution and supplies the existing
+Resource create/update/delete hooks. The Projects namespace is now a Resource
+subclass, preserving nested `Projects::Boards` and `Projects::BoardRecord`
+interfaces from #22. `Projects::Record` owns field validation,
+projection, native limits, confirmation, and recovery references. Client owns
+native endpoints; `CLI::Resources::Projects` owns flags, pre-session input-file
+reading, command preparation, help, and formatting. No workflow dependency or
+new persistence/session layer is introduced. Explicit project URLs are resolved
+by the shared CLI Instance; library callers supply numeric IDs or exact names.
+
+Collections preserve response order and validate even records beyond the output
+limit; malformed/duplicate records preserve validated matching results with
+`complete: false`. Name resolution must inspect the complete accessible collection;
+an incomplete lookup returns its original error without pretending its partial
+collection identifies one project. Individual reads verify the returned ID.
+Creation observes an unknown project with null fields, then issues one native
+POST. Updates send supplied differences and skip identical values. Deletion sends
+only the target DELETE. Shared Write classification retains known state on
+rejection, uncertain fields on unknown outcomes, and a valid returned creation ID
+for readback. No retry or child/manager mutation is performed.
+
+### Project API evidence
+
+Official **Community v2.2.1**, inspected for this implementation:
+
+- [Index controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/projects/index.js)
+  accepts no pagination inputs. It returns managed and board-membership projects,
+  plus other shared projects for administrators, in `items`; included board/user
+  records are unnecessary for the concise project projection. The
+  [query methods](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/Project.js)
+  sort each query by ID, but the controller appends the shared group separately.
+  Preserve response order rather than claim a globally sorted snapshot.
+- [Show controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/projects/show.js)
+  returns `item`; managers and project-board members may read, while administrators
+  additionally see shared projects. Denied access can return 404. The
+  [client paths](https://github.com/plankanban/planka/blob/v2.2.1/client/src/constants/Paths.js)
+  verify `/projects/:id` URLs.
+- [Create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/projects/create.js)
+  accepts required `type: private|shared`, required name (128), optional nullable
+  nonempty description (1024), returning `item` plus `included.projectManagers`.
+  [Policies](https://github.com/plankanban/planka/blob/v2.2.1/server/config/policies.js)
+  and the [role predicate](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/users/is-admin-or-project-owner.js)
+  restrict creation to administrator/projectOwner accounts. The
+  [create query](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/Project.js)
+  creates the project and caller's manager relationship in one native transaction,
+  setting `ownerProjectManagerId` for private projects. No persisted `type` field
+  appears in the [model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/Project.js);
+  read type derives from ownership. No client manager writes are required.
+- [Update controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/projects/update.js)
+  requires project-manager permission for name/description and accepts the same
+  lengths with explicit nullable description. It returns `item`. CLI updates
+  exclude ownership, background, hidden/favorite inputs. Length checks use the
+  native JavaScript UTF-16 convention through existing `Records.text?`.
+- [Delete controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/projects/delete.js)
+  requires manager permission. The
+  [delete helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/projects/delete-one.js)
+  rejects when any board remains (422), before native cleanup/deletion. Successful
+  empty-project deletion performs native
+  [related cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/projects/delete-related.js),
+  including managers, favorites, backgrounds, and custom-field settings.
+
+Routes are `GET/POST /api/projects` and `GET/PATCH/DELETE /api/projects/:id` in
+[official routes](https://github.com/plankanban/planka/blob/v2.2.1/server/config/routes.js).
+No endpoint is inferred from a fixture. Permission decisions remain with the
+server, and missing/inaccessible resources are never reinterpreted as successful
+empty results or a reason to write related resources.
+
+### Project verification boundary
+
+Standing approved seams are CLI subprocesses against local HTTP fixtures,
+installed-gem executables outside the checkout, and legacy parity. The project
+fixture extends only the HTTP route boundary and preserves the shared session,
+fault-injection, and legacy routes. Red/green slices cover each command, input
+validation, native creation effects, no-op updates, nonempty deletion, returned
+identity, malformed/partial reads, unknown writes, and cleanup precedence.
+
+The ignored development lockfile is reused unchanged: Bundler 4.0.14,
+net-http 0.9.1, Minitest 6.0.6, RuboCop 1.91.0. Context7 is unavailable in this
+session; the installed locked net-http source confirms `max_retries = 0` disables
+retries, and installed Minitest source verifies assertion behavior. No dependency
+upgrade or new dependency API is required. This is locked-source verification,
+not a claim of version-matched Context7 documentation.
+
+Official source plus local fixture/package checks do not prove live instance
+compatibility or support across all Planka 2.x versions/editions. No live project
+mutations were performed. Report actual remote CI separately in the PR.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -1400,10 +1496,10 @@ Basic project creation/update is settled in the style guide's
 private creation and supplied-fields-only name/description editing with mutually
 exclusive inline/file/stdin input and explicit update-only clearing. Track it in
 [issue #23](https://github.com/marshally/planka-cli/issues/23), alongside reads and
-native deletion. Ownership transfers and presentation/preferences remain deferred;
-create/update are not implemented. Verify native permissions, limits, creation
-effects and per-version/edition support during implementation; no extra
-client-side manager writes.
+native deletion. This slice is implemented; see
+[project operations and evidence](#implemented-project-resource-operations).
+Ownership transfers and presentation/preferences remain deferred. Native creation
+effects need no extra client-side manager writes.
 
 The supported-version floor is settled: target Planka 2.0.0 and higher, with no
 Planka 1.x API adapters. This minimum does not establish compatibility with every
@@ -1512,7 +1608,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, card task-list operations, and label resource operations are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, card task-list operations, label resource operations, comment operations, and project resource operations are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,
