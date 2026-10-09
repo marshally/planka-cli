@@ -227,7 +227,7 @@ class WorkflowCreateTicketCLITest < Minitest::Test
     criteria = criteria_file(["One"])
     list_id = "1900000000000000002"
     @server.inject("POST", %r{/api/task-lists/.+/tasks\z}, { "item" => { "id" => "1900000000000000003", "taskListId" => list_id,
-                                                                         "name" => "One", "isCompleted" => true } })
+                                                                         "name" => "One", "isCompleted" => true, "position" => 65_536 } })
     out, err, status = planka("workflow", "create", "ticket", "--list", FakePlanka::LIST_READY, "--name", "Search",
                               "--criteria-file", criteria, "-o", "json")
 
@@ -236,7 +236,7 @@ class WorkflowCreateTicketCLITest < Minitest::Test
     assert_equal ["unknown_outcome", true], [result.dig("error", "code"), result.dig("meta", "changed")]
     assert_equal "1900000000000000001", result.dig("data", "card", "id")
     assert_equal list_id, result.dig("data", "taskList", "id")
-    assert_equal({ "id" => nil, "name" => "One", "isCompleted" => nil, "created" => nil }, result.dig("data", "tasks").last)
+    assert_equal({ "id" => "1900000000000000003", "name" => "One", "isCompleted" => nil, "created" => nil }, result.dig("data", "tasks").last)
   end
 
   def test_malformed_created_task_position_is_unknown_and_stops_later_criterion_writes
@@ -250,7 +250,116 @@ class WorkflowCreateTicketCLITest < Minitest::Test
     result = JSON.parse(out)
     assert_equal ["unknown_outcome", true], [result.dig("error", "code"), result.dig("meta", "changed")]
     assert_equal 1, @server.counts("POST", %r{/api/task-lists/.+/tasks\z})
-    assert_equal [{ "id" => nil, "name" => "One", "isCompleted" => nil, "created" => nil }], result.dig("data", "tasks")
+    assert_equal [{ "id" => "1900000000000000003", "name" => "One", "isCompleted" => nil, "created" => nil }], result.dig("data", "tasks")
+  end
+
+  def test_later_criterion_cannot_reuse_a_confirmed_created_task_id
+    repeated_id = "1900000000000000003"
+    @server.inject("POST", %r{/api/task-lists/.+/tasks\z}, { "item" => { "id" => repeated_id,
+                                                                         "taskListId" => "1900000000000000002",
+                                                                         "name" => "Two", "isCompleted" => false,
+                                                                         "position" => 131_072 } }, skip: 1)
+    out, err, status = planka("workflow", "create", "ticket", "--list", FakePlanka::LIST_READY, "--name", "Search",
+                              "--criteria-file", criteria_file(["One", "Two", "Three"]), "-o", "json")
+
+    assert_equal 1, status.exitstatus, out + err
+    result = JSON.parse(out)
+    assert_equal ["unknown_outcome", true], [result.dig("error", "code"), result.dig("meta", "changed")]
+    assert_equal [{ "id" => repeated_id, "name" => "One", "isCompleted" => false, "created" => true },
+                  { "id" => nil, "name" => "Two", "isCompleted" => nil, "created" => nil }], result.dig("data", "tasks")
+    assert_equal 2, @server.counts("POST", %r{/api/task-lists/.+/tasks\z})
+  end
+
+  def test_malformed_created_task_list_retains_only_a_fresh_id_from_the_target_card
+    card_id = "1900000000000000001"
+    list_id = "1900000000000000002"
+    @server.inject("POST", %r{/api/cards/.+/task-lists\z}, { "item" => { "id" => list_id, "cardId" => card_id,
+                                                                         "name" => "Wrong name", "position" => 131_072 } })
+    out, err, status = planka("workflow", "create", "ticket", "--list", FakePlanka::LIST_READY, "--name", "Search",
+                              "--criteria-file", criteria_file(["One"]), "-o", "json")
+
+    assert_equal 1, status.exitstatus, out + err
+    result = JSON.parse(out)
+    assert_equal ["unknown_outcome", true], [result.dig("error", "code"), result.dig("meta", "changed")]
+    assert_equal({ "id" => list_id, "name" => "Acceptance criteria", "created" => nil }, result.dig("data", "taskList"))
+    assert_equal [{ "type" => "card", "id" => card_id }, { "type" => "task-list", "id" => list_id }], result.dig("error", "recovery", "resources")
+    assert_empty result.dig("data", "tasks")
+  end
+
+  def test_untrusted_task_list_id_is_not_exposed_for_invalid_or_other_card_identities
+    card_id = "1900000000000000001"
+    [
+      { "id" => "unsafe", "cardId" => card_id, "name" => "Wrong name", "position" => 131_072 },
+      { "id" => "1900000000000000002", "cardId" => "999", "name" => "Wrong name", "position" => 131_072 },
+    ].each do |record|
+      @server.inject("POST", %r{/api/cards/.+/task-lists\z}, { "item" => record })
+      out, err, status = planka("workflow", "create", "ticket", "--list", FakePlanka::LIST_READY, "--name", "Search",
+                                "--criteria-file", criteria_file(["One"]), "-o", "json")
+      assert_equal 1, status.exitstatus, out + err
+      result = JSON.parse(out)
+      assert_equal "unknown_outcome", result.dig("error", "code")
+      assert_nil result.dig("data", "taskList", "id")
+      assert_equal [{ "type" => "card", "id" => result.dig("data", "card", "id") }], result.dig("error", "recovery", "resources")
+    end
+  end
+
+  def test_task_list_id_observed_in_the_created_card_scope_is_not_reused_as_new
+    card_id = "1900000000000000001"
+    reused_list_id = "1900000000000000002"
+    inject_created_card_scope(card_id, [{ "id" => reused_list_id, "cardId" => card_id, "name" => "Other", "position" => 65_536 }], [])
+    @server.inject("POST", %r{/api/cards/.+/task-lists\z}, { "item" => { "id" => reused_list_id, "cardId" => card_id,
+                                                                         "name" => "Wrong name", "position" => 131_072 } })
+    out, err, status = planka("workflow", "create", "ticket", "--list", FakePlanka::LIST_READY, "--name", "Search",
+                              "--criteria-file", criteria_file(["One"]), "-o", "json")
+
+    assert_equal 1, status.exitstatus, out + err
+    result = JSON.parse(out)
+    assert_equal "unknown_outcome", result.dig("error", "code")
+    assert_nil result.dig("data", "taskList", "id")
+    assert_equal [{ "type" => "card", "id" => card_id }], result.dig("error", "recovery", "resources")
+  end
+
+  def test_task_id_observed_in_another_task_list_is_not_reused_as_new
+    card_id = "1900000000000000001"
+    list_id = "1900000000000000002"
+    reused_task_id = "1900000000000000003"
+    inject_created_card_scope(card_id, [{ "id" => "900", "cardId" => card_id, "name" => "Other", "position" => 65_536 }],
+                              [{ "id" => reused_task_id, "taskListId" => "900", "name" => "Occupied", "isCompleted" => false,
+                                 "position" => 65_536 }])
+    out, err, status = planka("workflow", "create", "ticket", "--list", FakePlanka::LIST_READY, "--name", "Search",
+                              "--criteria-file", criteria_file(["One"]), "-o", "json")
+
+    assert_equal 1, status.exitstatus, out + err
+    result = JSON.parse(out)
+    assert_equal ["unknown_outcome", true], [result.dig("error", "code"), result.dig("meta", "changed")]
+    assert_equal list_id, result.dig("data", "taskList", "id")
+    assert_equal ["unknown_outcome", nil], [result.dig("error", "code"), result.dig("data", "tasks", 0, "id")]
+    assert_equal 1, @server.counts("POST", %r{/api/task-lists/.+/tasks\z})
+  end
+
+  def test_invalid_or_other_task_parent_identity_is_not_exposed
+    [
+      { "id" => "unsafe", "taskListId" => "1900000000000000002", "name" => "One", "isCompleted" => false,
+        "position" => 65_536 },
+      { "id" => "1900000000000000003", "taskListId" => "999", "name" => "One", "isCompleted" => false,
+        "position" => 65_536 },
+    ].each do |record|
+      @server.stop
+      @server = FakePlanka.new
+      @server.inject("POST", %r{/api/cards/.+/task-lists\z}, { "item" => { "id" => "1900000000000000002",
+                                                                           "cardId" => "1900000000000000001",
+                                                                           "name" => "Acceptance criteria",
+                                                                           "position" => 131_072 } })
+      @server.inject("POST", %r{/api/task-lists/.+/tasks\z}, { "item" => record })
+      out, err, status = planka("workflow", "create", "ticket", "--list", FakePlanka::LIST_READY, "--name", "Search",
+                                "--criteria-file", criteria_file(["One"]), "-o", "json")
+      assert_equal 1, status.exitstatus, out + err
+      result = JSON.parse(out)
+      assert_equal "unknown_outcome", result.dig("error", "code")
+      assert_nil result.dig("data", "tasks", 0, "id")
+      assert_equal [{ "type" => "card", "id" => result.dig("data", "card", "id") },
+                    { "type" => "task-list", "id" => "1900000000000000002" }], result.dig("error", "recovery", "resources")
+    end
   end
 
   def test_leaf_alias_and_builtin_guide_are_offline_and_name_the_implemented_command
@@ -275,5 +384,12 @@ class WorkflowCreateTicketCLITest < Minitest::Test
     path = File.join(Dir.tmpdir, "ticket-criteria-#{Process.pid}-#{criteria.hash.abs}.json")
     File.write(path, JSON.generate(criteria))
     path
+  end
+
+  def inject_created_card_scope(card_id, task_lists, tasks)
+    @server.inject("GET", %r{/api/cards/#{card_id}\z}, {
+                     "item" => { "id" => card_id, "name" => "Search" },
+                     "included" => { "taskLists" => task_lists, "tasks" => tasks },
+                   })
   end
 end

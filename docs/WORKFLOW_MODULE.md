@@ -100,7 +100,10 @@ passes criteria to `Criteria::Fill`. Its progress adapter composes
 created card projection and the already-confirmed `changed: true` effect. This
 keeps resume and creation recovery policies separate while sharing the fill
 sequence. New ticket tasks must be confirmed incomplete before the write counts
-as confirmed. The canonical workflow does not call legacy
+as confirmed. Scope may carry a sanitized fresh numeric identity from a malformed
+write response only when its parent is the requested card/list; creation progress
+retains that ID as unconfirmed data while keeping confirmation fields null. The
+canonical workflow does not call legacy
 `Publishing#create_ticket`, whose adapter and runtime contract remain intact.
 
 `Workflow::Create::Spec.create` composes `Boards::Cards#create` with an explicit

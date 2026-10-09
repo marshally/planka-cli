@@ -1274,8 +1274,11 @@ response certainty, and unknown-create readback. Once confirmed, a ticket-owned
 progress adapter retains the full card projection and changed state while
 composing the existing resume criteria tracker for list/task IDs, write effects,
 and `resume-ticket` recovery. It validates newly returned criteria as incomplete
-before confirming them. The legacy `Publishing#create_ticket` adapter remains
-unchanged.
+before confirming them. For malformed returned criteria records, scope carries a
+sanitized identity only when a numeric ID is fresh in the observed card and the
+returned parent matches; progress retains that ID while leaving `created` and
+completion unknown. Invalid, reused, and other-parent IDs stay null. The legacy
+`Publishing#create_ticket` adapter remains unchanged.
 
 ### Create ticket API evidence
 
