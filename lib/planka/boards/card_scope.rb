@@ -45,11 +45,19 @@ module Planka
       def creation(list)
         board = board(list)
         destination = destination_in(board, list)
-        existing_ids = Array(board["included"]["cards"]).filter_map { |card| card["id"] if card.is_a?(Hash) && Records.id?(card["id"]) }
-        Observation.new(card: CardRecord.placeholder(destination), destination: destination, existing_ids: existing_ids)
+        Observation.new(card: CardRecord.placeholder(destination), destination: destination, existing_ids: existing_card_ids(board))
       end
 
       private
+
+      def existing_card_ids(board)
+        cards = board["included"]["cards"]
+        unless cards.is_a?(Array) && cards.all? { |card| card.is_a?(Hash) && Records.id?(card["id"]) }
+          raise InvalidResponse, "Invalid board card identities"
+        end
+
+        cards.map { |card| card["id"] }
+      end
 
       def destination_in(board, list, excluding: nil)
         record = lists(board, list).first

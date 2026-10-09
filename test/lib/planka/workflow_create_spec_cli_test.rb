@@ -284,4 +284,17 @@ class WorkflowCreateSpecCLITest < Minitest::Test
     assert_includes err, "session cleanup failed; the operation result is unchanged"
     assert_equal 2, writes.size
   end
+
+  def test_archive_creation_rejects_malformed_identity_collections_before_writing
+    archive = @server.add_list(nil, "archive")
+    [nil, { "id" => CARD }, [nil], [{ "id" => "invalid" }]].each do |cards|
+      @server.inject("GET", %r{/api/boards/}, { "item" => { "id" => BOARD, "defaultCardType" => "project" },
+                                                "included" => { "lists" => @server.lists, "cards" => cards } })
+      doc, _err, status = json("workflow", "create", "spec", "--list", archive, "--board", BOARD, "--name", "Spec")
+      assert_equal [1, "api_error", false], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+      assert_nil doc["data"]
+      assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+    end
+    assert_empty writes
+  end
 end
