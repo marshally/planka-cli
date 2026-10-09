@@ -54,7 +54,6 @@ card-scoped `get members`, `get member`, `add member`, `remove member`,
 `delete label`, card-scoped `add label`/`remove label`,
 `get comments`, `get comment`, `create comment`, `update comment`, `delete comment`,
 `get boards`, `get board`, `create board`, `update board`, `delete board`,
-
 `get projects`, `get project`, `create project`, `update project`, `delete project`,
 and their root/group/leaf help are
 implemented so far; the other
