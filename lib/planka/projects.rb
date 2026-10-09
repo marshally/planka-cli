@@ -20,22 +20,29 @@ module Planka
     public :update, :delete
 
     def all(name: nil, limit: nil)
-      raise ArgumentError, "name must be a string" unless name.nil? || name.is_a?(String)
-      raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
-
+      validate_options!(name: name, limit: limit)
       collect(limit) do |data|
-        seen = {}
-        client.projects.each do |record|
-          project = Record.data(record, base_url: @base_url)
-          raise InvalidResponse, "Duplicate project record" if seen[project["id"]]
-
-          seen[project["id"]] = true
-          data << project if name.nil? || project["name"] == name
-        end
+        each_project { |project| data << project if name.nil? || project["name"] == name }
       end
     end
 
     private
+
+    def validate_options!(name:, limit:)
+      raise ArgumentError, "name must be a string" unless name.nil? || name.is_a?(String)
+      raise ArgumentError, "limit must be a positive integer" unless limit.nil? || (limit.is_a?(Integer) && limit.positive?)
+    end
+
+    def each_project
+      seen = {}
+      client.projects.each do |record|
+        project = Record.data(record, base_url: @base_url)
+        raise InvalidResponse, "Duplicate project record" if seen[project["id"]]
+
+        seen[project["id"]] = true
+        yield project
+      end
+    end
 
     def read_record(reference) = find(reference)
 
