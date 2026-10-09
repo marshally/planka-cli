@@ -1386,14 +1386,14 @@ task assignments in the board. These are native effects of the single target
 removal, not permission for client-side cleanup writes. Verify target-version
 behavior during implementation; no live API acceptance is claimed.
 
-Basic board creation/update is settled in the style guide's
+Basic board creation/update is implemented under the style guide's
 [board contract](../STYLEGUIDE.md#basic-board-creation-and-updates): project/name
 creation with optional position and append default, and name/position updates
-within the existing project. Track it in
+within the existing project. Implemented for
 [issue #22](https://github.com/marshally/planka-cli/issues/22), alongside reads and
-native deletion. Extra settings/import/subscription surfaces remain deferred;
-create/update are not implemented. Verify native append, permissions, creation
-side effects and per-version/edition support during implementation.
+native deletion. Extra settings/import/subscription surfaces remain deferred.
+See [board API evidence](#board-api-evidence) for verified Community v2.2.1
+append, permissions, creation effects, and the source/fixture verification limits.
 
 Basic project creation/update is settled in the style guide's
 [project contract](../STYLEGUIDE.md#basic-project-creation-and-updates): default
