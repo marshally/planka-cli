@@ -22,6 +22,7 @@ parser = OptionParser.new do |o|
   o.on("--title TITLE", "card title") { |v| options[:title] = v }
   o.on("--description-file F", "description from a file, or - for stdin") { |v| options[:description] = v }
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
+  o.separator "Canonical replacement: planka workflow create spec --list LIST --name NAME (new JSON envelope)."
   Planka::CLI.output_option(o, options)
 end
 Planka::CLI.parse!(parser, "planka create-spec")

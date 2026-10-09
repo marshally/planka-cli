@@ -24,7 +24,8 @@ adds native list `get`, `create`, `update`, and `delete`; the twelfth adds
 `create`, `update`, and `delete`. Native label operations and comment
 `get`, `create`, `update`, and `delete` are also implemented. Native boards (#22)
 and projects (#23) support collection/individual reads, creation, updates, and
-deletion. All legacy entry
+deletion. `planka workflow create spec` (#26) publishes project cards without
+acceptance criteria. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -594,8 +595,8 @@ Card-scoped relationships stay under `Cards::*`; native cards live under `Boards
   (board, list, finiteness, append position, default card type). `Destination`
   owns the position rule: append unless positioned, none for archive/trash.
 - `Boards::Cards < Resource` exposes `all`, `find`, `create`, `update`, `move`,
-  and `delete`. Its `creation_type` hook selects the type independently of the
-  destination's placement rule, currently using the verified `default_card_type`.
+  and `delete`. Its `creation_type` hook selects an explicit native type or the
+  verified `default_card_type`, independently of the destination's placement rule.
   `move` delegates to `Boards::CardMove` and retains the card's existing type.
 - `Boards::CardMove < Resource` is scoped to its destination list. Its
   `read_record` reads the card and then its destination on the card's own board,
@@ -1194,6 +1195,63 @@ Official source plus local fixture/package checks do not prove live instance
 compatibility or support across all Planka 2.x versions/editions. No live project
 mutations were performed. Report actual remote CI separately in the PR.
 
+## Implemented create spec workflow
+
+`planka workflow create spec --list LIST --name NAME` implements
+[issue #26](https://github.com/marshally/planka-cli/issues/26), with the `specs`
+alias, optional `--board`, `--description-file FILE|-`, and native `--position`.
+The [README contract](../README.md#canonical-create-spec) records its full input,
+human output, card data schema, metadata, error codes, and recovery.
+
+`Workflow::Create::Spec` composes `Boards::Cards#create(type: "project")`;
+general cards remain independent of workflow conventions. Core creation now
+accepts an explicit native type while the native CLI still uses the board default.
+`Workflow::CLI` owns required flags/help and uses `CLI::CardInput` for preparation.
+Three-word dispatch, pre-session settings, in-memory sessions, Output, and cleanup
+handling remain shared. Legacy `create-spec` and its direct executable keep
+arguments, bare JSON, human output, and exits; only their help gains the implemented
+replacement. The current guide is updated, without changing legacy Prime.
+
+`CardScope#creation` observes destination and already-visible card IDs from one
+board read. `CardRecord` validates text, type, finite nonnegative positions,
+confirmation, and returned identities. Resource's deferred failure hooks preserve
+a valid numeric returned ID absent from the observed cards even when other fields
+cannot be confirmed. Write remains the certainty/failure owner. Unknown fields
+stay null, with card recovery for a known ID or list recovery otherwise; neither
+retries nor extra reconciliation writes are issued. Already-observed IDs cannot
+confirm new creates. These protections are shared with canonical native card
+creation. `ListScope` classifies API name ambiguity as operational exit 1 with
+its existing `invalid_input` code, retaining candidate IDs; explicit mismatches
+remain input failures.
+
+### Create spec API evidence
+
+Official **Community v2.2.1** source inspected for this implementation:
+
+| Contract | Primary source |
+| --- | --- |
+| POST `/api/lists/:listId/cards` requires type (`project`/`story`) and name (1024), accepts nonnegative/null position and nonempty/null description (1048576), requires board editor membership, and returns `item`. | [Create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/create.js) |
+| Finite lists require position; native insertion may renumber neighbors. Archive/trash omit it. Creation records native actions and may subscribe the creator, but adds no Acceptance criteria list or tasks. Native failures after card creation can leave an uncertain outcome. | [Create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/cards/create-one.js), [finite helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/is-finite.js) |
+| Append uses the last position plus 65536; returned positions are authoritative. | [Position selectors](https://github.com/plankanban/planka/blob/v2.2.1/client/src/selectors/positioning.js), [position gap](https://github.com/plankanban/planka/blob/v2.2.1/client/src/constants/Config.js), [normalization](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/utils/insert-to-positionables.js) |
+| GET `/api/boards/:id` supplies all visible lists and finite-list cards without pagination/filter inputs; the CLI resolves exact names and calculates append itself. Scope observation is bounded by that snapshot and native access. | [Board show](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js) |
+| GET `/api/lists/:id` finds an active/closed list's board, rejecting infinite lists with 404; archive/trash require board scope. Canonical `get cards` reconciles finite lists only, so unknown IDs in archive/trash need inspection in Planka. | [List show](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/lists/show.js), [finite helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/is-finite.js) |
+
+Append is a read followed by a write, not atomic with concurrent changes. Source
+inspection establishes endpoint/field/access behavior, not compatibility with
+every edition or later version. No live Planka acceptance or live writes were
+authorized or performed.
+
+Verification uses red-green CLI subprocess/local HTTP tests in
+`workflow_create_spec_cli_test.rb`: project type on a story board, exact input,
+append and supported positions, file/stdin text, aliases/offline help, duplicate
+creates, strict response validation and ID preservation, lookup/input/settings/
+API failures, uncertain effects without retries, readback without writes, cleanup
+precedence, and legacy/direct parity. Existing card/list/loading/CLI suites protect
+shared behavior. Locked Bundler 4.0.14 and repository CI/build plus an isolated
+installed-gem check are the package verification boundary; fixtures and package
+checks do not substitute for live API evidence. Context7 is unavailable; no new
+dependency APIs or upgrades are introduced.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -1614,7 +1672,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, card task-list operations, label resource operations, comment operations, board resource operations, and project resource operations are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, card task-list operations, label resource operations, comment operations, board resource operations, project resource operations, and workflow create spec are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

@@ -3,6 +3,7 @@ require "planka/workflow/configuration"
 require "planka/cli/failure"
 require "planka/cli/command"
 require "planka/cli/input_file"
+require "planka/cli/card_input"
 require "planka/cli/resources/scalar_flags"
 require "json"
 
@@ -12,6 +13,7 @@ module Planka
     module CLI
       ROOT_HELP = <<~HELP
         Workflows:
+          workflow create spec --list LIST --name NAME  Publish a project spec without acceptance criteria
           workflow claim CARD  Add your membership and move the card to in-progress
           workflow resume ticket CARD --criteria-file FILE  Add missing acceptance criteria to a ticket
           workflow guide  Read built-in agent guidance (offline)
@@ -22,6 +24,7 @@ module Planka
       HELP
       GROUP_HELP = <<~HELP
         usage: planka workflow <operation> [arguments] [flags]
+          create spec --list LIST --name NAME  Publish a project spec without acceptance criteria
           claim CARD  Add your membership and move the card to in-progress
           resume ticket CARD --criteria-file FILE  Add missing acceptance criteria to a ticket
           guide  Read built-in agent guidance (offline)
@@ -102,6 +105,33 @@ module Planka
         usage: planka workflow resume <resource> REF [flags]
           ticket CARD --criteria-file FILE  Add missing acceptance criteria to a ticket
       HELP
+
+      CREATE_SPEC_HELP = <<~HELP
+        usage: planka workflow create spec --list LIST [--board BOARD] --name NAME [--description-file FILE|-]
+                                           [--position N] [--output human|json]
+        Creates a project card without an Acceptance criteria list. Appends unless positioned.
+        LIST is an ID, same-instance URL, or exact name with --board BOARD or PLANKA_BOARD_ID.
+        BOARD is an ID or same-instance URL; an explicit board asserts the list's parent.
+        A list ID/URL ignores PLANKA_BOARD_ID. Archive/trash lists require --board and reject --position.
+        Requires PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, PLANKA_AGENT_PASSWORD.
+        spec/specs are aliases. No positional target or criteria flag is accepted.
+        NAME is nonempty, at most 1024 UTF-16 units; FILE (- for stdin) must be nonempty UTF-8 text,
+        at most 1048576 UTF-16 units. Text is preserved and read before any request.
+        --position is finite and nonnegative where supported; omitted descriptions stay null.
+        JSON data: id, name, description, type, boardId, listId, position, createdAt, updatedAt.
+        meta.changed: true on confirmation, false on rejection, null when the write is unknown.
+        A valid new returned ID is preserved even when other response fields are invalid.
+        Recovery: readback-card for a known ID, otherwise readback-cards for the list. Never retry blindly.
+        Inspect with planka get card CARD -o json, or get cards --list LIST -o json for active/closed lists.
+        Archive/trash lists need inspection in Planka when the created ID is unknown.
+        Exit 0: success; 2: local input; 1: configuration, lookup, API or unknown outcome.
+        Example: planka workflow create spec --list 123 --name Search --description-file spec.md -o json
+      HELP
+
+      CREATE_GROUP_HELP = <<~HELP
+        usage: planka workflow create <resource> [flags]
+          spec --list LIST --name NAME  Publish a project spec without acceptance criteria
+      HELP
       RESUME_TICKET_HELP = <<~HELP
         usage: planka workflow resume ticket CARD --criteria-file FILE|- [--output human|json]
         Finishes an existing ticket: adds criteria missing from its "Acceptance criteria" task list. Never creates a card.
@@ -148,6 +178,14 @@ module Planka
         { base_url: instance.base_url, criteria: criteria(flags.fetch(:criteria_file).first) }
       end
 
+      def self.spec_preparation(env, instance:, flags:, **)
+        unless flags[:list] && flags[:name]
+          raise Planka::CLI::Failure.invalid_input("create spec requires --list and --name")
+        end
+
+        Planka::CLI::CardInput.creation(env, instance: instance, flags: flags)
+      end
+
       # A nonempty JSON array of distinct criteria, each a valid task name.
       def self.criteria(path)
         criteria = JSON.parse(Planka::CLI::InputFile.read(path))
@@ -175,6 +213,11 @@ module Planka
       end
 
       COMMANDS = {
+        ["workflow", "create", "spec"] => Planka::CLI::Command.new(aliases: [["workflow", "create", "specs"]], reference: false, mutation: true, resource: "card", collection: "cards",
+                                                                   flags: { "--list LIST" => :list, "--board BOARD" => :board, "--name NAME" => :name,
+                                                                            "--description-file FILE" => :description_file, "--position N" => :position },
+                                                                   validate_flags: Planka::CLI::CardInput.method(:error), prepare: method(:spec_preparation),
+                                                                   help: CREATE_SPEC_HELP, operation: Create::Spec.method(:create), formatter: Format.method(:created_spec)),
         ["workflow", "claim"] => Planka::CLI::Command.new(resource: "card", collection: "cards", mutation: true, help: CLAIM_HELP, operation: Claim::Card.method(:read), formatter: Format.method(:claim)),
         ["workflow", "resume", "ticket"] => Planka::CLI::Command.new(aliases: [["workflow", "resume", "tickets"]], resource: "card", collection: "cards", mutation: true,
                                                                      flags: { "--criteria-file FILE" => :criteria_file },
@@ -188,7 +231,7 @@ module Planka
         ["workflow", "branch-name"] => Planka::CLI::Command.new(resource: "card", collection: "cards", help: BRANCH_NAME_HELP, operation: BranchName.method(:read), formatter: Format.method(:branch_name), prepare: method(:branch_preparation)),
       }.freeze
       def self.commands = COMMANDS
-      def self.groups = { ["workflow"] => GROUP_HELP, ["workflow", "resume"] => RESUME_GROUP_HELP }
+      def self.groups = { ["workflow"] => GROUP_HELP, ["workflow", "resume"] => RESUME_GROUP_HELP, ["workflow", "create"] => CREATE_GROUP_HELP }
       def self.root_help = ROOT_HELP
     end
   end

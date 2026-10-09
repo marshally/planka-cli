@@ -55,13 +55,13 @@ module Planka
         `create label --board BOARD --name NAME --color COLOR` always creates;
         `get|update|delete label LABEL --board BOARD` manages existing labels.
 
-        Legacy publishing: specs have no
-        Acceptance criteria list; tickets have one. Share feature:SLUG labels.
-        `planka create-spec` and `planka create-ticket` take --list ID_OR_NAME and
-        --title TITLE; tickets require --criteria-file FILE (a JSON string array).
-        --description-file FILE accepts multiline text; either file accepts -
-        for stdin. Positions append. `planka link BLOCKED BLOCKER`
-        records linked tasks in Blocked by; repeating a link is safe. Disambiguate with IDs. Read help before writes.
+        `planka workflow create spec --list LIST --name NAME` publishes a project
+        card without Acceptance criteria. Tickets have a criteria list; legacy
+        `planka create-ticket` takes --list ID_OR_NAME, --title TITLE, and
+        --criteria-file FILE (a JSON string array). Share feature:SLUG labels.
+        --description-file FILE preserves text; files accept - for stdin.
+        Positions append. `planka link BLOCKED BLOCKER` records linked
+        tasks in Blocked by; repeating a link is safe. Read help before writes.
 
         For an unknown outcome, read the board back before retrying: the write
         may already have applied. Legacy recovery JSON can contain completed=false,

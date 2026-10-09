@@ -55,6 +55,7 @@ card-scoped `get members`, `get member`, `add member`, `remove member`,
 `get comments`, `get comment`, `create comment`, `update comment`, `delete comment`,
 `get boards`, `get board`, `create board`, `update board`, `delete board`,
 `get projects`, `get project`, `create project`, `update project`, `delete project`,
+`planka workflow create spec`, `planka workflow resume ticket`,
 and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -450,8 +451,12 @@ Mutation `data` is the resulting card; delete adds `deleted: true`.
 keeps the unchanged card (`changed: false`) with the native failure code. An
 unknown or malformed write response returns `error.code: unknown_outcome`,
 `changed: null`, and marks requested fields null (`deleted: null` for delete).
-Unknown creates never invent a card ID and report `readback-cards` recovery for
-the list: inspect `get cards --list LIST` before retrying. Other mutations
+Unknown creates preserve a valid numeric returned ID only when it was absent
+from the observed cards; other returned fields remain unconfirmed. With such an
+ID, inspect `get card CARD` using `readback-card` recovery. Otherwise the ID stays
+null with `readback-cards` recovery for the list: inspect `get cards --list LIST`
+for active/closed lists before retrying, or inspect archive/trash in Planka.
+Other mutations
 report `readback-card`: inspect `get card CARD`. No request is retried
 automatically.
 
@@ -949,6 +954,74 @@ authorization/not-found/API/network codes. Success exits 0, local input 2, other
 failures 1. Cleanup failure warns on stderr and preserves the primary outcome.
 See the [claim contract and API evidence](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-eighth-slice-claim-a-card).
 
+### Canonical create spec
+
+```sh
+planka workflow create spec --list ready-for-agent --board BOARD --name "Search" --description-file spec.md
+planka workflow create spec --list LIST_ID --name "Search" --description-file - -o json < spec.md
+planka workflow create spec --list LIST_ID --name "Search" --position 0
+planka workflow create --help
+```
+
+Creates one `project` card without an `Acceptance criteria` task list, even when
+the board's default card type is `story`. Repeated names create distinct cards;
+this is not an upsert. The command adds no tasks, memberships, labels, or comments.
+`spec`/`specs` are aliases. It accepts no positional target or criteria flag.
+
+`--list` and `--name` are required. LIST is a numeric ID, same-instance list URL,
+or an exact name on `--board BOARD` or `PLANKA_BOARD_ID`. BOARD is an ID or
+same-instance board URL; an explicit board asserts the actual parent. List IDs
+and URLs determine their board and ignore the environment default. Absent list
+names discovered through API lookup and ambiguity exit 1; ambiguity keeps the `invalid_input`
+code and reports candidate IDs. Explicit parent mismatches exit 2.
+
+Names are nonempty, at most 1024 UTF-16 code units. Optional
+`--description-file FILE|-` reads nonempty UTF-8 text of at most 1048576 UTF-16
+units before authentication, preserving Unicode, quotes, and final newlines.
+An omitted description is null. Empty/unreadable/invalid text is local input
+failure. The three connection settings are required and checked before file
+reading; no configuration or token is persisted.
+
+Active/closed lists append after the highest observed position plus 65536,
+unless `--position N` supplies a finite nonnegative native value. Native
+normalization may move neighbors; the returned position is authoritative.
+Append is not atomic with concurrent changes. Archive/trash lists require
+explicit board scope, omit position, and reject `--position`.
+
+Human success is `Created spec NAME (CARD_ID) in list LIST_ID`. JSON uses the
+canonical envelope; `data` is a card object with `id`, `name`, `description`,
+`type`, `boardId`, `listId`, `position`, `createdAt`, and `updatedAt`.
+Description, position for archive/trash, and optional timestamps may be null.
+Confirmed success has `meta: {changed: true}` and `error: null`.
+
+Before scope is observed, failures have `data: null`. Rejected writes retain the
+observed placeholder: board/list IDs and null card fields, with `changed: false`.
+Unknown or malformed write responses use `unknown_outcome` and `changed: null`;
+unconfirmed fields remain null. A valid numeric returned ID absent from the
+observed cards is retained for reconciliation, without claiming a confirmed
+create. IDs are never invented, and an already observed ID cannot confirm a create.
+
+For a known ID, recovery is
+`{action: "readback-card", resources: [{type: "card", id: CARD}]}`:
+inspect `planka get card CARD -o json`. Otherwise recovery is
+`{action: "readback-cards", resources: [{type: "list", id: LIST}]}`:
+inspect `planka get cards --list LIST -o json` for active/closed lists, or inspect
+archive/trash in Planka. Compare name and description before deciding whether
+to create again. Neither automatic retry nor rollback occurs.
+
+Stable errors are `invalid_input`, `configuration_error`, `authentication_error`,
+`authorization_error`, `not_found`, `api_error`, `network_error`, and
+`unknown_outcome`. Resolved mutation failures include `meta.changed`; grammar
+failures use the shared parser envelope. Success exits 0, local input 2, and
+configuration/API/lookup/unknown outcomes 1. Sign-out is attempted after execution;
+cleanup failure warns on stderr and preserves the primary result. Native board
+editor permission is required. This is one card write, without a multi-step
+criteria workflow. See the [API evidence and verification limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#implemented-create-spec-workflow).
+
+Legacy `create-spec --title TITLE` and `planka-create-spec` retain their argument,
+bare `{card: {id, name, url}}` JSON, human output, and exit contracts. Their help
+names the implemented canonical command; runtime warnings are not added.
+
 ### Canonical resume ticket
 
 ```sh
@@ -1082,7 +1155,7 @@ release notes, with no automatic runtime warnings. `describe card` replaces
 `workflow pending-criteria` replaces `unticked`, and `workflow branch-name`
 replaces `branch-name`, `workflow claim-status` replaces `loop-lock`, and
 `workflow guide` replaces `prime`, `workflow next` replaces `next-card`, and
-`workflow claim` replaces `claim`, `workflow resume ticket` replaces
+`workflow claim` replaces `claim`, `workflow create spec` replaces `create-spec`, and `workflow resume ticket` replaces
 `create-ticket --card`, `update card` replaces `update-card`,
 `move card` replaces `move-card`, `get cards --list LIST` replaces the list
 view of `snapshot`, `create list` replaces `create-list`, and
@@ -1243,6 +1316,7 @@ Planka::Client.session(validate_responses: true) do |client|
   cards.all(list: "Ready", labels: ["enhancement"])           # CollectionResult
   cards.find("123")                                            # One card's public fields
   cards.create("Ready", name: "Fix login", description: "...") # MutationResult
+  cards.create("Ready", name: "Search", type: "project")       # Explicit native type; default otherwise
   cards.update("123", name: "Fix session expiry")
   cards.move("123", list: "Done")
   cards.delete("123")

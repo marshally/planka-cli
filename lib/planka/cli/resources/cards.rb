@@ -51,7 +51,8 @@ module Planka
           NAME is nonempty, at most 1024 characters. A description file (- for stdin) must be nonempty,
           at most 1048576 characters; it is read before any request.
           JSON data is the created card; meta.changed is true, or null with unknown_outcome.
-          An unknown or malformed write response gives readback-cards recovery for the list and no card ID.
+          An unknown or malformed write response keeps a valid new returned ID for readback-card recovery;
+          otherwise it gives readback-cards recovery for the list without inventing an ID.
           Read back with planka get cards --list LIST before retrying; creates are never retried.
         HELP
         UPDATE_HELP = <<~HELP + COMMON_HELP

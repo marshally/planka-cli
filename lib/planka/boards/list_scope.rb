@@ -25,12 +25,20 @@ module Planka
         return lists unless list
         raise ReferenceError, "List does not belong to #{@parent}" if Records.id?(list) && lists.none? { |record| record["id"] == list }
 
-        [Reference.resolve(lists, list, resource: "list", scope: "the board")]
+        [resolve_list(lists, list)]
       end
 
       def finite?(list) = FINITE_TYPES.include?(list["type"])
 
       private
+
+      # Name lookup observes server state, so ambiguity and absence are
+      # operational failures. Explicit parent mismatches remain local input.
+      def resolve_list(lists, reference)
+        Reference.resolve(lists, reference, resource: "list", scope: "the board")
+      rescue ReferenceError => error
+        raise ReferenceError.new(error.message, code: error.code, status: 1)
+      end
 
       def list_board(list)
         raise ArgumentError, "list names require a board" unless Records.id?(list)

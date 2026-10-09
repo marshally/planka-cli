@@ -25,8 +25,9 @@ module Planka
       def find(reference) = read_record(reference).card
 
       # Creates a native card in LIST, appending unless a position is given.
+      # Type defaults to the board's type unless explicitly supplied.
       # Archive/trash lists take no position. No workflow records are added.
-      def create(list, name:, description: nil, position: nil) = super
+      def create(list, name:, description: nil, position: nil, type: nil) = super
 
       # Changes only the supplied name and/or description.
       def update(reference, name: nil, description: nil) = super(reference, **{ name: name, description: description }.compact)
@@ -103,17 +104,21 @@ module Planka
 
       def read_record(reference) = CardScope::Observation.new(card: @scope.card(reference), destination: nil)
 
-      def read_creation_scope(list)
-        destination = @scope.destination(list)
-        CardScope::Observation.new(card: CardRecord.placeholder(destination), destination: destination)
-      end
+      def read_creation_scope(list) = @scope.creation(list)
 
       def record_data(known) = known.card
 
-      def creation_attributes(name:, description:, position:)
+      def unconfirmed_data(known, desired, returned)
+        data = super
+        known.card["id"] ? data : data.merge("id" => CardRecord.created_id(returned, known.existing_ids))
+      end
+
+      def unconfirmed_recovery(known, desired, returned) = CardRecord.recovery(unconfirmed_data(known, desired, returned))
+
+      def creation_attributes(name:, description:, position:, type:)
         { "name" => CardRecord.text!("name", name, CardRecord::NAME_LIMIT),
           "description" => description && CardRecord.text!("description", description, CardRecord::DESCRIPTION_LIMIT),
-          "position" => CardRecord.position!(position) }
+          "position" => CardRecord.position!(position), "type" => type && CardRecord.type!(type) }
       end
 
       def creation_data(known, attributes)
@@ -124,7 +129,7 @@ module Planka
 
       # Creation owns type selection; the destination supplies the board default
       # independently of its placement rule.
-      def creation_type(known, _attributes) = known.destination.default_card_type
+      def creation_type(known, attributes) = attributes["type"] || known.destination.default_card_type
 
       def create_record(_known, desired)
         request = { type: desired["type"], name: desired["name"], position: desired["position"], description: desired["description"] }
@@ -147,7 +152,14 @@ module Planka
       def deletion_data(known) = known.card.merge("deleted" => true)
       def delete_record(known) = client.delete_card(known.card["id"])
 
-      def validate_record!(record, desired, **) = CardRecord.confirm!(record, desired)
+      def validate_record!(record, desired, observation:)
+        if observation.card["id"].nil? && !CardRecord.created_id(record, observation.existing_ids)
+          raise InvalidResponse, "Creation did not return a new card ID"
+        end
+
+        CardRecord.confirm!(record, desired)
+      end
+
       def confirmed_data(record, desired) = CardRecord.data(record).merge(desired.slice("deleted"))
       def recovery(known) = CardRecord.recovery(known.card)
     end
