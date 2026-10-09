@@ -11,7 +11,8 @@ card task-list `get task-lists`, `get task-list`, `create task-list`,
 `update task-list`, `delete task-list`, native label `get labels`, `get label`,
 `create label`, `update label`, `delete label`, card-scoped `add label`/`remove label`,
 native comment `get comments`, `get comment`, `create comment`, `update comment`,
-`delete comment`, and nested help alongside all flat commands in
+`delete comment`, native board `get boards`, `get board`, `create board`,
+`update board`, `delete board`, and nested help alongside all flat commands in
 README.md. Other examples below remain target syntax, not a claim that every
 command is implemented or supported by every Planka release.
 
@@ -403,17 +404,28 @@ are implemented.
 
 ### Basic board creation and updates
 
-Planned `create board --project PROJECT --name NAME` creates a board in the
-specified project. Planned `update board BOARD` accepts `--name NAME` and
+Implemented `get boards --project PROJECT` reads all visible boards from that
+project, ordered by position then numeric ID, with exact `--name` filtering
+before positive `--limit` and accurate `meta.complete`. `get board BOARD` reads
+one concise object. BOARD is an ID, same-instance URL, or exact name with explicit
+project scope; PROJECT is an ID or same-instance URL. `PLANKA_BOARD_ID` is unused.
+Explicit parent mismatches fail. Malformed collections retain validated results.
+
+Implemented `create board --project PROJECT --name NAME` creates a board in the
+specified project. `update board BOARD` accepts `--name NAME` and
 `--position N`, changes only supplied fields, and rejects empty updates. Names
-are nonempty and obey the verified native length limit; positions are finite,
+are nonblank and at most 128 UTF-16 units; positions are finite,
 nonnegative native ordering values. Keep the board in its current project.
 Defer imports, display settings, card-type defaults, and subscription management.
 Creation accepts optional `--position N` and appends to the project when omitted;
-updates preserve position when omitted. Verify native ordering and append
-calculation during implementation. Track the resource slice in
-[boards issue #22](https://github.com/marshally/planka-cli/issues/22); basic
-create/update commands are not implemented.
+updates preserve position when omitted. Append uses the highest project position
+plus 65536 (65536 when empty); Planka may normalize positions. Native creation
+adds editor membership for the creator and archive/trash lists without extra
+client writes. `delete board BOARD` makes one native DELETE; Planka removes its
+lists/cards/labels/memberships and related data without client traversal.
+Writes require native project-manager access. Unknown writes require
+`readback-boards` or `readback-board` reconciliation without retries.
+See the [board schemas and recovery contract](README.md#canonical-boards).
 
 ### Basic project creation and updates
 

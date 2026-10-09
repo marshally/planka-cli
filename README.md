@@ -53,6 +53,7 @@ card-scoped `get members`, `get member`, `add member`, `remove member`,
 `delete task-list`, native `get labels`, `get label`, `create label`, `update label`,
 `delete label`, card-scoped `add label`/`remove label`,
 `get comments`, `get comment`, `create comment`, `update comment`, `delete comment`,
+`get boards`, `get board`, `create board`, `update board`, `delete board`,
 and their root/group/leaf help are
 implemented so far; the other
 redesigned commands remain planned.** See [STYLEGUIDE.md](STYLEGUIDE.md) for the contract and migration
@@ -233,6 +234,78 @@ require no credentials or network. Unknown write outcomes must be reconciled
 before retrying; incomplete workflows retain recovery state in JSON output.
 
 ## Current interface
+
+### Canonical boards
+
+```sh
+planka get boards --project PROJECT [--name NAME] [--limit N] -o json
+planka get board BOARD [--project PROJECT] -o json
+planka create board --project PROJECT --name NAME [--position N] -o json
+planka update board BOARD [--project PROJECT] [--name NAME] [--position N] -o json
+planka delete board BOARD [--project PROJECT] -o json
+```
+
+`board`/`boards` are aliases. BOARD accepts an ID, same-instance `/boards/ID`
+URL, or exact name within explicit `--project`. PROJECT accepts an ID or
+same-instance `/projects/ID` URL, not a project name. An explicit project must
+match the board's actual parent; it never relocates the board. `PLANKA_BOARD_ID`
+is unused. Unknown resources fail; ambiguous names report candidate IDs and
+exit 1. Explicit parent mismatches exit 2.
+
+Reads return concise board objects: `id`, `projectId`, `name`, `position`,
+nullable ISO timestamps `createdAt`/`updatedAt`, and `url`. Individual `data`
+is an object with empty `meta`; collection `data` is always an array.
+`get boards` requires explicit project scope and reads every board visible to
+the caller from one project response, without pagination. Results are sorted
+by position then numeric ID. Exact `--name` filtering precedes positive `--limit`;
+unsupported label/member filters and filters on individual reads are errors.
+`meta.complete` is true only when every matching board is returned. Truncation
+is successful; a failed or malformed read exits 1 with validated matching
+records retained and `complete: false`. A failed project fetch returns `[]`.
+Completeness describes visible boards, not hidden boards or a snapshot across
+concurrent changes.
+
+Creation always creates, even if the name exists. Names must be nonblank and at
+most 128 UTF-16 units; positions must be finite and nonnegative. The default
+position is the highest project board position plus 65536, or 65536 for an empty
+project. Planka may normalize positions and renumber neighboring boards.
+Updates require name, position, or both; send only supplied changed fields;
+and preserve omitted fields. Neither field has clearing semantics. Identical
+updates are a no-op. Project relocation, imports, display settings, card defaults,
+and subscriptions remain outside these commands.
+
+Native creation gives the creator editor membership and creates archive/trash
+lists; the CLI makes no additional membership/list writes. Deletion makes one
+target DELETE without prompts, `--yes`, or `--cascade`. Planka removes the board's
+lists, cards, labels, memberships, and related data; the CLI makes no child
+deletes. Native create/update/delete require project-manager permission. Native
+read visibility includes managers and board members, with the server's additional
+administrator visibility for projects without an owner manager.
+
+Successful mutations return the resulting board, with `deleted: true` on delete,
+and `meta.changed: true`; identical updates return the observed board and false.
+Rejected writes return false and observed data (a rejected create has only
+`projectId` known, other fields null). Unknown writes return `unknown_outcome`,
+`changed: null`, and observed fields with requested changed fields null; delete
+adds `deleted: null`. Before any successful observation, failure data is null.
+Unknown creates retain a numeric returned ID absent from the observed project,
+with its URL, when available; other new fields remain null. IDs are never invented.
+An existing board ID returned by creation cannot confirm a new board.
+
+Recovery uses `readback-boards` with `resources: [{type: "project", id: PROJECT}]`
+when no board ID is known: inspect `get boards --project PROJECT` before deciding
+whether to retry. With a board ID, `readback-board` includes both project and board
+references: inspect `get board BOARD` or the project collection. No write is
+automatically retried. Cleanup errors preserve the operation's result.
+
+Human reads show `NAME (ID) on project PROJECT_ID: URL`, one line per board,
+or `No boards.`; limited collections include a truncation notice. Mutations
+prefix the same fields with `Created board`, `Updated board`, or `Deleted board`.
+All JSON responses use `{data, meta, error}`. Success exits 0, local input 2,
+operational/API failures 1. `describe board` and legacy `snapshot` retain their
+existing detailed outputs. [Community v2.2.1 source evidence and verification
+limits](docs/CLI_REDESIGN_IMPLEMENTATION.md#board-api-evidence) are recorded separately
+from local HTTP and installed-package checks; no live write acceptance is claimed.
 
 ### Canonical cards
 
@@ -1069,6 +1142,13 @@ Planka::Client.session(validate_responses: true) do |client|
 
   tasks = Planka::Cards::Tasks.new(client, card_id: "123")
   tasks.update("789", completed: true)
+
+  boards = Planka::Projects::Boards.new(client, base_url: "https://planka.example", project_id: "600")
+  boards.all(name: "Delivery", limit: 10)  # CollectionResult; complete visible project collection
+  boards.find("100")                      # project_id optional for an ID
+  boards.create(name: "Delivery")          # MutationResult; append by default
+  boards.update("100", name: "Development")
+  boards.delete("100")                    # Native deletion, including the board's contents
 
   cards = Planka::Boards::Cards.new(client, board_id: "100")  # board_id optional for IDs
   cards.all(list: "Ready", labels: ["enhancement"])           # CollectionResult
