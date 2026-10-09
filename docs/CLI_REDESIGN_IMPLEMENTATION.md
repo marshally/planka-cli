@@ -775,7 +775,7 @@ offline at every level. The parser derives argument counts from the resolved
 path length. Later three-word workflows (`workflow create spec|ticket`,
 `workflow add|remove blocker`) attach through the same catalog role.
 
-`Workflow::CLI.resume_preparation` reads `--criteria-file` (or stdin) before
+`Workflow::CLI::TicketInput.resume` reads `--criteria-file` (or stdin) before
 authentication and requires a nonempty JSON array of distinct, nonblank strings
 of at most 1024 UTF-16 code units. Missing connection settings are reported
 first (exit 1); file, JSON and shape failures exit 2. The command's `--criteria-file` flag
