@@ -181,6 +181,31 @@ class CardResourcesCLITest < Minitest::Test
     assert_equal [], @server.memberships, "no claim"
   end
 
+  def test_creation_uses_a_story_board_default_and_moves_preserve_the_card_type
+    @server.boards.first["defaultCardType"] = "story"
+    doc, err, status = json("create", "card", "--list", READY, "--name", "Story")
+    assert status.success?, err
+    assert_equal "story", doc.dig("data", "type")
+    assert_equal [["POST", "/api/lists/#{READY}/cards", { "type" => "story", "name" => "Story", "position" => 131_072 }]], writes
+
+    @server.requests.clear
+    doc, err, status = json("move", "card", CARD, "--list", PROGRESS)
+    assert status.success?, err
+    assert_equal "project", doc.dig("data", "type")
+    assert_equal [["PATCH", "/api/cards/#{CARD}", { "position" => 65_536, "listId" => PROGRESS }]], writes
+  end
+
+  def test_invalid_board_default_type_prevents_creation_and_moves_without_writes
+    @server.boards.first["defaultCardType"] = "unsupported"
+    [["create", "card", "--list", READY, "--name", "Card"],
+     ["move", "card", CARD, "--list", PROGRESS]].each do |args|
+      doc, _err, status = json(*args)
+      assert_equal [1, "api_error", false], [status.exitstatus, doc.dig("error", "code"), doc.dig("meta", "changed")]
+      assert_equal ["DELETE", "/api/access-tokens/me"], @server.requests.last.first(2)
+    end
+    assert_empty writes
+  end
+
   def test_text_inputs_are_utf8_regardless_of_locale_and_invalid_utf8_is_rejected
     c_locale = { "LC_ALL" => "C", "LANG" => "C" }
     Dir.mktmpdir do |dir|

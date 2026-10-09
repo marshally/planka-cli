@@ -303,7 +303,8 @@ class FakePlanka
       "users" => users,
       "boardMemberships" => board_memberships.select { |record| record["boardId"] == id }
     }
-    { "item" => { "id" => id, "name" => "Board", "defaultCardType" => "project" }, "included" => included }
+    item = { "id" => id, "name" => "Board", "defaultCardType" => "project" }.merge(@boards.find { |board| board["id"] == id } || {})
+    { "item" => item, "included" => included }
   end
 
   def list_payload(id)
