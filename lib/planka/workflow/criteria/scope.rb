@@ -1,6 +1,6 @@
 module Planka
   module Workflow
-    module Resume
+    module Criteria
       # Validated observations and response invariants for one ticket's criteria.
       class Scope
         attr_reader :card, :task_list, :tasks

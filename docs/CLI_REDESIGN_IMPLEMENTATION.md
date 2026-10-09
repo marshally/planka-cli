@@ -781,15 +781,17 @@ of at most 1024 UTF-16 code units. Missing connection settings are reported
 first (exit 1); file, JSON and shape failures exit 2. The command's `--criteria-file` flag
 uses the shared scalar-flag checks.
 
-[Resume::Ticket](../lib/planka/workflow/resume/ticket.rb) coordinates the fill
-with the same structure as `Claim::Card`. [Resume::Scope](../lib/planka/workflow/resume/scope.rb)
+[Resume::Ticket](../lib/planka/workflow/resume/ticket.rb) selects resume's
+[Progress](../lib/planka/workflow/resume/progress.rb) and delegates to
+[Criteria::Fill](../lib/planka/workflow/criteria/fill.rb). [Criteria::Scope](../lib/planka/workflow/criteria/scope.rb)
 reads the card once, validates its task lists and tasks, rejects two or more
 `Acceptance criteria` lists as `ambiguous_criteria_list` before writes, and
 validates each write response. [MutationProgress](../lib/planka/workflow/mutation_progress.rb)
-owns common confirmation and failure accounting; [Resume::Progress](../lib/planka/workflow/resume/progress.rb)
-owns resume effects, result projection, and `resume-ticket`
-recovery. Each write is confirmed only after its response validates; an
-uncertain step is recorded with null identity. Legacy `Publishing#resume_ticket`
+owns common confirmation and failure accounting; resume progress owns resume
+effects, result projection, and `resume-ticket` recovery. Each write is confirmed
+only after its response validates; an uncertain step is recorded with null
+identity. Criteria fill accepts progress policy through the `start`, `keep`,
+`create_task_list`, `create_task`, `result`, and `failure` messages. Legacy `Publishing#resume_ticket`
 and the `create-ticket` adapter keep their behavior and JSON shape. Their help
 names only the implemented resume replacement. Canonical sessions now reject a
 missing `item` from task-list and task creates as an invalid response instead

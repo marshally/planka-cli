@@ -19,10 +19,10 @@ module Planka
         def self.criteria(path)
           criteria = JSON.parse(Planka::CLI::InputFile.read(path))
           return criteria if criteria.is_a?(Array) && !criteria.empty? && criteria.uniq.size == criteria.size &&
-                             criteria.all? { |criterion| Planka::Records.text?(criterion, Resume::Ticket::CRITERION_LIMIT) && !criterion.strip.empty? }
+                             criteria.all? { |criterion| Planka::Records.text?(criterion, Criteria::Fill::CRITERION_LIMIT) && !criterion.strip.empty? }
 
           invalid_criteria!("--criteria-file must be a nonempty JSON array of distinct nonblank strings " \
-                            "of at most #{Resume::Ticket::CRITERION_LIMIT} characters")
+                            "of at most #{Criteria::Fill::CRITERION_LIMIT} characters")
         rescue JSON::ParserError
           invalid_criteria!("--criteria-file must contain a JSON array")
         rescue SystemCallError, IOError

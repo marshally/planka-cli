@@ -75,12 +75,24 @@ and failure accounting. Claim::Progress owns claim projection, step effects, and
 recovery state;
 a write is confirmed only after its response validates. Claim::Card returns core `MutationResult` or raises `MutationFailure` with known
 results, uncertainty, and recovery references. Canonical Resume::Ticket follows
-the same structure: Resume::Scope owns the card's criteria reads and write-response
-validation, Resume::Progress owns resume projection, step effects, and
-`resume-ticket` recovery, and legacy `Publishing#resume_ticket` keeps its original
+the same structure: Criteria::Fill owns the shared criteria-fill sequence and
+Criteria::Scope owns card records and write-response validation, while
+Resume::Ticket selects Resume::Progress for resume projection, step effects, and
+`resume-ticket` recovery. Legacy `Publishing#resume_ticket` keeps its original
 result shape. Core outcome values are independent
 of workflow policy; shared CLI Output owns their canonical presentation. Legacy
 Claim retains its original behavior and result shape.
+
+`Workflow::Criteria::Fill.call(client, id, criteria:, progress:)` reads one card
+scope, starts progress, reuses or creates the exact `Acceptance criteria` list,
+keeps exact-text matches, appends missing criteria in input order, and returns the
+progress result. The progress collaborator supports `start(scope)`, `keep(task)`,
+`create_task_list { validated_record }`, `create_task(name) { validated_record }`,
+`result`, and `failure(error)`. Create messages validate their response before
+recording confirmation; an exception from a create block remains pending so
+`failure` can report uncertainty. `Fill` owns exception-to-failure wrapping and
+preserves the original exception as cause. Concrete progress implementations own
+projection and recovery policy; the fill operation does not choose a progress type.
 
 `Workflow::Create::Spec.create` composes `Boards::Cards#create` with an explicit
 `project` type. Core scope/record and Resource/Write handling own observation,
