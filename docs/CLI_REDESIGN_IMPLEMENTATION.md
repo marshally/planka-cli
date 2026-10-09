@@ -22,7 +22,8 @@ adds native card `get`, `create`, `update`, `move`, and `delete`; the eleventh
 adds native list `get`, `create`, `update`, and `delete`; the twelfth adds
 `planka workflow resume ticket CARD`; the thirteenth adds card task-list `get`,
 `create`, `update`, and `delete`. Native label operations and comment
-`get`, `create`, `update`, and `delete` are also implemented. All legacy entry
+`get`, `create`, `update`, and `delete` are also implemented, as are native board
+collection/individual reads, creation, updates, and deletion (#22). All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -1046,6 +1047,51 @@ Client), and URI 1.1.1 supplies query encoding. This is installed-source evidenc
 not current-version documentation. Source inspection, local fixtures, and package
 checks do not prove live compatibility. No live Planka writes were authorized or
 performed; report remote CI separately in the implementation PR.
+
+## Implemented board resource operations
+
+Issue #22 delivers project-scoped `get boards`, `get board`, `create board`,
+`update board`, and `delete board`, with singular/plural aliases and offline
+help. [README](../README.md#canonical-boards) owns the detailed schemas, human
+output, and recovery contract; [STYLEGUIDE](../STYLEGUIDE.md#basic-board-creation-and-updates)
+records the settled behavior. `describe board` and legacy `snapshot` remain unchanged.
+
+`Projects::Boards < Resource` owns project collection reads, board resolution,
+and native CRUD hooks. `Projects::BoardRecord` owns field validation, concise
+projection, response confirmation, and recovery references. CLI preparation
+resolves IDs/same-instance URLs and explicit project scope before authentication;
+board names require that scope, while project names are unsupported. `Resource`
+owns mutation ordering/no-op detection, `Write` owns certainty, and `collect`
+preserves validated, sorted, filtered partial reads. Core loading stays independent
+of workflow/CLI. Collection and creation scope is explicit; no environment board
+or cross-project fallback is consulted.
+
+### Board API evidence
+
+Inspected official **Planka Community v2.2.1** source for these contracts:
+
+| Contract | Official pinned evidence |
+| --- | --- |
+| `GET /api/projects/:id` returns project `item` and all caller-visible `included.boards` without paging. Managers see the project's boards; members can see their boards; admins have additional visibility for projects without an owner manager. | [Project show](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/projects/show.js), [board queries](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/Board.js) |
+| `GET /api/boards/:id` returns a board `item` after native access checks. Only the concise board is projected here; snapshot contents are not changed. | [Board show](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/show.js), [board model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/Board.js) |
+| POST `/api/projects/:projectId/boards` requires project-manager access and name/position, returns `item`; name limit 128, position >= 0. Native creation adds creator editor membership and archive/trash lists transactionally. | [Create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/create.js), [create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/boards/create-one.js), [query methods](https://github.com/plankanban/planka/blob/v2.2.1/server/api/hooks/query-methods/models/Board.js) |
+| Default append is last position + 65536. Native insertion/update may normalize positions and reposition neighbors; returned positions are authoritative. The CLI sorts position/ID independently, since member-only project reads can use ID order. | [Position selectors](https://github.com/plankanban/planka/blob/v2.2.1/client/src/selectors/positioning.js), [gap](https://github.com/plankanban/planka/blob/v2.2.1/client/src/constants/Config.js), [native normalization](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/utils/insert-to-positionables.js) |
+| PATCH `/api/boards/:id` accepts name/position for managers and returns `item`; other native display/subscription fields stay outside this CLI slice. | [Update controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/update.js), [update helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/boards/update-one.js) |
+| DELETE `/api/boards/:id` requires manager access and returns the deleted board `item`. Native cleanup removes memberships, labels, lists/cards, and related data. | [Delete controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/boards/delete.js), [board cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/boards/delete-related.js), [list cleanup](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/lists/delete-related.js) |
+
+Collection completeness is limited to native visibility at read time. Append is
+computed before the write and is not atomic with concurrent board changes.
+Native side effects and permissions are source-backed, not inferred from fake
+responses. No live board mutations were authorized or performed; fixture/package
+checks do not establish compatibility for other releases or editions.
+
+Verification uses the agreed public CLI subprocess/local HTTP seams in
+`board_resources_cli_test.rb`, including aliases, pre-request validation,
+read-only effects, supplied-field/no-op updates, target-only deletion, partial
+collections, malformed write confirmation, readback identity, uncertain writes,
+cleanup, and legacy/direct parity. Context7 was unavailable; dependency behavior
+was checked against installed locked Minitest 6.0.6 and net-http 0.9.1 source,
+using Bundler 4.0.14. No dependency upgrade is part of this slice.
 
 ## Canonical CLI architecture
 

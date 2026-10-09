@@ -5,20 +5,18 @@ module Planka
       INSTRUCTIONS = <<~'MARKDOWN'.freeze
         # planka-cli agent guide
 
-        Run `planka workflow guide` at session start.
-        Use `planka <command> --help` for options, `planka --help` for commands,
-        and `planka --version` for version.
+        Start with `planka workflow guide`; use `planka <command> --help` for options.
 
         ## Connection and output
         API commands require PLANKA_BASE_URL, PLANKA_AGENT_EMAIL, and
         PLANKA_AGENT_PASSWORD from the caller's environment. References accept IDs
-        or same-instance URLs; names need board scope. Guide, help, and version
-        work offline. Never report credentials.
+        or same-instance URLs; names need parent scope. Help/guide/version work
+        offline. Never report credentials.
 
         Add `-o json` for canonical results: one document with data, meta, and
         error. Inspect the exit status before consuming stdout: 0 is success,
         2 is invalid input, and 1 is another failure. Diagnostics go to stderr.
-        Legacy commands keep bare JSON and exits.
+        Legacy JSON/exits remain unchanged.
 
         ## Find and work a ticket
         1. `planka describe board BOARD -o json`: inspect lists, cards, and tasks.
@@ -45,6 +43,8 @@ module Planka
            using `Branch: BRANCH` and `PR: URL` on separate lines.
 
         ## Publish and recover
+        Boards: `get boards --project PROJECT`, `get|update|delete board BOARD`,
+        `create board --project PROJECT --name NAME`. Deletion removes board contents.
         Resources: `planka get cards|lists|labels --board BOARD`,
         `get|update|delete card|list REF`, `create card --list LIST --name NAME`,
         `create list --board BOARD --name NAME`, `move card CARD --list LIST`.

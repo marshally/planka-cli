@@ -72,6 +72,14 @@ module Planka
       document
     end
 
+    # One project and all boards visible to the authenticated caller, without paging.
+    def project_document(id)
+      document = request(:get, "/api/projects/#{id}")
+      @responses.check!("Invalid project response") { document["item"].is_a?(Hash) && document["included"].is_a?(Hash) }
+
+      document
+    end
+
     # A finite (active or closed) list; Planka answers 404 for archive and trash.
     def list(id)
       response = request(:get, "/api/lists/#{id}")
@@ -110,6 +118,10 @@ module Planka
     def list_cards(list_id) = request(:get, "/api/lists/#{list_id}/cards")
 
     # Creates return the new record under "item".
+    def create_board(project_id, **attrs) = item(request(:post, "/api/projects/#{project_id}/boards", attrs), "board")
+    def update_board(board_id, **attrs) = item(request(:patch, "/api/boards/#{board_id}", attrs), "board")
+    def delete_board(board_id) = item(request(:delete, "/api/boards/#{board_id}"), "board")
+
     def create_card(list_id, **attrs) = item(request(:post, "/api/lists/#{list_id}/cards", attrs), "card")
 
     def update_card(card_id, **attrs) = item(request(:patch, "/api/cards/#{card_id}", attrs), "card")

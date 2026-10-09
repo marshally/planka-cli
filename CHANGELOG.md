@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+Added native board `get boards --project PROJECT`, `get board BOARD`,
+`create board --project PROJECT --name NAME [--position N]`,
+`update board BOARD [--name NAME] [--position N]`, and `delete board BOARD`,
+with aliases and offline help. Collections preserve project visibility, exact
+filters, limits, completeness, and partial results. Creates append by default;
+updates send supplied changed fields and skip no-ops. Native creation owns
+editor membership/system lists; deletion owns server cleanup. Unknown writes
+preserve known identity and require readback without retries. Operations live
+under `Projects::Boards` using Resource/Write. Detailed board and legacy snapshot
+contracts remain unchanged. Evidence is Community v2.2.1 source plus local
+fixture/package verification, without live write acceptance.
+
 Added native comment resource reads, creation, text-only updates, and deletion
 with singular/plural aliases and offline help. All require explicit card scope;
 comment IDs have no URL/name lookup. Collections follow native 50-item descending
