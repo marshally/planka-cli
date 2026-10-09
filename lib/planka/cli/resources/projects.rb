@@ -94,12 +94,12 @@ module Planka
         def self.prepare_create(_env, instance:, flags:, **)
           raise Failure.invalid_input("create project requires --name") unless flags[:name]
 
-          { base_url: instance.base_url, name: flags[:name].first, type: flags[:type]&.first || "private", description: description(flags) }
+          { base_url: instance.base_url, name: flags[:name].first, type: flags[:type]&.first || "private".freeze, description: description(flags) }
         end
 
         def self.description(flags)
           text = flags[:description_file] ? InputFile.read(flags[:description_file].first) : flags[:description]&.first
-          Planka::Projects::Record.description!(text)
+          Planka::Projects::Record.description!(text).freeze
         rescue ArgumentError => error
           raise Failure.invalid_input(error.message)
         rescue SystemCallError, IOError
