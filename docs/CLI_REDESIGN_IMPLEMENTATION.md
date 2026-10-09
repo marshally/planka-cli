@@ -594,7 +594,9 @@ Card-scoped relationships stay under `Cards::*`; native cards live under `Boards
   (board, list, finiteness, append position, default card type). `Destination`
   owns the position rule: append unless positioned, none for archive/trash.
 - `Boards::Cards < Resource` exposes `all`, `find`, `create`, `update`, `move`,
-  and `delete`. `move` delegates to `Boards::CardMove`.
+  and `delete`. Its `creation_type` hook selects the type independently of the
+  destination's placement rule, currently using the verified `default_card_type`.
+  `move` delegates to `Boards::CardMove` and retains the card's existing type.
 - `Boards::CardMove < Resource` is scoped to its destination list. Its
   `read_record` reads the card and then its destination on the card's own board,
   so `updated_data` stays a pure projection, as the hook contract requires.

@@ -118,9 +118,13 @@ module Planka
 
       def creation_data(known, attributes)
         destination = known.destination
-        known.card.merge(attributes.slice("name", "description"), "type" => destination.card_type,
+        known.card.merge(attributes.slice("name", "description"), "type" => creation_type(known, attributes),
                                                                   "position" => destination.position(attributes["position"]))
       end
+
+      # Creation owns type selection; the destination supplies the board default
+      # independently of its placement rule.
+      def creation_type(known, _attributes) = known.destination.default_card_type
 
       def create_record(_known, desired)
         request = { type: desired["type"], name: desired["name"], position: desired["position"], description: desired["description"] }

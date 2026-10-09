@@ -9,7 +9,7 @@ module Planka
       Observation = Data.define(:card, :destination)
 
       # A verified list a card is created or moved into.
-      Destination = Data.define(:board_id, :list_id, :finite, :append_position, :card_type) do
+      Destination = Data.define(:board_id, :list_id, :finite, :append_position, :default_card_type) do
         # Active/closed lists append unless positioned; archive/trash take none.
         def position(requested)
           return requested || append_position if finite
@@ -40,7 +40,7 @@ module Planka
       def destination(list, excluding: nil)
         board = board(list)
         record = lists(board, list).first
-        Destination.new(board_id: board["item"]["id"], list_id: record["id"], finite: finite?(record), card_type: card_type(board),
+        Destination.new(board_id: board["item"]["id"], list_id: record["id"], finite: finite?(record), default_card_type: default_card_type(board),
                         append_position: (Position.after(list_cards(board, record, excluding: excluding)) if finite?(record)))
       end
 
@@ -51,7 +51,7 @@ module Planka
         raise InvalidResponse, "Card outside its list scope" unless card["listId"] == list["id"] && card["boardId"] == list["boardId"]
       end
 
-      def card_type(board)
+      def default_card_type(board)
         type = board["item"]["defaultCardType"]
         raise InvalidResponse, "Invalid board default card type" unless CARD_TYPES.include?(type)
 
