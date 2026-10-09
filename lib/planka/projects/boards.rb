@@ -79,16 +79,16 @@ module Planka
       end
 
       def read_record(reference)
-        board = if Records.id?(reference)
-                  board = BoardRecord.data(client.board_document(reference)["item"], base_url: @base_url)
-                  raise InvalidResponse, "Invalid board identity" unless board["id"] == reference
-                  raise ReferenceError, "Board does not belong to --project" if @project_id && board["projectId"] != @project_id
-
-                  board
-                else
-                  named_board(reference)
-                end
+        board = Records.id?(reference) ? board_by_id(reference) : named_board(reference)
         Observation.new(board: board, append_position: nil, existing_ids: [])
+      end
+
+      def board_by_id(reference)
+        board = BoardRecord.data(client.board_document(reference)["item"], base_url: @base_url)
+        raise InvalidResponse, "Invalid board identity" unless board["id"] == reference
+        raise ReferenceError, "Board does not belong to --project" if @project_id && board["projectId"] != @project_id
+
+        board
       end
 
       def named_board(reference)
