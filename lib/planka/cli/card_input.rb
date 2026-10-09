@@ -67,7 +67,7 @@ module Planka
       def self.description(flags)
         path = flags[:description_file]&.first or return
         text = InputFile.read(path)
-        return text if Planka::Boards::CardRecord.text?(text, Planka::Boards::CardRecord::DESCRIPTION_LIMIT)
+        return text.freeze if Planka::Boards::CardRecord.text?(text, Planka::Boards::CardRecord::DESCRIPTION_LIMIT)
 
         raise Failure.invalid_input("--description-file must be nonempty UTF-8 text of at most #{Planka::Boards::CardRecord::DESCRIPTION_LIMIT} characters")
       rescue SystemCallError, IOError

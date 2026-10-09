@@ -25,7 +25,8 @@ adds native list `get`, `create`, `update`, and `delete`; the twelfth adds
 `get`, `create`, `update`, and `delete` are also implemented. Native boards (#22)
 and projects (#23) support collection/individual reads, creation, updates, and
 deletion. `planka workflow create spec` (#26) publishes project cards without
-acceptance criteria. All legacy entry
+acceptance criteria; `planka workflow create ticket` (#27) publishes project
+cards with acceptance criteria. All legacy entry
 points are preserved. Other resource operations
 remain planned. README's **Current interface** describes working commands; its
 **Usage — planned interface** section describes the broader target.
@@ -1255,6 +1256,50 @@ installed-gem check are the package verification boundary; fixtures and package
 checks do not substitute for live API evidence. Context7 is unavailable; no new
 dependency APIs or upgrades are introduced.
 
+## Implemented create ticket workflow
+
+`planka workflow create ticket --list LIST --name NAME --criteria-file FILE|-`
+implements [issue #27](https://github.com/marshally/planka-cli/issues/27), with
+the `tickets` alias, optional `--board`, `--description-file FILE|-`, and native
+`--position`. The [README contract](../README.md#canonical-create-ticket)
+documents human output, complete success and failure data shapes, metadata,
+stable error codes, and recovery.
+
+Preparation belongs to `Workflow::CLI::TicketInput`: required flags and complete
+card/criteria inputs are read before the session. Two stdin inputs fail before
+either is consumed. The catalog only selects the complete prepared arguments.
+`Workflow::Create::Ticket` composes native project card creation with
+`Criteria::Fill`; the core `Boards::Cards` operation still owns card scope,
+response certainty, and unknown-create readback. Once confirmed, a ticket-owned
+progress adapter retains the full card projection and changed state while
+composing the existing resume criteria tracker for list/task IDs, write effects,
+and `resume-ticket` recovery. It validates newly returned criteria as incomplete
+before confirming them. The legacy `Publishing#create_ticket` adapter remains
+unchanged.
+
+### Create ticket API evidence
+
+Official **Community v2.2.1** source inspected:
+
+| Contract | Primary source |
+| --- | --- |
+| POST `/api/lists/:listId/cards` requires project/story type and name up to 1024 units, accepts description up to 1048576 and nonnegative position, checks board editor permission, and returns the created item. | [Card create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/cards/create.js) |
+| POST `/api/cards/:cardId/task-lists` accepts a name up to 128 and nonnegative position, checks board editor permission, and returns the created item. | [Task-list create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/task-lists/create.js) |
+| POST `/api/task-lists/:taskListId/tasks` accepts a name up to 1024 and nonnegative position, checks board editor permission, and creates tasks in list scope; task completion defaults to false and task insertion may normalize sibling positions. | [Task create controller](https://github.com/plankanban/planka/blob/v2.2.1/server/api/controllers/tasks/create.js), [create helper](https://github.com/plankanban/planka/blob/v2.2.1/server/api/helpers/tasks/create-one.js), [Task model](https://github.com/plankanban/planka/blob/v2.2.1/server/api/models/Task.js) |
+
+Official source gives endpoint, payload, permission, and default behavior; it does
+not establish compatibility with every edition or later release. Verification is
+local CLI subprocesses with FakePlanka and package checks, not live mutation
+acceptance. No live Planka writes were performed.
+
+`workflow_create_ticket_cli_test.rb` exercises project type on a story-default
+board, ordered incomplete Unicode/multiline criteria, exact scope and position,
+both input sources and dual-stdin rejection, malformed local and returned data,
+unknown card identity/readback, confirmed and uncertain criteria effects,
+resume without duplicate card, offline aliases/help/guide, and cleanup/session
+behavior through public subprocess and local HTTP boundaries. Legacy flat and
+direct executable parity remains covered by `workflow_resume_cli_test.rb`.
+
 ## Canonical CLI architecture
 
 General design and review rules live in
@@ -1675,7 +1720,7 @@ list cleanup is identical to the standalone list-delete endpoint.
 
 1. Read the style guide, this handoff, and current README implementation labels.
 2. Inspect current refs and source; do not assume this snapshot is still current.
-3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, card task-list operations, label resource operations, comment operations, board resource operations, project resource operations, and workflow create spec are complete.
+3. Select the next unfinished slice using the project's manual board order and live eligibility; nested dispatch/help, card detail, board description, workflow pending criteria, workflow branch name, workflow claim status, the offline workflow guide, workflow next selection, workflow claim, card-member operations, native card operations, native list operations, workflow resume ticket, card task-list operations, label resource operations, comment operations, board resource operations, project resource operations, workflow create spec, and workflow create ticket are complete.
 4. Record that slice's schemas, error/recovery details, and API evidence; add
    meaningful failing acceptance tests, implement, and verify packaged entry points.
 5. Update docs and report implemented capabilities, compatibility evidence,

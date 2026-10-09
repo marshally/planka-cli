@@ -4,7 +4,8 @@
 # Criteria come from a JSON file (an array of strings), so their text may hold
 # punctuation, quotes, newlines and Unicode without shell interpretation.
 #
-#   planka create-ticket --list ID|NAME --title TITLE --criteria-file F [options]
+#   planka workflow create ticket --list LIST --name TITLE --criteria-file F
+#   planka workflow resume ticket CARD --criteria-file F
 #
 #   --list LIST            target list, by id or name (required)
 #   --board ID             board for a list name (default PLANKA_BOARD_ID)
@@ -14,8 +15,8 @@
 #   --position N           explicit position; otherwise appended below the list
 #   --card ID              resume: skip creation and fill criteria on this card
 #
-# Card creation cannot be retried safely, so if a later step fails the created
-# card and task-list ids are still printed; resume with --card to finish.
+# Canonical creation preserves completed resource IDs and can be resumed without
+# creating another card. This flat command remains available for compatibility.
 require "planka/workflow"
 require "planka/workflow/format"
 require "planka/cli"
@@ -32,6 +33,7 @@ parser = OptionParser.new do |o|
   o.on("--criteria-file F", "JSON array of criterion strings, or - for stdin") { |v| options[:criteria] = v }
   o.on("--position N", Integer, "explicit position") { |v| options[:position] = v }
   o.on("--card ID", "resume: fill criteria on this existing card") { |v| options[:card] = v }
+  o.separator "Canonical replacement for creation: planka workflow create ticket --list LIST --name NAME --criteria-file FILE|- (new JSON envelope)."
   o.separator "Canonical replacement for --card: planka workflow resume ticket CARD --criteria-file FILE|- (new JSON envelope)."
   Planka::CLI.output_option(o, options)
 end

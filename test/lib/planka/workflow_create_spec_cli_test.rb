@@ -67,7 +67,13 @@ class WorkflowCreateSpecCLITest < Minitest::Test
       assert status.success?, err
       assert_empty err
       assert_includes out, expected
-      refute_includes out, "workflow create ticket"
+      if args.size <= 2
+        assert_includes out, "create ticket"
+      elsif args == ["workflow", "create", "--help"]
+        assert_includes out, "ticket --list LIST --name NAME --criteria-file FILE"
+      else
+        refute_includes out, "workflow create ticket"
+      end
     end
     assert_empty @server.requests
   end
@@ -254,8 +260,8 @@ class WorkflowCreateSpecCLITest < Minitest::Test
     assert status.success?, err
     text = doc.dig("data", "instructions")
     assert_includes text, "planka workflow create spec --list LIST --name NAME"
+    assert_includes text, "workflow create ticket"
     assert_operator text.split.size, :<=, 500
-    refute_includes text, "planka workflow create ticket"
     assert_empty @server.requests
   end
 

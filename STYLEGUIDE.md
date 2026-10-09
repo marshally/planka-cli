@@ -4,7 +4,7 @@ This document defines the target interface for a general Planka resource
 CLI. It is a design contract for staged changes; the current executable supports
 `describe card`, `describe board`, `workflow pending-criteria`, `workflow branch-name`,
 `workflow claim-status`, `workflow guide`, `workflow next`, `workflow claim`,
-`workflow resume ticket`, card-scoped `get members`, `get member`, `add member`, `remove member`, native card
+`workflow create spec`, `workflow create ticket`, `workflow resume ticket`, card-scoped `get members`, `get member`, `add member`, `remove member`, native card
 `get cards`, `get card`, `create card`, `update card`, `move card`, `delete card`,
 native list `get lists`, `get list`, `create list`, `update list`, `delete list`,
 card task-list `get task-lists`, `get task-list`, `create task-list`,
@@ -766,6 +766,13 @@ completion, text, and order, and appends missing ones in file order. Duplicate
 criteria lists fail before writes. Failures keep known IDs and recover with
 `resume-ticket`; see [the resume contract](README.md#canonical-resume-ticket).
 Workflow commands may use three-word paths such as `workflow resume ticket`.
+
+Implemented `workflow create ticket --list LIST --name NAME --criteria-file FILE|-`
+creates one project card, then one exact-name `Acceptance criteria` list and
+incomplete tasks in input order. It accepts optional description and position
+flags using native card scope and placement rules. The card write is never
+retried; later failures retain confirmed resource identities and recover through
+`workflow resume ticket`. See the [create ticket schema and recovery contract](README.md#canonical-create-ticket).
 
 Implemented `workflow next` accepts `--board BOARD`, falling back to
 `PLANKA_BOARD_ID` only when omitted. Repeated `--label` filters AND-match before

@@ -25,7 +25,7 @@ module Planka
 
         def created_task(record, task_list_id, name)
           unless record.is_a?(Hash) && Records.id?(record["id"]) && record["taskListId"] == task_list_id &&
-                 record["name"] == name && [true, false].include?(record["isCompleted"])
+                 record["name"] == name && [true, false].include?(record["isCompleted"]) && Records.position?(record["position"])
             raise InvalidResponse, "Invalid created criterion"
           end
 

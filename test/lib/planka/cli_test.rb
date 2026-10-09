@@ -60,7 +60,13 @@ class Planka::CLITest < Minitest::Test
       assert status.success?, err
       assert_empty err
       assert_includes out, "pending-criteria CARD"
-      refute_includes out, "workflow create ticket"
+      if args.size == 1
+        assert_includes out, "workflow create ticket"
+      elsif args == ["workflow", "--help"]
+        assert_includes out, "create ticket"
+      else
+        refute_includes out, "create ticket"
+      end
     end
     out, = run_cli("workflow", "pending-criteria", "--help")
     assert_includes out, "Acceptance criteria"
